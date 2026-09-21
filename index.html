@@ -1754,15 +1754,26 @@
       <select><option>날짜블록 (1~7일 / 8~14일 / 15~21일 / 22~말일)</option><option>캘린더 주 (월~일)</option></select>
     </div>
 
-    <p class="group-label expense" style="margin-top:16px;">지출 항목</p>
-    <p class="ob-hint" style="margin:0 20px 8px;">카테고리를 고르고, 필요하면 상품명(이름)을 따로 적어주세요. 결제일·월예산은 각자 본인 것으로 입력해주세요. 보험·투자처럼 상품이 여러 개면 "＋ 지출 항목 추가"로 같은 카테고리 안에 여러 개 만들 수 있어요.</p>
+    <p class="group-label expense" style="margin-top:16px;">지출 항목 (자유롭게 수정)</p>
+    <p class="ob-hint" style="margin:0 20px 8px;">이름을 직접 고치거나 지우거나 새로 추가할 수 있어요. 결제일·월예산도 본인 것으로 입력해주세요.</p>
     <div id="catExpenseList"></div>
     <button class="add-row" onclick="addCatRow('catExpenseList','expense')">＋ 지출 항목 추가</button>
 
-    <p class="group-label" style="margin-top:20px;color:var(--gold);">투자 (자산 탭과 이름으로 연결)</p>
-    <p class="ob-hint" style="margin:0 20px 8px;">비유동자산·고정투자자산·변동자산 <b>종류는 상관없어요</b> — 정기적으로 돈을 넣는 자산이면 여기 등록하세요 (예: 매달 2일 주식 50만원, 매달 10일 연금 33만원). 여기 등록한 이름이 자산 탭의 같은 이름 항목과 자동으로 연결돼요. 위 지출 항목표 안에 함께 표시돼요.
-    </p>
-    <button class="add-row" onclick="addCatRow('catExpenseList','expense')">＋ 정기 투자 항목 추가</button>
+    <p class="group-label" style="margin-top:20px;color:var(--gold);">투자 (자산과 직접 연결 — 이름·삭제 고정)</p>
+    <p class="ob-hint" style="margin:0 20px 8px;">비유동자산·고정투자자산·변동자산, 어떤 분류든 정기적으로 돈을 넣는 자산이면 여기 등록하세요. <b>자산 이름은 직접 입력하지 않고 드롭다운으로 골라요</b> — 오타로 연결이 어긋나는 걸 막기 위해서예요. 기록한 금액은 그 기간 지출로도 잡히고, 선택한 자산에 자동으로 누적돼요.</p>
+
+    <p class="group-label" style="margin:14px 0 4px 20px;font-size:11.5px;color:var(--ink-faint);">① 비유동자산</p>
+    <div id="assetLinkList_비유동자산"></div>
+    <button class="add-row" onclick="addAssetLinkRow('비유동자산')">＋ 비유동자산 항목 추가</button>
+
+    <p class="group-label" style="margin:14px 0 4px 20px;font-size:11.5px;color:var(--ink-faint);">② 고정투자자산</p>
+    <div id="assetLinkList_고정투자자산"></div>
+    <button class="add-row" onclick="addAssetLinkRow('고정투자자산')">＋ 고정투자자산 항목 추가</button>
+
+    <p class="group-label" style="margin:14px 0 4px 20px;font-size:11.5px;color:var(--ink-faint);">③ 변동자산</p>
+    <div id="assetLinkList_변동자산"></div>
+    <button class="add-row" onclick="addAssetLinkRow('변동자산')">＋ 변동자산 항목 추가</button>
+
     <p class="group-label income" style="margin-top:20px;">수입 항목</p>
     <div class="cat-header-row"><span>결제일</span><span>이름</span><span>월예산</span></div>
     <div id="catIncomeList"></div>
@@ -2230,17 +2241,21 @@ function updateCount(){
 
 /* ── 자산기록 → 로드맵 실시간 연동 ── */
 const ASSET_LIST_ID = { '비유동자산':'illiquidList', '고정투자자산':'longList', '변동자산':'shortList' };
-function makeAssetCardEl(asset){
+function makeAssetCardEl(asset, investedTotal){
+  investedTotal = investedTotal || 0;
   const card = document.createElement('div');
   card.className = 'asset-card';
   card.dataset.id = asset.id;
+  card.dataset.invested = investedTotal;
+  const total = (Number(asset.amount)||0) + investedTotal;
   const typeOpts = ['비유동자산','고정투자자산','변동자산'].map(t=>`<option value="${t}" ${t===asset.asset_type?'selected':''}>${t}</option>`).join('');
   card.innerHTML = `
     <div class="asset-row">
       <input class="a-name" type="text" value="${asset.name||''}" placeholder="항목 이름" onchange="saveAssetField(this,'name')">
-      <input class="a-amt asset-input" type="number" value="${asset.amount||0}" placeholder="금액" oninput="recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
+      <input class="a-amt asset-input" type="number" value="${asset.amount||0}" placeholder="기본금액" oninput="recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
+    ${investedTotal > 0 ? `<p class="field-hint" style="margin:2px 0 0;padding-left:2px;">기본금액 ${(asset.amount||0).toLocaleString()}원 + 투자 누적 ${investedTotal.toLocaleString()}원 = <b style="color:var(--ink);">총 ${total.toLocaleString()}원</b></p>` : ''}
     <div class="asset-detail">
       <div class="field"><label>분류</label><select onchange="changeAssetType(this)">${typeOpts}</select></div>
       <div class="field"><label>만기일 (있는 경우만)</label><input type="date" value="${asset.maturity_date||''}" onchange="saveAssetField(this,'maturity_date')"></div>
@@ -2253,12 +2268,17 @@ function makeAssetCardEl(asset){
 }
 async function loadAssets(){
   if(!currentUser) return;
-  const { data, error } = await sb.from('assets').select('*').eq('user_id', currentUser.id).order('created_at');
+  const [{ data, error }, { data: investedRows }] = await Promise.all([
+    sb.from('assets').select('*').eq('user_id', currentUser.id).order('created_at'),
+    sb.from('asset_investment_totals').select('*'),
+  ]);
+  const investedMap = {};
+  (investedRows||[]).forEach(r => { investedMap[r.asset_id] = Number(r.invested_total) || 0; });
   ['illiquidList','longList','shortList'].forEach(id => document.getElementById(id).innerHTML = '');
   if(error){ console.error('assets load failed', error); return; }
   (data||[]).forEach(a => {
     const listId = ASSET_LIST_ID[a.asset_type] || 'shortList';
-    document.getElementById(listId).appendChild(makeAssetCardEl(a));
+    document.getElementById(listId).appendChild(makeAssetCardEl(a, investedMap[a.id] || 0));
   });
   recomputeRoadmap();
 }
@@ -2309,7 +2329,11 @@ function toggleAssetDetail(btn){
 }
 function sumAssets(){
   let sum = 0;
-  document.querySelectorAll('.asset-input').forEach(i => sum += Number(i.value) || 0);
+  document.querySelectorAll('.asset-card').forEach(card => {
+    const input = card.querySelector('.asset-input');
+    sum += Number(input?.value) || 0;
+    sum += Number(card.dataset.invested) || 0;
+  });
   return sum;
 }
 let roadmapChart;
@@ -2856,7 +2880,7 @@ function addCatRow(listId, type){
     card.className = 'cat-card';
     card.innerHTML = `
       <div class="cat-row-top">
-        <select class="cat-select">${catOptions('')}</select>
+        <input class="cat-select" type="text" placeholder="카테고리 이름">
         <input class="cat-name-input" type="text" placeholder="상품명(선택)">
         <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
       </div>
@@ -2912,12 +2936,10 @@ function makeCatCardEl(cat){
   const card = document.createElement('div');
   card.className = 'cat-card';
   if(cat.id) card.dataset.id = cat.id;
-  const opts = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금']
-    .map(c => `<option${c===cat.category?' selected':''}>${c}</option>`).join('');
   const hasSplit = cat.splits && cat.splits.length > 0;
   card.innerHTML = `
     <div class="cat-row-top">
-      <select class="cat-select">${opts}</select>
+      <input class="cat-select" type="text" placeholder="카테고리 이름" value="${cat.category||''}">
       <input class="cat-name-input" type="text" placeholder="상품명(선택)" value="${cat.name && cat.name!==cat.category ? cat.name : ''}">
       <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
     </div>
@@ -2934,16 +2956,67 @@ function makeCatCardEl(cat){
   if(hasSplit) card.querySelector('.cat-budget').classList.add('cat-total-auto');
   return card;
 }
+function makeAssetLinkRowEl(assetType, cat, myAssets){
+  const row = document.createElement('div');
+  row.className = 'cat-card asset-link-row';
+  if(cat && cat.id) row.dataset.id = cat.id;
+  row.dataset.assetType = assetType;
+  const assetsOfType = myAssets.filter(a => a.asset_type === assetType);
+  const opts = assetsOfType.length
+    ? assetsOfType.map(a => `<option value="${a.id}" ${cat && cat.linked_asset_id===a.id?'selected':''}>${a.name||'(이름 없음)'}</option>`).join('')
+    : '';
+  const hasSplit = cat && cat.splits && cat.splits.length > 0;
+  if(assetsOfType.length === 0){
+    row.innerHTML = `<p class="field-hint" style="margin:0;">아직 "${assetType}" 항목이 없어요. <span style="color:var(--brand);text-decoration:underline;cursor:pointer;" onclick="closeSub('categories');openSub('roadmap');">자산 탭에서 먼저 만들어주세요 →</span></p>`;
+    return row;
+  }
+  row.innerHTML = `
+    <div class="cat-row-top">
+      <select class="asset-link-select">${opts}</select>
+      <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
+    </div>
+    <div class="cat-row-bottom">
+      <input class="cat-day" type="text" placeholder="결제일" value="${hasSplit?'':(cat&&cat.payment_day||'')}" ${hasSplit?'disabled':''}>
+      <input class="cat-budget" type="number" placeholder="월예산" value="${cat&&cat.monthly_budget||''}" ${hasSplit?'readonly':''}>
+    </div>
+    <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
+    <div class="cat-split-detail ${hasSplit?'open':''}">
+      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="number" value="${s.amount}" oninput="recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
+      <button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button>
+    </div>
+  `;
+  if(hasSplit) row.querySelector('.cat-budget').classList.add('cat-total-auto');
+  return row;
+}
+let myAssetsCache = [];
+async function addAssetLinkRow(assetType){
+  if(myAssetsCache.length === 0){
+    const { data } = await sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id);
+    myAssetsCache = data || [];
+  }
+  const list = document.getElementById('assetLinkList_' + assetType);
+  list.appendChild(makeAssetLinkRowEl(assetType, null, myAssetsCache));
+}
+const ASSET_TYPES_3 = ['비유동자산','고정투자자산','변동자산'];
 async function loadCategories(){
   if(!currentUser) return;
-  const { data: cats, error } = await sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id);
+  const [{ data: cats, error }, { data: myAssets }] = await Promise.all([
+    sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id),
+    sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id),
+  ]);
+  myAssetsCache = myAssets || [];
   if(error){ console.error('categories load failed', error); return; }
   const expenseList = document.getElementById('catExpenseList');
   const incomeList = document.getElementById('catIncomeList');
   expenseList.innerHTML = '';
   incomeList.innerHTML = '';
+  ASSET_TYPES_3.forEach(t => document.getElementById('assetLinkList_' + t).innerHTML = '');
+
   (cats||[]).forEach(c => {
-    if(c.kind === 'expense'){
+    if(c.kind === 'expense' && ASSET_TYPES_3.includes(c.category)){
+      const cat = { id:c.id, linked_asset_id:c.linked_asset_id, payment_day:c.payment_day, monthly_budget:c.monthly_budget, splits:(c.category_splits||[]).map(s=>({day_label:s.day_label, amount:s.amount})) };
+      document.getElementById('assetLinkList_' + c.category).appendChild(makeAssetLinkRowEl(c.category, cat, myAssetsCache));
+    } else if(c.kind === 'expense'){
       const cat = { id:c.id, category:c.category, name:c.name, payment_day:c.payment_day, monthly_budget:c.monthly_budget, splits:(c.category_splits||[]).map(s=>({day_label:s.day_label, amount:s.amount})) };
       expenseList.appendChild(makeCatCardEl(cat));
     } else {
@@ -2971,9 +3044,9 @@ async function saveCategories(){
   const btn = document.querySelector('#sub-categories .save-btn');
   btn.disabled = true; btn.textContent = '저장 중...';
   try{
-    // 지출 항목 파싱
+    // 지출 항목 파싱 (자유 텍스트)
     const expensePayload = [...document.querySelectorAll('#catExpenseList .cat-card')].map(card => {
-      const category = card.querySelector('.cat-select').value;
+      const category = card.querySelector('.cat-select').value.trim();
       const nameInput = card.querySelector('.cat-name-input').value.trim();
       const splitRows = [...card.querySelectorAll('.cat-split-row')].map(r => {
         const inputs = r.querySelectorAll('input');
@@ -2981,12 +3054,35 @@ async function saveCategories(){
       }).filter(s => s.day_label);
       const budget = Number(card.querySelector('.cat-budget').value) || 0;
       return {
-        category, name: nameInput || category, kind:'expense',
+        category, name: nameInput || category, kind:'expense', linked_asset_id: null,
         payment_day: splitRows.length ? null : (card.querySelector('.cat-day').value.trim() || null),
         monthly_budget: budget,
         splits: splitRows,
       };
+    }).filter(r => r.category);
+
+    // 자산연결 3종 파싱
+    const assetLinkPayload = [];
+    ASSET_TYPES_3.forEach(assetType => {
+      document.querySelectorAll('#assetLinkList_' + assetType + ' .asset-link-row').forEach(row => {
+        const select = row.querySelector('.asset-link-select');
+        if(!select) return; // 자산 없어서 안내문만 있는 경우
+        const linked_asset_id = select.value;
+        const splitRows = [...row.querySelectorAll('.cat-split-row')].map(r => {
+          const inputs = r.querySelectorAll('input');
+          return { day_label: inputs[0].value.trim(), amount: Number(inputs[1].value)||0 };
+        }).filter(s => s.day_label);
+        const budget = Number(row.querySelector('.cat-budget').value) || 0;
+        const assetName = select.options[select.selectedIndex]?.textContent || assetType;
+        assetLinkPayload.push({
+          category: assetType, name: assetName, kind:'expense', linked_asset_id,
+          payment_day: splitRows.length ? null : (row.querySelector('.cat-day').value.trim() || null),
+          monthly_budget: budget,
+          splits: splitRows,
+        });
+      });
     });
+
     // 수입 항목 파싱
     const incomePayload = [...document.querySelectorAll('#catIncomeList .cat-row')].map(row => {
       const nameInput = row.querySelector('input[type="text"]').value.trim();
@@ -3000,11 +3096,12 @@ async function saveCategories(){
     const { error: delErr } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
     if(delErr) throw delErr;
 
-    const allRows = [...expensePayload, ...incomePayload].filter(r => r.category);
+    const allRows = [...expensePayload, ...assetLinkPayload, ...incomePayload].filter(r => r.category);
     if(allRows.length > 0){
       const insertPayload = allRows.map(r => ({
         user_id: currentUser.id, category:r.category, name:r.name, kind:r.kind,
         income_tag: r.income_tag || null, payment_day: r.payment_day, monthly_budget: r.monthly_budget,
+        linked_asset_id: r.linked_asset_id || null,
       }));
       const { data: inserted, error: insErr } = await sb.from('ledger_categories').insert(insertPayload).select();
       if(insErr) throw insErr;
