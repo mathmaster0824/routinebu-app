@@ -1827,6 +1827,12 @@
   const SB_URL = 'https://mnrrcfpnmebuixpomuso.supabase.co';
   const SB_KEY = 'sb_publishable_4igpt7hQVEt8018z04rcag_Ons4nogB';
   const sb = window.supabase.createClient(SB_URL, SB_KEY);
+  window.addEventListener('error', function(e){
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;padding:12px;font-size:12px;white-space:pre-wrap;';
+    box.textContent = '⚠️ 에러: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')';
+    document.body.appendChild(box);
+  });
 </script>
 <script>
 function addCustomRow(){
@@ -4235,7 +4241,18 @@ async function approveMember(userId, btn){
 async function rejectMember(userId, btn){
   btn.disabled = true;
   const { error } = await sb.from('profiles').update({ approval_status: 'rejected' }).eq('id', userId);
-  if(!error) btn.closest('.approval-row').remove();
+  const t = document.getElementById('toast');
+  if(error){
+    btn.disabled = false;
+    t.textContent = '거절 실패: ' + error.message;
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2500);
+    return;
+  }
+  btn.closest('.approval-row').remove();
+  t.textContent = '거절 처리됐어요';
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1500);
 }
 function switchProg(btn, prog){
   document.querySelectorAll('.prog-tab').forEach(t=>t.classList.remove('active'));
