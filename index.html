@@ -2246,6 +2246,21 @@ function updateCount(){
   const done = document.querySelectorAll('.mission.done').length;
   document.getElementById('missionCount').textContent = total+'개 중 '+done+'개 완료';
 }
+async function loadTodayMissionStatus(){
+  if(!currentUser) return;
+  const today = new Date().toISOString().slice(0,10);
+  const { data, error } = await sb.from('mission_logs')
+    .select('mission_type')
+    .eq('user_id', currentUser.id)
+    .eq('log_date', today);
+  document.querySelectorAll('.mission').forEach(m => m.classList.remove('done'));
+  if(error){ console.error('today mission status load failed', error); updateCount(); return; }
+  (data||[]).forEach(row => {
+    const card = document.querySelector('.mission[data-target="'+row.mission_type+'"]');
+    if(card) card.classList.add('done');
+  });
+  updateCount();
+}
 
 /* ── 자산기록 → 로드맵 실시간 연동 ── */
 const ASSET_LIST_ID = { '비유동자산':'illiquidList', '고정투자자산':'longList', '변동자산':'shortList' };
@@ -2547,7 +2562,7 @@ function calcDiff(input){
 }
 
 /* ── 아침예산 → 저녁정산 실제 연동 ── */
-const TODAY_DAY = 17; // "오늘" — 홈/가계부 등 다른 화면과 동일하게 9월 17일로 통일
+const TODAY_DAY = new Date().getDate(); // 실제 오늘 날짜 (매일 자동으로 바뀜)
 let todaysMorningBudget = null; // null이면 아직 아침예산을 저장 안 한 상태
 let todaysEveningActual = null; // null이면 아직 저녁정산을 저장 안 한 상태 → 가계부엔 기존 데모값이 보임
 
@@ -2732,6 +2747,7 @@ function setDemoMode(mode){
   } else if(mode === 'routine'){
     main.style.display = 'block';
     try{ loadMyStats(); }catch(e){ console.error('stats load failed', e); }
+    try{ loadTodayMissionStatus(); }catch(e){ console.error('mission status load failed', e); }
   } else if(mode === 'bonbu'){
     bonbu.style.position = 'static';
     bonbu.style.transform = 'none';
