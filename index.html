@@ -1450,10 +1450,10 @@
 
   <div class="section-head"><h2>로드맵 설정</h2></div>
   <div class="sub-body" style="padding-top:0;">
-    <div class="field"><label>만 나이</label><input id="ageInput" type="number" value="33" oninput="recomputeRoadmap()"></div>
+    <div class="field"><label>만 나이</label><input id="ageInput" type="number" value="" oninput="recomputeRoadmap()" onchange="saveRoadmapSettings()"></div>
     <div class="field">
       <label>예상 자산증식률</label>
-      <select id="rateInput" oninput="recomputeRoadmap()">
+      <select id="rateInput" oninput="recomputeRoadmap()" onchange="saveRoadmapSettings()">
         <option value="3">3% · 나는 투자 초보다</option>
         <option value="5">5% · 투자를 시작해서 하고 있다</option>
         <option value="8">8% · 투자로 수익실현을 할 수 있다</option>
@@ -2032,8 +2032,10 @@ function openSub(id){
   }
   if(id === 'roadmap'){
     (async () => {
-      try{ await loadAssets(); await loadLiabilities(); await loadMonthlyInvestActual(); recomputeRoadmap(); }
-      catch(e){ console.error('assets/liabilities load failed', e); }
+      try{
+        await loadAssets(); await loadLiabilities(); await loadMonthlyInvestActual(); await loadRoadmapSettings();
+        recomputeRoadmap();
+      } catch(e){ console.error('assets/liabilities load failed', e); }
     })();
   }
   if(id === 'invest'){
@@ -2354,6 +2356,20 @@ async function loadMonthlyInvestActual(){
   if(input) input.value = sum;
   if(hint) hint.textContent = `이번 달 실제 투자 거래 합계로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
+}
+async function saveRoadmapSettings(){
+  if(!currentUser) return;
+  const age = Number(document.getElementById('ageInput').value) || null;
+  const rate = Number(document.getElementById('rateInput').value) || 6;
+  const { error } = await sb.from('profiles').update({ roadmap_age: age, roadmap_rate: rate }).eq('id', currentUser.id);
+  if(error) console.error('roadmap settings save failed', error);
+}
+async function loadRoadmapSettings(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('profiles').select('roadmap_age, roadmap_rate').eq('id', currentUser.id).single();
+  if(error){ console.error('roadmap settings load failed', error); return; }
+  if(data.roadmap_age) document.getElementById('ageInput').value = data.roadmap_age;
+  if(data.roadmap_rate) document.getElementById('rateInput').value = data.roadmap_rate;
 }
 function makeLiabilityCardEl(liab){
   const card = document.createElement('div');
