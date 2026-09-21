@@ -1191,7 +1191,7 @@
     </div>
   </div>
 
-  <div class="notice"><span class="tag">공지</span>이번 주 일요일 ZOOM은 20시로 변경됐어요.</div>
+  <div class="notice" id="routineNoticeBanner" style="display:none;"><span class="tag">공지</span><span id="routineNoticeText"></span></div>
   <div class="survey-banner" id="seasonSurveyBanner" style="display:none;" onclick="openSub('seasonend')">
     <span>📋 시즌3 종료 설문에 참여해주세요</span><span class="sb-arrow">→</span>
   </div>
@@ -1311,7 +1311,7 @@
 <div class="subscreen" id="sub-bookdone">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('bookdone')">←</button><h1 class="sub-title">완독</h1></div>
   <div class="sub-body">
-    <p class="se-intro">《부의 추월차선》을 완독하셨어요! 별점과 한 줄 총평은 <b>나만 볼 수 있어요.</b></p>
+    <p class="se-intro" id="bdIntro">완독하셨어요! 별점과 한 줄 총평은 <b>나만 볼 수 있어요.</b></p>
 
     <p class="ob-progress" style="margin-top:20px;">별점</p>
     <div class="se-stars" id="bdStars">
@@ -1369,12 +1369,7 @@
     <button class="save-btn" style="margin:0 20px 20px;width:calc(100% - 40px);" onclick="postAnnounce()">게시하기</button>
 
     <div class="section-head" style="padding:0;margin:0 0 8px;"><h2>게시된 공지</h2></div>
-    <div id="announceList">
-      <div class="announce-row">
-        <p class="ac-sub">9/16 게시 · 루틴부</p>
-        <p class="ac-line">이번 주 일요일 ZOOM은 20시로 변경됐어요.</p>
-      </div>
-    </div>
+    <div id="announceList"></div>
   </div>
 </div>
 
@@ -1499,22 +1494,15 @@
   </div>
   <div id="ledgerContent">
   <div class="ledger-summary">
-    <div class="ls-row"><span>이번 기간 예산</span><b>320,000원</b></div>
-    <div class="ls-row"><span>실제 지출</span><b class="ls-actual">214,000원</b></div>
-    <div class="ls-bar"><i style="width:67%"></i></div>
-    <div class="ls-note">9/15 ~ 9/21 · 남은 예산 106,000원</div>
+    <div class="ls-row"><span>이번 기간 예산</span><b id="lsBudget">0원</b></div>
+    <div class="ls-row"><span>실제 지출</span><b class="ls-actual" id="lsActual">0원</b></div>
+    <div class="ls-bar"><i id="lsBar" style="width:0%"></i></div>
+    <div class="ls-note" id="lsNote"></div>
   </div>
 
   <div class="section-head" style="margin-top:22px;"><h2>이번 주</h2><span>날짜를 눌러보세요</span></div>
   <div class="grid7" id="grid7">
     <div class="g-head">월</div><div class="g-head">화</div><div class="g-head">수</div><div class="g-head">목</div><div class="g-head">금</div><div class="g-head">토</div><div class="g-head">일</div>
-    <div class="g-cell nospend" onclick="showDay(this,'월 9/15')">15<span class="stamp">무지출</span></div>
-    <div class="g-cell ok" onclick="showDay(this,'화 9/16')">16<small>-1.2만</small></div>
-    <div class="g-cell over" onclick="showDay(this,'수 9/17')">17<small>+3천</small></div>
-    <div class="g-cell empty" onclick="showDay(this,'목 9/18')">18<small>-</small></div>
-    <div class="g-cell empty" onclick="showDay(this,'금 9/19')">19<small>-</small></div>
-    <div class="g-cell empty" onclick="showDay(this,'토 9/20')">20<small>-</small></div>
-    <div class="g-cell empty" onclick="showDay(this,'일 9/21')">21<small>-</small></div>
   </div>
   </div>
   </div>
@@ -1534,10 +1522,8 @@
   </div>
 
   <div class="day-detail" id="dayDetail">
-    <p class="dd-title">수 9/17 상세내역</p>
-    <div id="dayTxList">
-      <div class="tx-row"><span class="tx-dot expense"></span><select class="tx-cat"><option>대출</option><option>보험</option><option>계모임</option><option selected>식비</option><option>관리비</option><option>교육비</option><option>용돈</option><option>통신</option><option>주유</option><option>병원비</option><option>성장비</option><option>국민건강</option><option>국민연금</option></select><input class="tx-name" type="text" placeholder="거래명(선택)" value="저녁 외식"><input class="tx-input" type="number" value="32000"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button></div>
-    </div>
+    <p class="dd-title">날짜를 눌러 상세내역을 확인하세요</p>
+    <div id="dayTxList"></div>
     <p class="dd-hint">고정지출(결제일 있는 항목)은 여기 자동으로 이미 기록돼있어요. 아래 버튼은 그 외 변동적인 것만 추가할 때 써요.</p>
     <div class="dd-add-row">
       <button class="dd-add expense" onclick="addTx('expense')">＋ 지출 추가</button>
@@ -1546,7 +1532,7 @@
   </div>
 
   <button class="save-btn" onclick="openSub('weeksettle')" style="background:var(--gold);color:#2b220a;">일요일 주말정산 보기</button>
-  <button class="save-btn" onclick="openSub('monthsettle')" style="background:var(--brand-deep);color:#fff;margin-top:8px;">이번 달 월말정산 보기 (9/27)</button>
+  <button class="save-btn" onclick="openSub('monthsettle')" style="background:var(--brand-deep);color:#fff;margin-top:8px;">이번 달 월말정산 보기</button>
 </div>
 
 <!-- 주말정산 서브화면 -->
@@ -1563,142 +1549,43 @@
       <p>이 주는 아직 기록이 없어요.<br>해당 날짜에 직접 입력하시면 여기 반영돼요.</p>
     </div>
     <div id="weeksettleContent">
-    <div class="settle-total-row income"><span>총 수입</span><b>3,117,000원</b></div>
+    <div class="settle-total-row income"><span>총 수입</span><b id="wsIncomeTotal">0원</b></div>
     <p class="group-label income">수입</p>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot income"></span><span class="sr-name">월급 <i>노동수입</i></span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">300만</b></span><span class="sr-col"><small>실제</small><b class="sr-total">3,000,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number"></div>
-        <div class="di-cell"><label>화</label><input type="number"></div>
-        <div class="di-cell"><label>수</label><input type="number"></div>
-        <div class="di-cell"><label>목</label><input type="number"></div>
-        <div class="di-cell"><label>금</label><input type="number" value="3000000"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
-    </div>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot income"></span><span class="sr-name">배당금 <i>비노동수입</i></span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">10만</b></span><span class="sr-col"><small>실제</small><b class="sr-total">82,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number"></div>
-        <div class="di-cell"><label>화</label><input type="number"></div>
-        <div class="di-cell"><label>수</label><input type="number" value="82000"></div>
-        <div class="di-cell"><label>목</label><input type="number"></div>
-        <div class="di-cell"><label>금</label><input type="number"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
-    </div>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot income"></span><span class="sr-name">용돈 <i>이벤트수입</i></span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">-</b></span><span class="sr-col"><small>실제</small><b class="sr-total">35,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number"></div>
-        <div class="di-cell"><label>화</label><input type="number"></div>
-        <div class="di-cell"><label>수</label><input type="number" value="35000"></div>
-        <div class="di-cell"><label>목</label><input type="number"></div>
-        <div class="di-cell"><label>금</label><input type="number"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
-    </div>
+    <div id="wsIncomeGroups"></div>
 
-    <div class="settle-total-row expense"><span>총 지출</span><b>56,000원</b></div>
+    <div class="settle-total-row expense"><span>총 지출</span><b id="wsExpenseTotal">0원</b></div>
     <p class="group-label expense">지출</p>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot expense"></span><span class="sr-name">식비</span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">45만</b></span><span class="sr-col"><small>실제</small><b class="sr-total">38,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number" value="8000"></div>
-        <div class="di-cell"><label>화</label><input type="number" value="12000"></div>
-        <div class="di-cell"><label>수</label><input type="number" value="6000"></div>
-        <div class="di-cell"><label>목</label><input type="number" value="12000"></div>
-        <div class="di-cell"><label>금</label><input type="number"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
+    <div id="wsExpenseGroups"></div>
+    <p class="ac-sub" id="wsEmptyNote" style="display:none;text-align:center;padding:10px 0;">이번 주엔 아직 카테고리별 기록이 없어요.</p>
     </div>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot expense"></span><span class="sr-name">교통</span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">18만</b></span><span class="sr-col"><small>실제</small><b class="sr-total">12,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number" value="3000"></div>
-        <div class="di-cell"><label>화</label><input type="number" value="3000"></div>
-        <div class="di-cell"><label>수</label><input type="number" value="3000"></div>
-        <div class="di-cell"><label>목</label><input type="number" value="3000"></div>
-        <div class="di-cell"><label>금</label><input type="number"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
-    </div>
-    <div class="settle-group">
-      <div class="settle-row" onclick="toggleDays(this)">
-        <span class="tx-dot expense"></span><span class="sr-name">기타</span>
-        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">12만</b></span><span class="sr-col"><small>실제</small><b class="sr-total">6,000원</b></span></span><span class="sr-chev">⌄</span>
-      </div>
-      <div class="day-inputs">
-        <div class="di-cell"><label>월</label><input type="number"></div>
-        <div class="di-cell"><label>화</label><input type="number"></div>
-        <div class="di-cell"><label>수</label><input type="number" value="6000"></div>
-        <div class="di-cell"><label>목</label><input type="number"></div>
-        <div class="di-cell"><label>금</label><input type="number"></div>
-        <div class="di-cell"><label>토</label><input type="number"></div>
-        <div class="di-cell"><label>일</label><input type="number"></div>
-      </div>
-    </div>
-  </div>
-  </div>
   <button class="save-btn" onclick="logMissionCompletion('weeksettle').then(loadMyStats);closeSub('weeksettle')">제출</button>
   <p class="autosave-note">입력하는 즉시 자동저장돼요</p>
 </div>
 
 <!-- 월말정산 서브화면 -->
 <div class="subscreen" id="sub-monthsettle">
-  <div class="sub-top"><button class="back-btn" onclick="closeSub('monthsettle')">←</button><h1 class="sub-title">월말정산 · 9월</h1></div>
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('monthsettle')">←</button><h1 class="sub-title" id="monthsettleTitle">월말정산</h1></div>
   <div class="sub-body">
 
     <div class="ms-metric-row">
-      <div class="ms-metric income"><p>총 수입</p><b>3,117,000원</b></div>
-      <div class="ms-metric expense"><p>총 지출</p><b>56,000원</b></div>
+      <div class="ms-metric income"><p>총 수입</p><b id="msIncomeTotal">0원</b></div>
+      <div class="ms-metric expense"><p>총 지출</p><b id="msExpenseTotal">0원</b></div>
     </div>
 
     <p class="group-label income">수입 내역</p>
-    <div class="ms-list-row"><span>월급 <i>노동수입</i></span><b>3,000,000원</b></div>
-    <div class="ms-list-row"><span>배당금 <i>비노동수입</i></span><b>82,000원</b></div>
-    <div class="ms-list-row"><span>용돈 <i>이벤트수입</i></span><b>35,000원</b></div>
+    <div id="msIncomeList"></div>
 
     <p class="group-label expense">지출 내역</p>
-    <div class="ms-list-row"><span>식비</span><b>38,000원</b></div>
-    <div class="ms-list-row"><span>교통</span><b>12,000원</b></div>
-    <div class="ms-list-row"><span>기타</span><b>6,000원</b></div>
+    <div id="msExpenseList"></div>
+    <p class="ac-sub" id="msEmptyNote" style="display:none;text-align:center;padding:8px 0;">이번 달 기록이 아직 없어요.</p>
 
     <div class="section-head" style="margin:22px 0 8px;padding:0;"><h2>수입 비율</h2></div>
     <div class="ms-chart-wrap"><canvas id="msIncChart"></canvas></div>
-    <div class="ms-legend">
-      <span><i style="background:#378ADD;"></i>노동 96%</span>
-      <span><i style="background:#1D9E75;"></i>비노동 3%</span>
-      <span><i style="background:#EF9F27;"></i>이벤트 1%</span>
-    </div>
+    <div class="ms-legend" id="msIncLegend"></div>
 
     <div class="section-head" style="margin:20px 0 8px;padding:0;"><h2>지출 비율</h2></div>
     <div class="ms-chart-wrap"><canvas id="msExpChart"></canvas></div>
-    <div class="ms-legend">
-      <span><i style="background:#D85A30;"></i>식비 68%</span>
-      <span><i style="background:#D4537E;"></i>교통 21%</span>
-      <span><i style="background:#888780;"></i>기타 11%</span>
-    </div>
+    <div class="ms-legend" id="msExpLegend"></div>
 
     <div class="ms-nav-buttons">
       <button class="ms-nav-btn" onclick="openSub('roadmap')">자산기록 바로가기 →</button>
@@ -1769,30 +1656,7 @@
   <div class="sub-top"><button class="back-btn" onclick="closeSub('idxmemo')">←</button><h1 class="sub-title">메모 모아보기</h1></div>
   <div class="sub-body">
     <p class="se-intro">지수체크 때 남긴 생각들을 시간순으로 모아봤어요.</p>
-
-    <p class="memo-month">2026년 9월</p>
-    <div class="memo-card">
-      <p class="memo-date">9월 16일 수요일</p>
-      <p class="memo-text">환율이 계속 오르네. 당분간 달러자산 비중 유지.</p>
-    </div>
-    <div class="memo-card">
-      <p class="memo-date">9월 15일 화요일</p>
-      <p class="memo-text">코스피 3200 돌파. 국내 비중 조금 줄일 때가 된 듯.</p>
-    </div>
-    <div class="memo-card">
-      <p class="memo-date">9월 12일 토요일</p>
-      <p class="memo-text">비트코인 변동성 심함. 당분간 지켜보기만.</p>
-    </div>
-
-    <p class="memo-month">2026년 8월</p>
-    <div class="memo-card">
-      <p class="memo-date">8월 29일 토요일</p>
-      <p class="memo-text">S&P 500 사상 최고치 경신. 과열 신호일 수도.</p>
-    </div>
-    <div class="memo-card">
-      <p class="memo-date">8월 14일 금요일</p>
-      <p class="memo-text">금값 오름세. 인플레이션 헤지 목적으로 조금 더 담을까 고민.</p>
-    </div>
+    <div id="idxMemoList"><p class="ac-sub">불러오는 중...</p></div>
   </div>
 </div>
 
@@ -1802,34 +1666,34 @@
 
   <div class="section-head" style="margin:14px 0 8px;padding:0 20px;"><h2>오늘 기록</h2></div>
   <div class="sub-body" style="padding-top:0;padding-bottom:0;">
-    <div class="field"><label>S&P500</label><input type="number" value="6480"></div>
-    <div class="field"><label>코스피</label><input type="number" value="3210"></div>
-    <div class="field"><label>달러환율</label><input type="number" value="1362"></div>
-    <div class="field"><label>금</label><input type="number" value="2680000"></div>
+    <div class="field"><label>S&P500</label><input id="idxSp500" type="number" placeholder="예: 6480"></div>
+    <div class="field"><label>코스피</label><input id="idxKospi" type="number" placeholder="예: 3210"></div>
+    <div class="field"><label>달러환율</label><input id="idxUsd" type="number" placeholder="예: 1362"></div>
+    <div class="field"><label>금</label><input id="idxGold" type="number" placeholder="예: 2680000"></div>
     <div class="field">
       <label>나만의 지표 (이름은 자유롭게 바꿀 수 있어요)</label>
       <div class="custom-field">
-        <input class="custom-label" type="text" value="비트코인" placeholder="지표 이름">
-        <input type="number" placeholder="값 입력" value="142000000">
+        <input class="custom-label" id="idxCustom1Name" type="text" value="비트코인" placeholder="지표 이름">
+        <input id="idxCustom1Value" type="number" placeholder="값 입력">
       </div>
     </div>
     <div class="field">
       <div class="custom-field">
-        <input class="custom-label" type="text" value="내 보유종목" placeholder="지표 이름">
-        <input type="number" placeholder="값 입력">
+        <input class="custom-label" id="idxCustom2Name" type="text" value="내 보유종목" placeholder="지표 이름">
+        <input id="idxCustom2Value" type="number" placeholder="값 입력">
       </div>
     </div>
   </div>
-  <button class="save-btn" onclick="saveMission('idx')">완료</button>
+  <button class="save-btn" onclick="saveIndexCheck()">완료</button>
   <p class="autosave-note">입력하는 즉시 자동저장돼요</p>
 
   <div class="section-head" style="margin:22px 0 0;padding:0 20px;"><h2>추이 보기</h2></div>
-  <div class="idx-chip-row">
-    <button class="idx-chip active" onclick="switchIdx(this,'sp')">S&P500</button>
+  <div class="idx-chip-row" id="idxChipRow">
+    <button class="idx-chip active" onclick="switchIdx(this,'sp500')">S&P500</button>
     <button class="idx-chip" onclick="switchIdx(this,'kospi')">코스피</button>
     <button class="idx-chip" onclick="switchIdx(this,'usd')">환율</button>
     <button class="idx-chip" onclick="switchIdx(this,'gold')">금</button>
-    <button class="idx-chip" onclick="switchIdx(this,'btc')">비트코인</button>
+    <button class="idx-chip" onclick="switchIdx(this,'custom1')" id="idxChipCustom1">비트코인</button>
   </div>
 
   <div class="idx-period-row">
@@ -1838,10 +1702,10 @@
   </div>
 
   <div class="idx-chart-wrap"><canvas id="idxChart"></canvas></div>
-  <p class="idx-chart-note" id="idxChartNote">최근 7일 · 6,320 → 6,480 (+2.5%)</p>
+  <p class="idx-chart-note" id="idxChartNote"></p>
 
   <div class="sub-body" style="padding-top:0;padding-bottom:0;">
-    <div class="field"><label>메모 (오늘 흐름을 보고 든 생각)</label><textarea placeholder="위 추이를 보고 든 생각을 적어보세요">환율이 계속 오르네. 당분간 달러자산 비중 유지.</textarea></div>
+    <div class="field"><label>메모 (오늘 흐름을 보고 든 생각)</label><textarea id="idxMemo" placeholder="위 추이를 보고 든 생각을 적어보세요" onchange="saveIndexMemo()"></textarea></div>
   </div>
 
   <p class="demo-link" onclick="openSub('idxmemo')">📝 지난 메모 모아보기 →</p>
@@ -1927,23 +1791,23 @@
 <div class="subscreen" id="sub-bonbu">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('bonbu')">←</button><h1 class="sub-title">본부성</h1><button class="bonbu-myinfo-btn" onclick="openSub('myinfo')">👤</button></div>
 
-  <div class="notice" style="margin-top:10px;"><span class="tag">공지</span>이번 달 마지막 주 수요일 ZOOM은 20시예요.</div>
+  <div class="notice" id="bonbuNoticeBanner" style="margin-top:10px;display:none;"><span class="tag">공지</span><span id="bonbuNoticeText"></span></div>
   <div class="survey-banner" id="bonbuSeasonSurveyBanner" style="display:none;" onclick="openSub('seasonend')">
     <span>📋 시즌3 종료 설문에 참여해주세요</span><span class="sb-arrow">→</span>
   </div>
 
   <div class="section-head" style="margin-top:18px;"><h2>이달의 진도표</h2></div>
   <div class="progress-img">
-    <div class="pi-placeholder">📅 9월 진도표 이미지<br><span>운영자가 업로드</span></div>
+    <div class="pi-placeholder">📅 진도표 이미지<br><span>운영자가 업로드</span></div>
   </div>
 
-  <div class="section-head" id="bonbuSectionCert"><h2>오늘의 독서 인증</h2><span>《부의 추월차선》 30·31장</span></div>
+  <div class="section-head" id="bonbuSectionCert"><h2>오늘의 독서 인증</h2><span id="bonbuCertBookLabel">-</span></div>
   <div class="cert-box">
-    <textarea placeholder="오늘 읽은 부분에 대한 한 줄 생각을 남겨보세요"></textarea>
+    <textarea id="bonbuCertInput" placeholder="오늘 읽은 부분에 대한 한 줄 생각을 남겨보세요"></textarea>
     <button class="save-btn" onclick="submitCert()">인증하기</button>
   </div>
 
-  <div class="section-head"><h2>이번 달 스탬프</h2><span>18/22일</span></div>
+  <div class="section-head"><h2>이번 달 스탬프</h2><span id="bonbuStampCount">-</span></div>
   <div class="stamp-grid" id="stampGrid"></div>
 
   <div class="section-head" id="bonbuSectionLibrary"><h2>서재</h2></div>
@@ -1952,42 +1816,9 @@
     <button class="lib-tab" onclick="switchLib(this,'done')">읽은 책</button>
     <button class="lib-tab" onclick="switchLib(this,'next')">읽을 책</button>
   </div>
-  <div class="lib-panel" id="libReading">
-    <div class="book-card current">
-      <div class="book-cover">📖</div>
-      <div class="book-info"><p class="book-title">부의 추월차선</p><p class="book-sub">10주년 스페셜 에디션 · 9월</p></div>
-    </div>
-    <button class="add-row" onclick="openSub('bookdone')">✓ 완독하기</button>
-  </div>
-  <div class="lib-panel" id="libDone" style="display:none;">
-    <div id="libDoneList">
-    <div class="book-card">
-      <div class="book-cover">📗</div>
-      <div class="book-info">
-        <p class="book-title">부자아빠 가난한아빠</p>
-        <p class="book-sub">★★★★☆ · "고정관념을 깨는 계기가 된 책"</p>
-      </div>
-    </div>
-    </div>
-  </div>
-  <div class="lib-panel" id="libNext" style="display:none;">
-    <div class="book-card muted">
-      <div class="book-cover">📘</div>
-      <div class="book-info"><p class="book-title">돈의 심리학</p><p class="book-sub">10월</p></div>
-    </div>
-    <div class="book-card muted">
-      <div class="book-cover">📙</div>
-      <div class="book-info"><p class="book-title">부의 인문학</p><p class="book-sub">11월</p></div>
-    </div>
-    <div class="book-card muted">
-      <div class="book-cover">📕</div>
-      <div class="book-info"><p class="book-title">현명한 투자자</p><p class="book-sub">12월</p></div>
-    </div>
-    <div class="book-card muted">
-      <div class="book-cover">📓</div>
-      <div class="book-info"><p class="book-title">사이드파이어</p><p class="book-sub">1월</p></div>
-    </div>
-  </div>
+  <div class="lib-panel" id="libReading"></div>
+  <div class="lib-panel" id="libDone" style="display:none;"></div>
+  <div class="lib-panel" id="libNext" style="display:none;"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -2030,6 +1861,27 @@ function openSub(id){
   if(id === 'categories'){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
   }
+  if(id === 'ledger'){
+    try{ initLedgerView(); }catch(e){ console.error('ledger init failed', e); }
+  }
+  if(id === 'weeksettle'){
+    try{ renderWeekSettle(); }catch(e){ console.error('weeksettle render failed', e); }
+  }
+  if(id === 'monthsettle'){
+    try{ renderMonthSettle(); }catch(e){ console.error('monthsettle render failed', e); }
+  }
+  if(id === 'idx'){
+    (async () => {
+      try{
+        await loadTodayIndexCheck();
+        await loadIndexHistory();
+        renderIdxChart();
+      } catch(e){ console.error('idx init failed', e); }
+    })();
+  }
+  if(id === 'idxmemo'){
+    try{ loadIdxMemoList(); }catch(e){ console.error('idx memo list load failed', e); }
+  }
   if(id === 'roadmap'){
     (async () => {
       try{
@@ -2041,9 +1893,22 @@ function openSub(id){
   if(id === 'invest'){
     try{ loadGoals(); }catch(e){ console.error('goals load failed', e); }
   }
+  if(id === 'announce'){
+    try{ loadAnnounceList(); }catch(e){ console.error('announce list load failed', e); }
+  }
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'none';
     el.querySelector('.back-btn').style.visibility = 'visible';
+    try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
+    (async () => {
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); }
+      catch(e){ console.error('bonbu library load failed', e); }
+    })();
+  }
+  if(id === 'bookdone'){
+    const book = bonbuBooksCache.find(b=>b.id===currentReadingBookId);
+    const intro = document.getElementById('bdIntro');
+    if(intro) intro.innerHTML = `${book?'《'+book.title+'》를':'이 책을'} 완독하셨어요! 별점과 한 줄 총평은 <b>나만 볼 수 있어요.</b>`;
   }
 }
 function closeAllSubs(){
@@ -2063,30 +1928,124 @@ function addTx(type){
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
   row.className = 'tx-row';
-  const cats = type==='expense'
-    ? catOptions('식비')
-    : '<option>노동수입</option><option>비노동수입</option><option>이벤트수입</option>';
-  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)"><input class="tx-input" type="number" placeholder="금액"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
+  const cats = type==='expense' ? catOptions('') : incomeOptions('');
+  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
   list.appendChild(row);
-  const amtInput = row.querySelector('.tx-input');
-  const catSelect = row.querySelector('.tx-cat');
-  amtInput.addEventListener('change', () => {
-    syncToLongTermAsset(catSelect.value, Number(amtInput.value) || 0);
-  });
 }
-function syncToLongTermAsset(catName, amount){
-  if(!amount) return;
-  document.querySelectorAll('#longList .a-name').forEach(nameInput => {
-    if(nameInput.value === catName){
-      const amtInput = nameInput.closest('.asset-row').querySelector('.a-amt');
-      amtInput.value = (Number(amtInput.value)||0) + amount;
-      recomputeRoadmap();
-      const t = document.getElementById('toast');
-      t.textContent = '고정투자자산(저축보험)에 자동 반영됐어요';
-      t.classList.add('show');
-      setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
+async function renderWeekSettle(){
+  if(!currentUser) return;
+  if(myCategoriesCache.length === 0) await loadMyCategories();
+  const start = getThisWeekMonday();
+  start.setDate(start.getDate() + weekOffset*7);
+  if(Object.keys(weekTxCache).length === 0 || weekOffset !== 0){
+    await loadWeekTransactions(start);
+  }
+  const dayLabels = ['월','화','수','목','금','토','일'];
+  const weekDates = [];
+  for(let i=0;i<7;i++){ const d = new Date(start); d.setDate(start.getDate()+i); weekDates.push(d); }
+
+  const incomeWrap = document.getElementById('wsIncomeGroups');
+  const expenseWrap = document.getElementById('wsExpenseGroups');
+  incomeWrap.innerHTML = ''; expenseWrap.innerHTML = '';
+  let incomeTotal = 0, expenseTotal = 0;
+  let anyRow = false;
+
+  myCategoriesCache.forEach(cat => {
+    const dayAmounts = weekDates.map(d => {
+      const tx = (weekTxCache[dateKey(d)] || []).filter(t => t.category_id === cat.id);
+      return tx.reduce((s,t)=>s+Number(t.amount),0);
+    });
+    const total = dayAmounts.reduce((s,v)=>s+v,0);
+    const budget = weekDates.reduce((s,d) => {
+      const due = getDueItemsForDate(d).find(x=>x.category_id===cat.id);
+      return s + (due ? due.amount : 0);
+    }, 0);
+    if(total === 0 && budget === 0) return;
+    anyRow = true;
+    if(cat.kind === 'income') incomeTotal += total; else expenseTotal += total;
+
+    const group = document.createElement('div');
+    group.className = 'settle-group';
+    const budgetText = budget > 0 ? (budget>=10000 ? Math.round(budget/10000*10)/10+'만' : budget.toLocaleString()) : '-';
+    const subLabel = cat.kind === 'income' ? `<i>${cat.income_tag||''}</i>` : '';
+    group.innerHTML = `
+      <div class="settle-row" onclick="toggleDays(this)">
+        <span class="tx-dot ${cat.kind}"></span><span class="sr-name">${cat.name||cat.category} ${subLabel}</span>
+        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">${budgetText}</b></span><span class="sr-col"><small>실제</small><b class="sr-total">${total.toLocaleString()}원</b></span></span><span class="sr-chev">⌄</span>
+      </div>
+      <div class="day-inputs">
+        ${dayLabels.map((dl,i)=>`<div class="di-cell"><label>${dl}</label><input type="text" value="${dayAmounts[i]?dayAmounts[i].toLocaleString():''}" readonly></div>`).join('')}
+      </div>
+    `;
+    (cat.kind === 'income' ? incomeWrap : expenseWrap).appendChild(group);
+  });
+
+  document.getElementById('wsIncomeTotal').textContent = incomeTotal.toLocaleString()+'원';
+  document.getElementById('wsExpenseTotal').textContent = expenseTotal.toLocaleString()+'원';
+  document.getElementById('wsEmptyNote').style.display = anyRow ? 'none' : 'block';
+  try{ colorizeSettleRows(); }catch(e){}
+}
+const MS_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D85A30','#D4537E','#888780','#8B5CF6','#F59E0B'];
+let msIncChartInstance, msExpChartInstance;
+async function renderMonthSettle(){
+  if(!currentUser) return;
+  if(myCategoriesCache.length === 0) await loadMyCategories();
+  const today = new Date();
+  const monthStart = dateKey(new Date(today.getFullYear(), today.getMonth(), 1));
+  const monthEnd = dateKey(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  document.getElementById('monthsettleTitle').textContent = `월말정산 · ${today.getMonth()+1}월`;
+
+  const { data, error } = await sb.from('transactions').select('*')
+    .eq('user_id', currentUser.id).gte('tx_date', monthStart).lte('tx_date', monthEnd);
+  if(error){ console.error('monthsettle load failed', error); return; }
+  const tx = data || [];
+
+  const catMap = {};
+  myCategoriesCache.forEach(c => catMap[c.id] = c);
+
+  const incomeByCat = {}, expenseByCat = {};
+  let incomeTotal = 0, expenseTotal = 0;
+  tx.forEach(t => {
+    const cat = catMap[t.category_id];
+    const label = cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
+    if(t.kind === 'income'){
+      incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount);
+      incomeTotal += Number(t.amount);
+    } else {
+      expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount);
+      expenseTotal += Number(t.amount);
     }
   });
+
+  document.getElementById('msIncomeTotal').textContent = incomeTotal.toLocaleString()+'원';
+  document.getElementById('msExpenseTotal').textContent = expenseTotal.toLocaleString()+'원';
+  document.getElementById('msEmptyNote').style.display = (tx.length===0) ? 'block' : 'none';
+
+  const incList = document.getElementById('msIncomeList');
+  const expList = document.getElementById('msExpenseList');
+  incList.innerHTML = Object.entries(incomeByCat).map(([name,amt])=>`<div class="ms-list-row"><span>${name}</span><b>${amt.toLocaleString()}원</b></div>`).join('') || '<p class="ac-sub" style="margin:0 20px;">수입 기록 없음</p>';
+  expList.innerHTML = Object.entries(expenseByCat).map(([name,amt])=>`<div class="ms-list-row"><span>${name}</span><b>${amt.toLocaleString()}원</b></div>`).join('') || '<p class="ac-sub" style="margin:0 20px;">지출 기록 없음</p>';
+
+  function renderChart(canvasId, legendId, dataObj, total, prevInstance){
+    if(prevInstance) prevInstance.destroy();
+    const entries = Object.entries(dataObj);
+    const legend = document.getElementById(legendId);
+    if(entries.length === 0 || total === 0){
+      legend.innerHTML = '<span>기록 없음</span>';
+      return null;
+    }
+    const labels = entries.map(e=>e[0]);
+    const values = entries.map(e=>e[1]);
+    const colors = labels.map((_,i)=>MS_COLORS[i % MS_COLORS.length]);
+    legend.innerHTML = entries.map(([name,amt],i)=>`<span><i style="background:${colors[i]};"></i>${name} ${Math.round(amt/total*100)}%</span>`).join('');
+    return new Chart(document.getElementById(canvasId), {
+      type:'doughnut',
+      data:{ datasets:[{ data:values, backgroundColor:colors, borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}} }
+    });
+  }
+  msIncChartInstance = renderChart('msIncChart','msIncLegend', incomeByCat, incomeTotal, msIncChartInstance);
+  msExpChartInstance = renderChart('msExpChart','msExpLegend', expenseByCat, expenseTotal, msExpChartInstance);
 }
 function toggleDays(rowEl){
   rowEl.parentElement.classList.toggle('open');
@@ -2102,86 +2061,189 @@ document.addEventListener('input', function(e){
     recalcTotal(e.target.closest('.settle-group'));
   }
 });
-const FIXED_PAYMENTS = {
-  1:  [{cat:'대출', name:'대출', amt:260000}],
-  5:  [{cat:'보험', name:'자동차보험', amt:85000}],
-  10: [{cat:'계모임', name:'계모임', amt:600000},{cat:'국민건강', name:'국민건강보험', amt:550000},{cat:'국민연금', name:'국민연금', amt:110000}],
-  15: [{cat:'교육비', name:'교육비', amt:627000}],
-  20: [{cat:'통신', name:'통신비', amt:300000}],
-  25: [{cat:'관리비', name:'관리비', amt:300000}],
-};
-const FIXED_INCOME = {
-  25: [{cat:'노동수입', name:'월급', amt:3000000}],
-  10: [{cat:'비노동수입', name:'배당금', amt:82000}],
-};
 const INCOME_TAGS = ['노동수입','비노동수입','이벤트수입'];
 function incomeOptions(selected){
   return INCOME_TAGS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
-const EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금'];
 function catOptions(selected){
-  return EXPENSE_CATS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
+  const names = myCategoriesCache.filter(c=>c.kind==='expense').map(c=>c.category);
+  if(names.length === 0) return `<option>${selected||'카테고리 없음'}</option>`;
+  return names.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
-function showDay(el, label){
-  document.querySelectorAll('.g-cell, .m-cell').forEach(c=>c.classList.remove('selected'));
-  el.classList.add('selected');
-  document.querySelector('.dd-title').textContent = label + ' 상세내역';
 
-  const dayNum = parseInt(label.split('/').pop(), 10);
+/* ── 가계부: 실제 카테고리/거래 데이터 ── */
+let myCategoriesCache = [];
+let weekTxCache = {}; // { 'YYYY-MM-DD': [tx, ...] }
+function dayLabelForDate(d){
+  const day = d.getDate();
+  const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  return (day === lastDay) ? ['말일', String(day)] : [String(day)];
+}
+async function loadMyCategories(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id);
+  if(error){ console.error('categories load failed', error); return; }
+  myCategoriesCache = data || [];
+}
+function getDueItemsForDate(d){
+  const labels = dayLabelForDate(d); // ['말일','30'] or ['5']
+  const items = [];
+  myCategoriesCache.forEach(c => {
+    if(c.category_splits && c.category_splits.length > 0){
+      c.category_splits.forEach(s => {
+        if(labels.includes(s.day_label)){
+          items.push({ category_id:c.id, category:c.category, name:c.name, kind:c.kind, income_tag:c.income_tag, amount:Number(s.amount)||0 });
+        }
+      });
+    } else if(c.payment_day && labels.includes(c.payment_day)){
+      items.push({ category_id:c.id, category:c.category, name:c.name, kind:c.kind, income_tag:c.income_tag, amount:Number(c.monthly_budget)||0 });
+    }
+  });
+  return items;
+}
+function dateKey(d){ return d.toISOString().slice(0,10); }
+async function loadWeekTransactions(weekStart){
+  if(!currentUser) return;
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate()+6);
+  const { data, error } = await sb.from('transactions').select('*')
+    .eq('user_id', currentUser.id)
+    .gte('tx_date', dateKey(weekStart)).lte('tx_date', dateKey(weekEnd));
+  weekTxCache = {};
+  if(error){ console.error('week tx load failed', error); return; }
+  (data||[]).forEach(tx => {
+    if(!weekTxCache[tx.tx_date]) weekTxCache[tx.tx_date] = [];
+    weekTxCache[tx.tx_date].push(tx);
+  });
+}
+let selectedDayDate = null;
+async function showRealDay(el, d){
+  document.querySelectorAll('.g-cell, .m-cell').forEach(c=>c.classList.remove('selected'));
+  if(el) el.classList.add('selected');
+  selectedDayDate = d;
+  const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+  document.querySelector('.dd-title').textContent = `${dow} ${d.getMonth()+1}/${d.getDate()} 상세내역`;
+
+  const key = dateKey(d);
   const list = document.getElementById('dayTxList');
+  list.innerHTML = '<p class="ac-sub" style="margin:0 20px;">불러오는 중...</p>';
+
+  const due = getDueItemsForDate(d);
+  let dayTx = weekTxCache[key];
+  if(dayTx === undefined){
+    const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).eq('tx_date', key);
+    dayTx = data || [];
+    weekTxCache[key] = dayTx;
+  }
   list.innerHTML = '';
 
-  const fixedIncome = FIXED_INCOME[dayNum];
-  if(fixedIncome){
-    fixedIncome.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'tx-row fixed income-fixed';
-      row.innerHTML = `
-        <div class="tx-fixed-top">
-          <span class="tx-dot income"></span><span class="tx-fixed-badge income">고정</span>
-          <select class="tx-cat" disabled>${incomeOptions(item.cat)}</select>
-        </div>
-        <div class="tx-fixed-bottom">
-          <span class="tx-fixed-name">${item.name}</span>
-          <span class="tx-fixed-budget">예산 ${item.amt.toLocaleString()}원</span>
-          <input class="tx-input" type="number" value="${item.amt}">
-        </div>`;
-      list.appendChild(row);
-    });
+  due.forEach(item => {
+    const existing = dayTx.find(tx => tx.category_id === item.category_id && tx.is_auto_fixed);
+    const amt = existing ? existing.amount : item.amount;
+    const row = document.createElement('div');
+    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '');
+    row.dataset.txId = existing ? existing.id : '';
+    row.dataset.categoryId = item.category_id;
+    row.dataset.autoFixed = '1';
+    row.dataset.kind = item.kind;
+    const catSelectHtml = item.kind === 'income'
+      ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
+      : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
+    row.innerHTML = `
+      <div class="tx-fixed-top">
+        <span class="tx-dot ${item.kind}"></span><span class="tx-fixed-badge${item.kind==='income'?' income':''}">고정</span>
+        ${catSelectHtml}
+      </div>
+      <div class="tx-fixed-bottom">
+        <span class="tx-fixed-name">${item.name}</span>
+        <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
+        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveFixedTx(this)">
+      </div>`;
+    list.appendChild(row);
+  });
+
+  const manualTx = dayTx.filter(tx => !tx.is_auto_fixed);
+  manualTx.forEach(tx => {
+    const row = document.createElement('div');
+    row.className = 'tx-row';
+    row.dataset.txId = tx.id;
+    const catHtml = tx.kind === 'income'
+      ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
+      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
+    row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
+    list.appendChild(row);
+  });
+
+  if(due.length === 0 && manualTx.length === 0){
+    const emptyNote = document.createElement('p');
+    emptyNote.className = 'field-hint';
+    emptyNote.style.margin = '0 20px';
+    emptyNote.textContent = '이 날은 아직 기록이 없어요. 아래 버튼으로 추가해보세요.';
+    list.appendChild(emptyNote);
   }
-  const fixed = FIXED_PAYMENTS[dayNum];
-  if(fixed){
-    fixed.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'tx-row fixed';
-      row.innerHTML = `
-        <div class="tx-fixed-top">
-          <span class="tx-dot expense"></span><span class="tx-fixed-badge">고정</span>
-          <select class="tx-cat" disabled>${catOptions(item.cat)}</select>
-        </div>
-        <div class="tx-fixed-bottom">
-          <span class="tx-fixed-name">${item.name}</span>
-          <span class="tx-fixed-budget">예산 ${item.amt.toLocaleString()}원</span>
-          <input class="tx-input" type="number" value="${item.amt}">
-        </div>`;
-      list.appendChild(row);
-    });
+}
+async function saveFixedTx(input){
+  const row = input.closest('.tx-row');
+  const amount = rawMoney(input);
+  const categoryId = row.dataset.categoryId;
+  const kind = row.dataset.kind;
+  const key = dateKey(selectedDayDate);
+  if(row.dataset.txId){
+    const { error } = await sb.from('transactions').update({ amount }).eq('id', row.dataset.txId);
+    if(error){ console.error('fixed tx update failed', error); return; }
+    const tx = weekTxCache[key]?.find(t=>t.id===row.dataset.txId);
+    if(tx) tx.amount = amount;
+  } else {
+    const { data, error } = await sb.from('transactions').insert({
+      user_id: currentUser.id, category_id: categoryId, amount, kind, tx_date: key, is_auto_fixed: true,
+    }).select().single();
+    if(error){ console.error('fixed tx insert failed', error); return; }
+    row.dataset.txId = data.id;
+    if(!weekTxCache[key]) weekTxCache[key] = [];
+    weekTxCache[key].push(data);
   }
-  if(label.includes('9/17')){
-    if(todaysEveningActual && todaysEveningActual.length > 0){
-      todaysEveningActual.forEach(item=>{
-        const row = document.createElement('div');
-        row.className = 'tx-row';
-        row.innerHTML = `<span class="tx-dot ${item.type||'expense'}"></span><span class="tx-fixed-name">${item.name}</span><input class="tx-input" type="number" value="${item.amt}">`;
-        list.appendChild(row);
-      });
-    } else {
-      const extra = document.createElement('div');
-      extra.className = 'tx-row';
-      extra.innerHTML = `<span class="tx-dot expense"></span><select class="tx-cat">${catOptions('식비')}</select><input class="tx-name" type="text" placeholder="거래명(선택)" value="저녁 외식"><input class="tx-input" type="number" value="32000"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
-      list.appendChild(extra);
-    }
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
+}
+async function saveManualTx(el){
+  const row = el.closest('.tx-row');
+  const catSelect = row.querySelector('.tx-cat');
+  const nameInput = row.querySelector('.tx-name');
+  const amtInput = row.querySelector('.tx-input');
+  const category = catSelect.value;
+  const name = nameInput.value.trim();
+  const amount = rawMoney(amtInput);
+  const kind = row.querySelector('.tx-dot').classList.contains('income') ? 'income' : 'expense';
+  const key = dateKey(selectedDayDate);
+  const myCat = myCategoriesCache.find(c => c.kind===kind && c.category===category);
+  const payload = {
+    user_id: currentUser.id, category_id: myCat ? myCat.id : null, category_snapshot: category,
+    name, amount, kind, tx_date: key, is_auto_fixed: false,
+  };
+  if(row.dataset.txId){
+    const { error } = await sb.from('transactions').update(payload).eq('id', row.dataset.txId);
+    if(error){ console.error('manual tx update failed', error); return; }
+  } else {
+    const { data, error } = await sb.from('transactions').insert(payload).select().single();
+    if(error){ console.error('manual tx insert failed', error); return; }
+    row.dataset.txId = data.id;
+    if(!weekTxCache[key]) weekTxCache[key] = [];
+    weekTxCache[key].push(data);
   }
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
+}
+async function deleteManualTx(btn){
+  const row = btn.closest('.tx-row');
+  const id = row.dataset.txId;
+  if(id){
+    const { error } = await sb.from('transactions').delete().eq('id', id);
+    if(error){ console.error('tx delete failed', error); return; }
+    const key = dateKey(selectedDayDate);
+    if(weekTxCache[key]) weekTxCache[key] = weekTxCache[key].filter(t=>t.id!==id);
+  }
+  row.remove();
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
 }
 async function logMissionCompletion(missionType){
   if(!currentUser) return;
@@ -2757,9 +2819,93 @@ function renderWeekStrip(){
     strip.appendChild(card);
   }
 }
-function submitCert(){
+let bonbuBooksCache = [];
+let bonbuProgressCache = {}; // book_id -> progress row
+let currentReadingBookId = null;
+
+async function loadBonbuLibrary(){
+  if(!currentUser) return;
+  const [{ data: books, error: bErr }, { data: progress, error: pErr }] = await Promise.all([
+    sb.from('bonbu_books').select('*').order('sort_order'),
+    sb.from('bonbu_book_progress').select('*').eq('user_id', currentUser.id),
+  ]);
+  if(bErr){ console.error('books load failed', bErr); return; }
+  bonbuBooksCache = books || [];
+  bonbuProgressCache = {};
+  (progress||[]).forEach(p => bonbuProgressCache[p.book_id] = p);
+
+  const readingList = document.getElementById('libReading');
+  const doneList = document.getElementById('libDone');
+  const nextList = document.getElementById('libNext');
+  readingList.innerHTML = ''; doneList.innerHTML = ''; nextList.innerHTML = '';
+  currentReadingBookId = null;
+
+  if(bonbuBooksCache.length === 0){
+    readingList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 운영자가 등록한 책이 없어요.</p>';
+  }
+
+  bonbuBooksCache.forEach(book => {
+    const prog = bonbuProgressCache[book.id];
+    const status = prog ? prog.status : 'upcoming';
+    if(status === 'reading'){
+      currentReadingBookId = book.id;
+      const card = document.createElement('div');
+      card.className = 'book-card current';
+      card.innerHTML = `<div class="book-cover">📖</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.subtitle||''}</p></div>`;
+      readingList.appendChild(card);
+    } else if(status === 'done'){
+      const stars = '★'.repeat(prog.rating||0) + '☆'.repeat(5-(prog.rating||0));
+      const card = document.createElement('div');
+      card.className = 'book-card';
+      card.innerHTML = `<div class="book-cover">📗</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${stars}${prog.review?' · "'+prog.review+'"':''}</p></div>`;
+      doneList.appendChild(card);
+    } else {
+      const card = document.createElement('div');
+      card.className = 'book-card muted';
+      card.innerHTML = `<div class="book-cover">📘</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.subtitle||'읽을 예정'}</p></div>`;
+      nextList.appendChild(card);
+    }
+  });
+
+  if(currentReadingBookId){
+    const btn = document.createElement('button');
+    btn.className = 'add-row';
+    btn.textContent = '✓ 완독하기';
+    btn.onclick = () => openSub('bookdone');
+    readingList.appendChild(btn);
+  } else if(bonbuBooksCache.length > 0){
+    readingList.innerHTML += '<p class="ac-sub" style="text-align:center;padding:10px 0;">현재 읽는 중인 책이 없어요.</p>';
+  }
+  if(doneList.innerHTML === '') doneList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 완독한 책이 없어요.</p>';
+  if(nextList.innerHTML === '') nextList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">읽을 예정인 책이 없어요.</p>';
+
+  const bookLabel = document.getElementById('bonbuCertBookLabel');
+  if(bookLabel){
+    const curBook = bonbuBooksCache.find(b=>b.id===currentReadingBookId);
+    bookLabel.textContent = curBook ? curBook.title : '읽는 중인 책 없음';
+  }
+}
+async function loadTodayCert(){
+  if(!currentUser) return;
+  const { data } = await sb.from('bonbu_reading_logs').select('note').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
+  const input = document.getElementById('bonbuCertInput');
+  if(input) input.value = data ? data.note : '';
+}
+async function submitCert(){
+  if(!currentUser) return;
+  const input = document.getElementById('bonbuCertInput');
+  const note = input.value.trim();
+  if(!note) return;
+  const { error } = await sb.from('bonbu_reading_logs').upsert({
+    user_id: currentUser.id, log_date: dateKey(new Date()), note, book_id: currentReadingBookId,
+  }, { onConflict: 'user_id,log_date' });
   const t = document.getElementById('toast');
-  t.textContent = '오늘의 독서가 인증됐어요 · 스탬프 획득!';
+  if(error){
+    t.textContent = '인증 실패: ' + error.message;
+  } else {
+    t.textContent = '오늘의 독서가 인증됐어요 · 스탬프 획득!';
+    await renderStamps();
+  }
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
 }
@@ -2770,33 +2916,34 @@ function switchLib(btn, which){
   document.getElementById('libDone').style.display = which==='done' ? 'block' : 'none';
   document.getElementById('libNext').style.display = which==='next' ? 'block' : 'none';
 }
-(function renderStamps(){
+async function renderStamps(){
   const grid = document.getElementById('stampGrid');
-  if(!grid) return;
-  const total = 22, got = 18;
-  for(let i=1;i<=total;i++){
+  const countLabel = document.getElementById('bonbuStampCount');
+  if(!grid || !currentUser) return;
+  const today = new Date();
+  const monthStart = dateKey(new Date(today.getFullYear(), today.getMonth(), 1));
+  const monthEnd = dateKey(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  const { data } = await sb.from('bonbu_reading_logs').select('log_date').eq('user_id', currentUser.id).gte('log_date', monthStart).lte('log_date', monthEnd);
+  const loggedDates = new Set((data||[]).map(r=>r.log_date));
+
+  // 이번 달 평일 수 계산
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+  let weekdayCount = 0;
+  grid.innerHTML = '';
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(today.getFullYear(), today.getMonth(), day);
+    const dow = d.getDay();
+    if(dow === 0 || dow === 6) continue; // 주말 제외
+    weekdayCount++;
+    const key = dateKey(d);
     const s = document.createElement('div');
-    s.className = 'stamp ' + (i<=got ? 'got' : 'empty');
-    s.textContent = i<=got ? '✓' : '';
+    const got = loggedDates.has(key);
+    s.className = 'stamp ' + (got ? 'got' : 'empty');
+    s.textContent = got ? '✓' : '';
     grid.appendChild(s);
   }
-})();
-
-(function renderMonthCharts(){
-  const inc = document.getElementById('msIncChart');
-  const exp = document.getElementById('msExpChart');
-  if(!inc || !exp) return;
-  new Chart(inc, {
-    type:'doughnut',
-    data:{ datasets:[{ data:[96,3,1], backgroundColor:['#378ADD','#1D9E75','#EF9F27'], borderWidth:2 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}} }
-  });
-  new Chart(exp, {
-    type:'doughnut',
-    data:{ datasets:[{ data:[68,21,11], backgroundColor:['#D85A30','#D4537E','#888780'], borderWidth:2 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}} }
-  });
-})();
+  if(countLabel) countLabel.textContent = `${loggedDates.size}/${weekdayCount}일`;
+}
 
 function setDemoMode(mode){
   const main = document.getElementById('mainScreen');
@@ -2823,12 +2970,18 @@ function setDemoMode(mode){
     main.style.display = 'block';
     try{ loadMyStats(); }catch(e){ console.error('stats load failed', e); }
     try{ loadTodayMissionStatus(); }catch(e){ console.error('mission status load failed', e); }
+    try{ loadRoutineNotice(); }catch(e){ console.error('notice load failed', e); }
   } else if(mode === 'bonbu'){
     bonbu.style.position = 'static';
     bonbu.style.transform = 'none';
     bonbu.classList.add('open');
     bonbu.style.paddingBottom = '40px';
     bonbuBack.style.visibility = 'hidden';
+    try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
+    (async () => {
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); }
+      catch(e){ console.error('bonbu library load failed', e); }
+    })();
   } else if(mode === 'admin'){
     admin.style.display = 'block';
     try{ loadApprovalList(); }catch(e){ console.error('approval list load failed', e); }
@@ -3635,27 +3788,83 @@ function sendChat(){
   input.value = '';
   thread.scrollTop = thread.scrollHeight;
 }
-let announceProg = '루틴부';
+let announceProgKey = 'routinebu';
 function switchAnnounceProg(btn, prog){
   document.querySelectorAll('#sub-announce .prog-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  announceProg = prog === 'routine' ? '루틴부' : '본부성';
-  document.getElementById('announceProgLabel').textContent = announceProg;
+  announceProgKey = prog === 'routine' ? 'routinebu' : 'bonbuseong';
+  document.getElementById('announceProgLabel').textContent = announceProgKey === 'routinebu' ? '루틴부' : '본부성';
+  loadAnnounceList();
 }
-function postAnnounce(){
+async function postAnnounce(){
   const input = document.getElementById('announceInput');
   const text = input.value.trim();
-  if(!text) return;
-  const list = document.getElementById('announceList');
-  const row = document.createElement('div');
-  row.className = 'announce-row';
-  row.innerHTML = `<p class="ac-sub">방금 게시 · ${announceProg}</p><p class="ac-line">${text}</p>`;
-  list.prepend(row);
-  input.value = '';
+  if(!text || !currentUser) return;
+  const { error } = await sb.from('notices').insert({
+    program: announceProgKey, content: text, created_by: currentUser.id,
+  });
   const t = document.getElementById('toast');
+  if(error){
+    t.textContent = '게시 실패: ' + error.message;
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2000);
+    return;
+  }
+  input.value = '';
   t.textContent = '공지가 게시됐어요';
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1500);
+  loadAnnounceList();
+}
+async function loadAnnounceList(){
+  const list = document.getElementById('announceList');
+  if(!list) return;
+  list.innerHTML = '<p class="ac-sub">불러오는 중...</p>';
+  const { data, error } = await sb.from('notices').select('*').eq('program', announceProgKey).order('created_at', { ascending: false });
+  if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  if(!data || data.length === 0){
+    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:8px 0;">게시된 공지가 없어요</p>';
+    return;
+  }
+  const progLabel = announceProgKey === 'routinebu' ? '루틴부' : '본부성';
+  list.innerHTML = '';
+  data.forEach(n => {
+    const row = document.createElement('div');
+    row.className = 'announce-row';
+    const dateStr = new Date(n.created_at).toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
+    row.innerHTML = `
+      <p class="ac-sub">${dateStr} 게시 · ${progLabel} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteNotice('${n.id}')">삭제</span></p>
+      <p class="ac-line">${n.content}</p>
+    `;
+    list.appendChild(row);
+  });
+}
+async function deleteNotice(id){
+  const { error } = await sb.from('notices').delete().eq('id', id);
+  if(error){ console.error('notice delete failed', error); return; }
+  loadAnnounceList();
+}
+async function loadRoutineNotice(){
+  const { data } = await sb.from('notices').select('content').eq('program','routinebu').order('created_at',{ascending:false}).limit(1);
+  const banner = document.getElementById('routineNoticeBanner');
+  if(!banner) return;
+  if(data && data.length > 0){
+    document.getElementById('routineNoticeText').textContent = data[0].content;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+async function loadBonbuNotice(){
+  const { data } = await sb.from('notices').select('content').eq('program','bonbuseong').order('created_at',{ascending:false}).limit(1);
+  const banner = document.getElementById('bonbuNoticeBanner');
+  if(!banner) return;
+  if(data && data.length > 0){
+    document.getElementById('bonbuNoticeText').textContent = data[0].content;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 function toggleSeasonSurvey(checkbox){
   document.getElementById('seasonSurveyBanner').style.display = checkbox.checked ? 'flex' : 'none';
@@ -3664,16 +3873,10 @@ function toggleBonbuSeasonSurvey(checkbox){
   document.getElementById('bonbuSeasonSurveyBanner').style.display = checkbox.checked ? 'flex' : 'none';
 }
 
-/* ── 지수 추이 그래프 ── */
-const idxData = {
-  sp:   { name:'S&P500',   unit:'',   week:[6320,6350,6380,6410,6395,6440,6480], month:[6180,6210,6250,6280,6300,6340,6360,6390,6410,6395,6420,6440,6455,6480] },
-  kospi:{ name:'코스피',    unit:'',   week:[3140,3160,3175,3150,3180,3200,3210], month:[3020,3050,3080,3060,3090,3110,3130,3150,3160,3175,3150,3180,3200,3210] },
-  usd:  { name:'달러환율',  unit:'',   week:[1342,1348,1350,1355,1358,1360,1362], month:[1310,1315,1320,1325,1330,1332,1338,1342,1348,1350,1355,1358,1360,1362] },
-  gold: { name:'금',        unit:'',   week:[2610000,2625000,2630000,2650000,2660000,2670000,2680000], month:[2500000,2520000,2540000,2560000,2570000,2580000,2600000,2610000,2625000,2630000,2650000,2660000,2670000,2680000] },
-  btc:  { name:'비트코인',  unit:'',   week:[138000000,140000000,139500000,141000000,140500000,141500000,142000000], month:[128000000,130000000,133000000,135000000,134000000,136000000,137000000,138000000,140000000,139500000,141000000,140500000,141500000,142000000] }
-};
-let curIdx = 'sp', curPeriod = 7;
+/* ── 지수 추이 그래프 (실데이터) ── */
+let curIdx = 'sp500', curPeriod = 7;
 let idxChart;
+let idxHistoryCache = [];
 function switchIdx(btn, key){
   document.querySelectorAll('.idx-chip').forEach(c=>c.classList.remove('active'));
   btn.classList.add('active');
@@ -3686,21 +3889,38 @@ function switchIdxPeriod(btn, period){
   curPeriod = period;
   renderIdxChart();
 }
+async function loadIndexHistory(){
+  if(!currentUser) return;
+  const since = new Date(); since.setDate(since.getDate() - 30);
+  const { data, error } = await sb.from('index_checks').select('*')
+    .eq('user_id', currentUser.id).gte('log_date', dateKey(since)).order('log_date', { ascending: true });
+  if(error){ console.error('index history load failed', error); return; }
+  idxHistoryCache = data || [];
+  const custom1Chip = document.getElementById('idxChipCustom1');
+  if(custom1Chip && idxHistoryCache.length > 0){
+    custom1Chip.textContent = idxHistoryCache[idxHistoryCache.length-1].custom1_name || '비트코인';
+  }
+}
 function renderIdxChart(){
   const canvas = document.getElementById('idxChart');
+  const note = document.getElementById('idxChartNote');
   if(!canvas) return;
-  const d = idxData[curIdx];
-  const data = curPeriod === 7 ? d.week : d.month;
-  const first = data[0], last = data[data.length-1];
-  const pct = (((last-first)/first)*100).toFixed(1);
-  const label = curPeriod===7 ? '최근 7일' : '최근 30일';
-  document.getElementById('idxChartNote').textContent =
-    `${label} · ${first.toLocaleString()} → ${last.toLocaleString()} (${pct>=0?'+':''}${pct}%)`;
+  const recent = idxHistoryCache.slice(-curPeriod);
+  const field = curIdx === 'sp500' ? 'sp500' : curIdx === 'kospi' ? 'kospi' : curIdx === 'usd' ? 'usd' : curIdx === 'gold' ? 'gold' : 'custom1_value';
+  const points = recent.filter(r => r[field] !== null && r[field] !== undefined).map(r => ({ x: r.log_date, y: Number(r[field]) }));
   if(idxChart) idxChart.destroy();
+  if(points.length === 0){
+    note.textContent = '아직 기록이 없어요. 오늘 기록을 남겨보세요.';
+    return;
+  }
+  const first = points[0].y, last = points[points.length-1].y;
+  const pct = first ? (((last-first)/first)*100).toFixed(1) : '0.0';
+  const label = curPeriod===7 ? '최근 7일' : '최근 30일';
+  note.textContent = `${label} · ${first.toLocaleString()} → ${last.toLocaleString()} (${pct>=0?'+':''}${pct}%)`;
   idxChart = new Chart(canvas, {
     type:'line',
-    data:{ labels:data.map((_,i)=>i+1), datasets:[{
-      data, borderColor:'#20402E', backgroundColor:'rgba(32,64,46,.08)',
+    data:{ labels:points.map(p=>p.x.slice(5)), datasets:[{
+      data: points.map(p=>p.y), borderColor:'#20402E', backgroundColor:'rgba(32,64,46,.08)',
       fill:true, tension:.3, borderWidth:2, pointRadius:0
     }]},
     options:{ responsive:true, maintainAspectRatio:false,
@@ -3712,9 +3932,79 @@ function renderIdxChart(){
     }
   });
 }
-document.addEventListener('DOMContentLoaded', () => {
-  try{ renderIdxChart(); }catch(e){ console.error('idx chart init failed', e); }
-});
+async function saveIndexCheck(){
+  if(!currentUser) return;
+  const payload = {
+    user_id: currentUser.id,
+    log_date: dateKey(new Date()),
+    sp500: document.getElementById('idxSp500').value ? Number(document.getElementById('idxSp500').value) : null,
+    kospi: document.getElementById('idxKospi').value ? Number(document.getElementById('idxKospi').value) : null,
+    usd: document.getElementById('idxUsd').value ? Number(document.getElementById('idxUsd').value) : null,
+    gold: document.getElementById('idxGold').value ? Number(document.getElementById('idxGold').value) : null,
+    custom1_name: document.getElementById('idxCustom1Name').value.trim() || '비트코인',
+    custom1_value: document.getElementById('idxCustom1Value').value ? Number(document.getElementById('idxCustom1Value').value) : null,
+    custom2_name: document.getElementById('idxCustom2Name').value.trim() || '내 보유종목',
+    custom2_value: document.getElementById('idxCustom2Value').value ? Number(document.getElementById('idxCustom2Value').value) : null,
+  };
+  const { error } = await sb.from('index_checks').upsert(payload, { onConflict: 'user_id,log_date' });
+  if(error){ console.error('index save failed', error); return; }
+  await logMissionCompletion('idx'); loadMyStats();
+  await loadIndexHistory();
+  renderIdxChart();
+  const card = document.querySelector('.mission[data-target="idx"]');
+  if(card) card.classList.add('done');
+  updateCount();
+  closeSub('idx');
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1400);
+}
+async function saveIndexMemo(){
+  if(!currentUser) return;
+  const memo = document.getElementById('idxMemo').value.trim();
+  const { error } = await sb.from('index_checks').upsert({
+    user_id: currentUser.id, log_date: dateKey(new Date()), memo,
+  }, { onConflict: 'user_id,log_date' });
+  if(error) console.error('index memo save failed', error);
+}
+async function loadTodayIndexCheck(){
+  if(!currentUser) return;
+  const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
+  if(!data) return;
+  if(data.sp500!=null) document.getElementById('idxSp500').value = data.sp500;
+  if(data.kospi!=null) document.getElementById('idxKospi').value = data.kospi;
+  if(data.usd!=null) document.getElementById('idxUsd').value = data.usd;
+  if(data.gold!=null) document.getElementById('idxGold').value = data.gold;
+  if(data.custom1_name) document.getElementById('idxCustom1Name').value = data.custom1_name;
+  if(data.custom1_value!=null) document.getElementById('idxCustom1Value').value = data.custom1_value;
+  if(data.custom2_name) document.getElementById('idxCustom2Name').value = data.custom2_name;
+  if(data.custom2_value!=null) document.getElementById('idxCustom2Value').value = data.custom2_value;
+  if(data.memo) document.getElementById('idxMemo').value = data.memo;
+}
+async function loadIdxMemoList(){
+  if(!currentUser) return;
+  const list = document.getElementById('idxMemoList');
+  const { data, error } = await sb.from('index_checks').select('log_date, memo')
+    .eq('user_id', currentUser.id).not('memo','is',null).neq('memo','').order('log_date',{ascending:false});
+  if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  if(!data || data.length === 0){
+    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 남긴 메모가 없어요.</p>';
+    return;
+  }
+  const dow = ['일','월','화','수','목','금','토'];
+  let curMonth = null;
+  let html = '';
+  data.forEach(r => {
+    const d = new Date(r.log_date+'T00:00:00');
+    const monthLabel = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+    if(monthLabel !== curMonth){
+      html += `<p class="memo-month">${monthLabel}</p>`;
+      curMonth = monthLabel;
+    }
+    html += `<div class="memo-card"><p class="memo-date">${d.getMonth()+1}월 ${d.getDate()}일 ${dow[d.getDay()]}요일</p><p class="memo-text">${r.memo}</p></div>`;
+  });
+  list.innerHTML = html;
+}
 function selectSeasonOpt(el){
   document.querySelectorAll('.se-option').forEach(o=>o.classList.remove('selected'));
   el.classList.add('selected');
@@ -3738,26 +4028,34 @@ function setBdStar(n){
     s.classList.toggle('on', i < n);
   });
 }
-function submitBookDone(){
-  const stars = '★'.repeat(bdStarCount) + '☆'.repeat(5-bdStarCount);
-  const review = document.getElementById('bdReview').value.trim() || '총평 없음';
-  const list = document.getElementById('libDoneList');
-  const card = document.createElement('div');
-  card.className = 'book-card';
-  card.innerHTML = `
-    <div class="book-cover">📙</div>
-    <div class="book-info">
-      <p class="book-title">부의 추월차선</p>
-      <p class="book-sub">${stars} · "${review}"</p>
-    </div>
-  `;
-  list.prepend(card);
+async function submitBookDone(){
+  if(!currentUser || !currentReadingBookId) return;
+  const btn = document.querySelector('#sub-bookdone .save-btn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const review = document.getElementById('bdReview').value.trim();
+  const { error } = await sb.from('bonbu_book_progress').upsert({
+    user_id: currentUser.id, book_id: currentReadingBookId, status: 'done',
+    rating: bdStarCount || null, review: review || null, completed_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,book_id' });
+  if(error){ console.error('book done save failed', error); btn.disabled=false; btn.textContent='완독 등록'; return; }
+
+  // 다음 순서 책을 '읽는 중'으로 자동 승급
+  const doneBook = bonbuBooksCache.find(b=>b.id===currentReadingBookId);
+  const nextBook = bonbuBooksCache
+    .filter(b => b.sort_order > (doneBook?doneBook.sort_order:0) && (!bonbuProgressCache[b.id] || bonbuProgressCache[b.id].status==='upcoming'))
+    .sort((a,b)=>a.sort_order-b.sort_order)[0];
+  if(nextBook){
+    await sb.from('bonbu_book_progress').upsert({
+      user_id: currentUser.id, book_id: nextBook.id, status: 'reading',
+    }, { onConflict: 'user_id,book_id' });
+  }
+  btn.disabled = false; btn.textContent = '완독 등록';
+  bdStarCount = 0;
+  document.getElementById('bdReview').value = '';
+  document.querySelectorAll('#bdStars span').forEach(s=>s.classList.remove('on'));
   closeSub('bookdone');
+  await loadBonbuLibrary();
   switchLib(document.querySelectorAll('.lib-tab')[1], 'done');
-  const t = document.getElementById('toast');
-  t.textContent = '완독 등록됐어요 🎉';
-  t.classList.add('show');
-  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
 }
 async function saveLevelAdjust(userId, btn){
   const detail = btn.closest('.member-detail');
@@ -3808,6 +4106,36 @@ async function loadFocusModeList(){
     return;
   }
   card.innerHTML = data.map(m => `<p class="ac-line"><b>${m.name || m.email}</b> · 진행중</p>`).join('');
+}
+async function loadAdminBookList(){
+  const wrap = document.getElementById('adminBookList');
+  if(!wrap) return;
+  const { data, error } = await sb.from('bonbu_books').select('*').order('sort_order');
+  if(error){ wrap.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  if(!data || data.length === 0){
+    wrap.innerHTML = '<p class="ac-sub" style="text-align:center;padding:6px 0;">등록된 책이 없어요. 아래에서 첫 책을 추가해보세요.</p>';
+    return;
+  }
+  wrap.innerHTML = data.map(b => `
+    <p class="ac-line">${b.sort_order+1}. <b>${b.title}</b>${b.subtitle?' · '+b.subtitle:''} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteBonbuBook('${b.id}')">삭제</span></p>
+  `).join('');
+}
+async function addBonbuBook(){
+  const title = document.getElementById('abTitle').value.trim();
+  const subtitle = document.getElementById('abSubtitle').value.trim();
+  if(!title || !currentUser) return;
+  const { data: existing } = await sb.from('bonbu_books').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+  const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
+  const { error } = await sb.from('bonbu_books').insert({ title, subtitle: subtitle || null, sort_order: nextOrder, created_by: currentUser.id });
+  if(error){ console.error('book add failed', error); return; }
+  document.getElementById('abTitle').value = '';
+  document.getElementById('abSubtitle').value = '';
+  loadAdminBookList();
+}
+async function deleteBonbuBook(id){
+  const { error } = await sb.from('bonbu_books').delete().eq('id', id);
+  if(error){ console.error('book delete failed', error); return; }
+  loadAdminBookList();
 }
 async function loadMemberList(){
   const list = document.getElementById('memberList');
@@ -3920,6 +4248,7 @@ function switchProg(btn, prog){
   if(!isRoutine){
     try{ loadBonbuMemberList(); }catch(e){ console.error('bonbu member list load failed', e); }
     try{ loadApprovalList('bonbuseong','bonbuApprovalCard', null); }catch(e){ console.error('bonbu approval load failed', e); }
+    try{ loadAdminBookList(); }catch(e){ console.error('admin book list load failed', e); }
   }
 }
 async function loadBonbuMemberList(){
@@ -3990,32 +4319,107 @@ function viewMemberScreen(sub, name){
 
 /* ── 과거 주/월 이동 ── */
 let weekOffset = 0;
-function navWeek(dir){
+function getThisWeekMonday(){
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+async function navWeek(dir){
   weekOffset += dir;
-  const base = new Date(2026, 8, 15); // 9/15 (현재 주 시작)
-  const start = new Date(base); start.setDate(start.getDate() + weekOffset*7);
+  const start = getThisWeekMonday();
+  start.setDate(start.getDate() + weekOffset*7);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => (d.getMonth()+1) + '.' + d.getDate();
-  const text = `2026.${fmt(start)} ~ ${fmt(end)} ${weekOffset===0 ? '<i>이번 주</i>' : ''}`;
+  const text = `${start.getFullYear()}.${fmt(start)} ~ ${fmt(end)} ${weekOffset===0 ? '<i>이번 주</i>' : ''}`;
   document.getElementById('weekNavLabel').innerHTML = text;
   const settleLabel = document.getElementById('weeksettleNavLabel');
   if(settleLabel) settleLabel.innerHTML = text;
 
-  const isCurrent = weekOffset === 0;
-  const content = document.getElementById('weeksettleContent');
-  const empty = document.getElementById('weeksettleEmpty');
-  if(content && empty){
-    content.style.display = isCurrent ? 'block' : 'none';
-    empty.style.display = isCurrent ? 'none' : 'block';
+  await loadWeekTransactions(start);
+  renderWeekGrid(start);
+  refreshLedgerSummary();
+  if(document.getElementById('sub-weeksettle').classList.contains('open')){
+    try{ await renderWeekSettle(); }catch(e){ console.error('weeksettle refresh failed', e); }
   }
-  const ledgerContent = document.getElementById('ledgerContent');
-  const ledgerEmpty = document.getElementById('ledgerEmpty');
-  if(ledgerContent && ledgerEmpty){
-    ledgerContent.style.display = isCurrent ? 'block' : 'none';
-    ledgerEmpty.style.display = isCurrent ? 'none' : 'block';
+}
+function renderWeekGrid(weekStart){
+  const grid = document.getElementById('grid7');
+  grid.querySelectorAll('.g-cell').forEach(c=>c.remove());
+  const dayLabels = ['월','화','수','목','금','토','일'];
+  const todayKey = dateKey(new Date());
+  for(let i=0;i<7;i++){
+    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const key = dateKey(d);
+    const tx = weekTxCache[key] || [];
+    const expenseSum = tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
+    const due = getDueItemsForDate(d);
+    const dueBudget = due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
+
+    const cell = document.createElement('div');
+    cell.className = 'g-cell';
+    cell.dataset.date = key;
+    if(key === todayKey) cell.classList.add('today-cell');
+
+    let inner = `${d.getDate()}`;
+    if(tx.length === 0 && due.length === 0){
+      cell.classList.add('empty');
+      inner += '<small>-</small>';
+    } else if(expenseSum === 0 && tx.length > 0){
+      cell.classList.add('nospend');
+      inner += '<span class="stamp">무지출</span>';
+    } else if(expenseSum === 0 && due.length === 0){
+      cell.classList.add('empty');
+      inner += '<small>-</small>';
+    } else {
+      const diff = dueBudget - expenseSum;
+      cell.classList.add(diff >= 0 ? 'ok' : 'over');
+      const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
+      inner += `<small>${diff>=0?'-':'+'}${diffText}</small>`;
+    }
+    cell.innerHTML = inner;
+    cell.onclick = () => showRealDay(cell, d);
+    grid.appendChild(cell);
   }
-  const dd = document.getElementById('dayDetail');
-  if(dd) dd.style.display = isCurrent ? 'block' : 'none';
+}
+function refreshWeekGridDisplay(){
+  const start = getThisWeekMonday();
+  start.setDate(start.getDate() + weekOffset*7);
+  renderWeekGrid(start);
+}
+function refreshLedgerSummary(){
+  const start = getThisWeekMonday();
+  start.setDate(start.getDate() + weekOffset*7);
+  let budget = 0, actual = 0;
+  for(let i=0;i<7;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const due = getDueItemsForDate(d);
+    budget += due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
+    const tx = weekTxCache[dateKey(d)] || [];
+    actual += tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
+  }
+  document.getElementById('lsBudget').textContent = budget.toLocaleString()+'원';
+  document.getElementById('lsActual').textContent = actual.toLocaleString()+'원';
+  const pct = budget > 0 ? Math.min(Math.round(actual/budget*100),100) : 0;
+  document.getElementById('lsBar').style.width = pct+'%';
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  const fmt = d => (d.getMonth()+1)+'/'+d.getDate();
+  const remain = budget - actual;
+  document.getElementById('lsNote').textContent = `${fmt(start)} ~ ${fmt(end)} · ${remain>=0?'남은 예산 '+remain.toLocaleString():'예산 초과 '+Math.abs(remain).toLocaleString()}원`;
+}
+async function initLedgerView(){
+  if(!currentUser) return;
+  await loadMyCategories();
+  weekOffset = 0;
+  const start = getThisWeekMonday();
+  const fmt = d => (d.getMonth()+1) + '.' + d.getDate();
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  document.getElementById('weekNavLabel').innerHTML = `${start.getFullYear()}.${fmt(start)} ~ ${fmt(end)} <i>이번 주</i>`;
+  await loadWeekTransactions(start);
+  renderWeekGrid(start);
+  refreshLedgerSummary();
 }
 function colorizeSettleRows(){
   document.querySelectorAll('.settle-row').forEach(row=>{
@@ -4048,9 +4452,11 @@ function navCalMonth(dir){
   calMonthOffset += dir;
   renderMonthGrid();
 }
-function renderMonthGrid(){
-  const base = new Date(2026, 8, 1); // 2026년 9월 기준
-  const d = new Date(base); d.setMonth(d.getMonth() + calMonthOffset);
+async function renderMonthGrid(){
+  const base = getThisWeekMonday(); // 오늘이 포함된 주의 월요일 기준으로 오늘 달 계산은 아래서 별도 처리
+  const today = new Date();
+  const d = new Date(today.getFullYear(), today.getMonth(), 1);
+  d.setMonth(d.getMonth() + calMonthOffset);
   const year = d.getFullYear(), month = d.getMonth();
   document.getElementById('calMonthLabel').textContent = `${year}년 ${month+1}월`;
 
@@ -4064,8 +4470,20 @@ function renderMonthGrid(){
   });
 
   const firstDay = new Date(year, month, 1);
-  const leadBlanks = (firstDay.getDay() + 6) % 7; // 월요일 시작 기준 오프셋
+  const leadBlanks = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month+1, 0).getDate();
+  const monthStartKey = dateKey(new Date(year, month, 1));
+  const monthEndKey = dateKey(new Date(year, month, daysInMonth));
+
+  let monthTx = {};
+  if(currentUser){
+    const { data } = await sb.from('transactions').select('*')
+      .eq('user_id', currentUser.id).gte('tx_date', monthStartKey).lte('tx_date', monthEndKey);
+    (data||[]).forEach(tx => {
+      if(!monthTx[tx.tx_date]) monthTx[tx.tx_date] = [];
+      monthTx[tx.tx_date].push(tx);
+    });
+  }
 
   for(let i=0;i<leadBlanks;i++){
     const blank = document.createElement('div');
@@ -4073,23 +4491,33 @@ function renderMonthGrid(){
     grid.appendChild(blank);
   }
   for(let day=1; day<=daysInMonth; day++){
+    const dObj = new Date(year, month, day);
+    const key = dateKey(dObj);
+    const tx = monthTx[key] || [];
+    const due = getDueItemsForDate(dObj);
+    const expenseSum = tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
+    const dueBudget = due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
+
     const cell = document.createElement('div');
-    let state;
-    if(day % 9 === 0) state = 'nospend';
-    else if(day % 7 === 0) state = 'empty';
-    else if(day % 5 === 0) state = 'over';
-    else state = 'ok';
-    cell.className = 'm-cell ' + state;
-    if(state === 'nospend'){
-      cell.innerHTML = `${day}<small>무지출</small>`;
+    let state, label;
+    if(tx.length === 0 && due.length === 0){
+      state = 'empty'; label = '-';
+    } else if(expenseSum === 0 && tx.length > 0){
+      state = 'nospend'; label = '무지출';
+    } else if(expenseSum === 0 && due.length === 0){
+      state = 'empty'; label = '-';
     } else {
-      const amt = state==='ok' ? '-' + (3+day%6) + '천' : state==='over' ? '+' + (1+day%3) + '천' : '-';
-      cell.innerHTML = `${day}<small>${amt}</small>`;
+      const diff = dueBudget - expenseSum;
+      state = diff >= 0 ? 'ok' : 'over';
+      const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
+      label = (diff>=0?'-':'+') + diffText;
     }
+    cell.className = 'm-cell ' + state;
+    cell.innerHTML = state==='nospend' ? `${day}<small>무지출</small>` : `${day}<small>${label}</small>`;
     cell.onclick = () => {
       document.querySelectorAll('.m-cell').forEach(c=>c.classList.remove('selected'));
       cell.classList.add('selected');
-      showDay(cell, `${month+1}/${day}`);
+      showRealDay(cell, dObj);
     };
     grid.appendChild(cell);
   }
@@ -4097,7 +4525,7 @@ function renderMonthGrid(){
 let monthOffset = 0;
 function navMonth(dir){
   monthOffset += dir;
-  const base = new Date(2026, 8, 1); // 9월
+  const base = new Date(); base.setDate(1);
   const d = new Date(base); d.setMonth(d.getMonth() + monthOffset);
   const label = document.getElementById('monthNavLabel');
   label.innerHTML = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${monthOffset===0 ? '<i>이번 달</i>' : ''}`;
@@ -4200,6 +4628,22 @@ function navMonth(dir){
 
   <div id="bonbuProgBody" style="display:none;">
   <div class="section-head">
+    <h2>서재 · 책 관리</h2>
+  </div>
+  <div class="admin-card" id="adminBookList">
+    <p class="ac-sub">불러오는 중...</p>
+  </div>
+  <div class="field" style="margin-top:10px;">
+    <label>책 제목</label>
+    <input type="text" id="abTitle" placeholder="예: 부의 추월차선">
+  </div>
+  <div class="field">
+    <label>부제/월 표시 (선택)</label>
+    <input type="text" id="abSubtitle" placeholder="예: 10주년 스페셜 에디션 · 9월">
+  </div>
+  <button class="add-row" onclick="addBonbuBook()">＋ 책 추가 (목록 맨 뒤에)</button>
+
+  <div class="section-head" style="margin-top:22px;">
     <h2>오늘의 독서인증 현황</h2>
     <label class="mini-toggle"><input type="checkbox" onchange="toggleUnsubmittedBonbu(this)"> 미제출만</label>
   </div>
