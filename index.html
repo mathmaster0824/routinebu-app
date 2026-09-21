@@ -1012,8 +1012,8 @@
     <p class="login-sub">루틴으로 부를 짓다 · 본질적인 부자로 성장하다</p>
 
     <div id="loginStep">
-      <div class="field"><label>이메일</label><input id="loginEmail" type="email" placeholder="you@email.com"></div>
-      <div class="field"><label>비밀번호</label><input id="loginPassword" type="password" placeholder="비밀번호"></div>
+      <div class="field"><label>이메일</label><input id="loginEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('loginPassword').focus();}"></div>
+      <div class="field"><label>비밀번호</label><input id="loginPassword" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}"></div>
       <button class="save-btn" id="loginBtn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="doLogin()">로그인</button>
       <p class="login-link" onclick="showOnboard('signup')">처음이신가요? 회원가입</p>
       <p class="login-link" onclick="requestPasswordReset()">비밀번호를 잊으셨나요?</p>
@@ -1022,7 +1022,7 @@
 
     <div id="onboardSignup" style="display:none;">
       <p class="ob-progress">회원가입</p>
-      <div class="field"><label>이름</label><input id="signupName" type="text" placeholder="실명으로 적어주세요"></div>
+      <div class="field"><label>이름</label><input id="signupName" type="text" placeholder="실명으로 적어주세요" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupEmail').focus();}"></div>
       <div class="field">
         <label>신청 프로그램</label>
         <div class="signup-program-row">
@@ -1030,9 +1030,9 @@
           <label class="signup-program-chip"><input type="checkbox" id="progBonbu" value="bonbuseong"> 본부성</label>
         </div>
       </div>
-      <div class="field"><label>이메일</label><input id="signupEmail" type="email" placeholder="you@email.com"></div>
-      <div class="field"><label>비밀번호</label><input id="signupPassword" type="password" placeholder="비밀번호"></div>
-      <div class="field"><label>비밀번호 확인</label><input id="signupPasswordConfirm" type="password" placeholder="비밀번호 확인"></div>
+      <div class="field"><label>이메일</label><input id="signupEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupPassword').focus();}"></div>
+      <div class="field"><label>비밀번호</label><input id="signupPassword" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupPasswordConfirm').focus();}"></div>
+      <div class="field"><label>비밀번호 확인</label><input id="signupPasswordConfirm" type="password" placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter'){event.preventDefault();doSignup();}"></div>
       <button class="save-btn" id="signupBtn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="doSignup()">가입 신청</button>
       <p class="field-hint" id="signupErrorMsg" style="color:var(--red);text-align:center;margin-top:10px;"></p>
     </div>
@@ -1399,32 +1399,7 @@
 <div class="subscreen" id="sub-invest">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('invest')">←</button><h1 class="sub-title">투자계획안</h1></div>
 
-  <div class="goal-list" id="goalList">
-    <div class="goal-card" data-target="100" data-unit="주">
-      <div class="goal-top"><span class="goal-name">배당주 모으기</span><span class="goal-pct">32%</span></div>
-      <div class="goal-bar"><i style="width:32%"></i></div>
-      <div class="goal-foot">
-        <span class="goal-cur-text">32 / 100주</span>
-        <button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button>
-      </div>
-      <div class="goal-edit-row">
-        <input type="number" class="goal-cur-input" value="32">
-        <button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button>
-      </div>
-    </div>
-    <div class="goal-card" data-target="15" data-unit="%">
-      <div class="goal-top"><span class="goal-name">리츠 비중 확대</span><span class="goal-pct">53%</span></div>
-      <div class="goal-bar"><i style="width:53%"></i></div>
-      <div class="goal-foot">
-        <span class="goal-cur-text">8 / 15%</span>
-        <button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button>
-      </div>
-      <div class="goal-edit-row">
-        <input type="number" class="goal-cur-input" value="8">
-        <button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button>
-      </div>
-    </div>
-  </div>
+  <div class="goal-list" id="goalList"></div>
 
   <button class="add-row" onclick="toggleGoalForm()" style="margin-top:14px;">＋ 새 목표 만들기</button>
 
@@ -2061,6 +2036,9 @@ function openSub(id){
       catch(e){ console.error('assets/liabilities load failed', e); }
     })();
   }
+  if(id === 'invest'){
+    try{ loadGoals(); }catch(e){ console.error('goals load failed', e); }
+  }
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'none';
     el.querySelector('.back-btn').style.visibility = 'visible';
@@ -2241,6 +2219,14 @@ function refreshTodayLedgerCell(){
     }
   });
 }
+/* ── 금액 입력 콤마 포맷 유틸 ── */
+function formatMoneyInput(el){
+  const raw = el.value.replace(/[^\d]/g, '');
+  el.value = raw ? Number(raw).toLocaleString() : '';
+}
+function rawMoney(el){
+  return Number((el.value || '').replace(/[^\d]/g, '')) || 0;
+}
 function updateCount(){
   const total = document.querySelectorAll('.mission').length;
   const done = document.querySelectorAll('.mission.done').length;
@@ -2275,7 +2261,7 @@ function makeAssetCardEl(asset, investedTotal){
   card.innerHTML = `
     <div class="asset-row">
       <input class="a-name" type="text" value="${asset.name||''}" placeholder="항목 이름" onchange="saveAssetField(this,'name')">
-      <input class="a-amt asset-input" type="number" value="${asset.amount||0}" placeholder="기본금액" oninput="recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
+      <input class="a-amt asset-input" type="text" inputmode="numeric" value="${(asset.amount||0).toLocaleString()}" placeholder="기본금액" oninput="formatMoneyInput(this);recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
     ${investedTotal > 0 ? `<p class="field-hint" style="margin:2px 0 0;padding-left:2px;">기본금액 ${(asset.amount||0).toLocaleString()}원 + 투자 누적 ${investedTotal.toLocaleString()}원 = <b style="color:var(--ink);">총 ${total.toLocaleString()}원</b></p>` : ''}
@@ -2310,7 +2296,7 @@ async function saveAssetField(el, field){
   const id = card.dataset.id;
   if(!id) return;
   let value = el.value;
-  if(field === 'amount') value = Number(value) || 0;
+  if(field === 'amount') value = rawMoney(el);
   const { error } = await sb.from('assets').update({ [field]: value || null }).eq('id', id);
   if(error) console.error('asset save failed', error);
 }
@@ -2376,7 +2362,7 @@ function makeLiabilityCardEl(liab){
   card.innerHTML = `
     <div class="asset-row">
       <input class="a-name" type="text" value="${liab.name||''}" placeholder="항목 이름 (예: 신용대출)" onchange="saveLiabilityField(this,'name')">
-      <input class="a-amt liability-input" type="number" value="${liab.amount||0}" placeholder="금액" oninput="recomputeRoadmap()" onchange="saveLiabilityField(this,'amount')">
+      <input class="a-amt liability-input" type="text" inputmode="numeric" value="${(liab.amount||0).toLocaleString()}" placeholder="금액" oninput="formatMoneyInput(this);recomputeRoadmap()" onchange="saveLiabilityField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
     <div class="asset-detail">
@@ -2401,7 +2387,7 @@ async function saveLiabilityField(el, field){
   const id = card.dataset.id;
   if(!id) return;
   let value = el.value;
-  if(field === 'amount') value = Number(value) || 0;
+  if(field === 'amount') value = rawMoney(el);
   const { error } = await sb.from('liabilities').update({ [field]: value || null }).eq('id', id);
   if(error) console.error('liability save failed', error);
 }
@@ -2429,7 +2415,7 @@ function sumAssets(){
   let sum = 0;
   document.querySelectorAll('.asset-card').forEach(card => {
     const input = card.querySelector('.asset-input');
-    sum += Number(input?.value) || 0;
+    sum += input ? rawMoney(input) : 0;
     sum += Number(card.dataset.invested) || 0;
   });
   return sum;
@@ -2437,7 +2423,7 @@ function sumAssets(){
 let roadmapChart;
 function sumLiabilities(){
   let sum = 0;
-  document.querySelectorAll('.liability-input').forEach(i => sum += Number(i.value) || 0);
+  document.querySelectorAll('.liability-input').forEach(i => sum += rawMoney(i));
   return sum;
 }
 function recomputeRoadmap(){
@@ -2501,10 +2487,57 @@ document.addEventListener('DOMContentLoaded', () => {
   }catch(e){ console.error('roadmap init failed', e); }
 });
 
+function makeGoalCardEl(goal){
+  const card = document.createElement('div');
+  card.className = 'goal-card';
+  card.dataset.id = goal.id;
+  card.dataset.target = goal.target;
+  card.dataset.unit = goal.unit;
+  const pct = goal.target ? Math.min(Math.round(goal.current/goal.target*100), 100) : 0;
+  card.innerHTML = `
+    <div class="goal-top"><span class="goal-name" id="goalName_${goal.id}">${goal.name}</span><span class="goal-pct">${pct}%</span></div>
+    <div class="goal-bar"><i style="width:${pct}%"></i></div>
+    <div class="goal-foot">
+      <span class="goal-cur-text">${goal.current} / ${goal.target}${goal.unit}</span>
+      <span style="display:flex;gap:6px;">
+        <button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button>
+        <button class="goal-edit" onclick="toggleGoalMeta(this)">✏️</button>
+        <button class="goal-edit" style="color:var(--red);" onclick="deleteGoal(this)">삭제</button>
+      </span>
+    </div>
+    <div class="goal-edit-row">
+      <input type="number" class="goal-cur-input" value="${goal.current}">
+      <button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button>
+    </div>
+    <div class="goal-meta-row" style="display:none;margin-top:8px;">
+      <div class="field"><label>목표명</label><input class="goal-meta-name" type="text" value="${goal.name}"></div>
+      <div class="field">
+        <label>단위</label>
+        <select class="goal-meta-unit">
+          <option value="주" ${goal.unit==='주'?'selected':''}>주 (수량)</option>
+          <option value="원" ${goal.unit==='원'?'selected':''}>원 (금액)</option>
+          <option value="%" ${goal.unit==='%'?'selected':''}>% (비율)</option>
+          <option value="개" ${goal.unit==='개'?'selected':''}>개 (개수)</option>
+        </select>
+      </div>
+      <div class="field"><label>목표치</label><input class="goal-meta-target" type="number" value="${goal.target}"></div>
+      <button class="goal-save-btn" onclick="saveGoalMeta(this)">저장</button>
+    </div>
+  `;
+  return card;
+}
+async function loadGoals(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('investment_goals').select('*').eq('user_id', currentUser.id).order('created_at');
+  const list = document.getElementById('goalList');
+  list.innerHTML = '';
+  if(error){ console.error('goals load failed', error); return; }
+  (data||[]).forEach(g => list.appendChild(makeGoalCardEl(g)));
+}
 function toggleGoalForm(){
   document.getElementById('goalForm').classList.toggle('open');
 }
-function addGoal(){
+async function addGoal(){
   const nameEl = document.getElementById('gfName');
   const targetEl = document.getElementById('gfTarget');
   const unit = document.getElementById('gfUnit').value;
@@ -2517,34 +2550,60 @@ function addGoal(){
     return;
   }
   errEl.classList.remove('show');
-  const card = document.createElement('div');
-  card.className = 'goal-card';
-  card.dataset.target = target;
-  card.dataset.unit = unit;
-  card.innerHTML = `
-    <div class="goal-top"><span class="goal-name">${name}</span><span class="goal-pct">0%</span></div>
-    <div class="goal-bar"><i style="width:0%"></i></div>
-    <div class="goal-foot"><span class="goal-cur-text">0 / ${target}${unit}</span><button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button></div>
-    <div class="goal-edit-row"><input type="number" class="goal-cur-input" value="0"><button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button></div>
-  `;
-  document.getElementById('goalList').appendChild(card);
-  nameEl.value = '';
-  targetEl.value = '';
+  const { data, error } = await sb.from('investment_goals').insert({
+    user_id: currentUser.id, name, unit, target, current: 0,
+  }).select().single();
+  if(error){ errEl.textContent = '저장 실패: ' + error.message; errEl.classList.add('show'); return; }
+  document.getElementById('goalList').appendChild(makeGoalCardEl(data));
+  nameEl.value = ''; targetEl.value = '';
   toggleGoalForm();
 }
 function toggleGoalEdit(btn){
   btn.closest('.goal-card').querySelector('.goal-edit-row').classList.toggle('open');
 }
-function saveGoalCur(btn){
+function toggleGoalMeta(btn){
+  const row = btn.closest('.goal-card').querySelector('.goal-meta-row');
+  row.style.display = row.style.display === 'none' ? 'block' : 'none';
+}
+async function saveGoalCur(btn){
   const card = btn.closest('.goal-card');
+  const id = card.dataset.id;
   const target = Number(card.dataset.target);
   const unit = card.dataset.unit;
   const curNum = Number(card.querySelector('.goal-cur-input').value) || 0;
+  const { error } = await sb.from('investment_goals').update({ current: curNum }).eq('id', id);
+  if(error){ console.error('goal current save failed', error); return; }
   const pct = target ? Math.min(Math.round(curNum/target*100), 100) : 0;
   card.querySelector('.goal-pct').textContent = pct + '%';
   card.querySelector('.goal-bar i').style.width = pct + '%';
   card.querySelector('.goal-cur-text').textContent = curNum + ' / ' + target + unit;
   card.querySelector('.goal-edit-row').classList.remove('open');
+}
+async function saveGoalMeta(btn){
+  const card = btn.closest('.goal-card');
+  const id = card.dataset.id;
+  const name = card.querySelector('.goal-meta-name').value.trim();
+  const unit = card.querySelector('.goal-meta-unit').value;
+  const target = Number(card.querySelector('.goal-meta-target').value) || 0;
+  if(!name || !target) return;
+  const { error } = await sb.from('investment_goals').update({ name, unit, target }).eq('id', id);
+  if(error){ console.error('goal meta save failed', error); return; }
+  card.dataset.target = target;
+  card.dataset.unit = unit;
+  const current = Number(card.querySelector('.goal-cur-input').value) || 0;
+  const pct = target ? Math.min(Math.round(current/target*100), 100) : 0;
+  card.querySelector('#goalName_'+id).textContent = name;
+  card.querySelector('.goal-pct').textContent = pct + '%';
+  card.querySelector('.goal-bar i').style.width = pct + '%';
+  card.querySelector('.goal-cur-text').textContent = current + ' / ' + target + unit;
+  card.querySelector('.goal-meta-row').style.display = 'none';
+}
+async function deleteGoal(btn){
+  const card = btn.closest('.goal-card');
+  const id = card.dataset.id;
+  const { error } = await sb.from('investment_goals').delete().eq('id', id);
+  if(error){ console.error('goal delete failed', error); return; }
+  card.remove();
 }
 function calcDiff(input){
   const plan = Number(input.dataset.plan) || 0;
@@ -2990,7 +3049,7 @@ function addCatRow(listId, type){
       </div>
       <div class="cat-row-bottom">
         <input class="cat-day" type="text" placeholder="결제일">
-        <input class="cat-budget" type="number" placeholder="월예산">
+        <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
       </div>
       <p class="cat-split-link" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ›</p>
       <div class="cat-split-detail"><button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button></div>
@@ -3049,7 +3108,7 @@ function makeCatCardEl(cat){
     </div>
     <div class="cat-row-bottom">
       <input class="cat-day" type="text" placeholder="결제일" value="${hasSplit?'':(cat.payment_day||'')}" ${hasSplit?'disabled':''}>
-      <input class="cat-budget" type="number" placeholder="월예산" value="${cat.monthly_budget||''}" ${hasSplit?'readonly':''}>
+      <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" value="${cat.monthly_budget?Number(cat.monthly_budget).toLocaleString():''}" oninput="formatMoneyInput(this)" ${hasSplit?'readonly':''}>
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
@@ -3081,7 +3140,7 @@ function makeAssetLinkRowEl(assetType, cat, myAssets){
     </div>
     <div class="cat-row-bottom">
       <input class="cat-day" type="text" placeholder="결제일" value="${hasSplit?'':(cat&&cat.payment_day||'')}" ${hasSplit?'disabled':''}>
-      <input class="cat-budget" type="number" placeholder="월예산" value="${cat&&cat.monthly_budget||''}" ${hasSplit?'readonly':''}>
+      <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" value="${cat&&cat.monthly_budget?Number(cat.monthly_budget).toLocaleString():''}" oninput="formatMoneyInput(this)" ${hasSplit?'readonly':''}>
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
@@ -3156,7 +3215,7 @@ async function saveCategories(){
         const inputs = r.querySelectorAll('input');
         return { day_label: inputs[0].value.trim(), amount: Number(inputs[1].value)||0 };
       }).filter(s => s.day_label);
-      const budget = Number(card.querySelector('.cat-budget').value) || 0;
+      const budget = rawMoney(card.querySelector('.cat-budget'));
       return {
         category, name: nameInput || category, kind:'expense', linked_asset_id: null,
         payment_day: splitRows.length ? null : (card.querySelector('.cat-day').value.trim() || null),
@@ -3176,7 +3235,7 @@ async function saveCategories(){
           const inputs = r.querySelectorAll('input');
           return { day_label: inputs[0].value.trim(), amount: Number(inputs[1].value)||0 };
         }).filter(s => s.day_label);
-        const budget = Number(row.querySelector('.cat-budget').value) || 0;
+        const budget = rawMoney(row.querySelector('.cat-budget'));
         const assetName = select.options[select.selectedIndex]?.textContent || assetType;
         assetLinkPayload.push({
           category: assetType, name: assetName, kind:'expense', linked_asset_id,
