@@ -1822,8 +1822,14 @@
   <div class="section-head" id="bonbuSectionCert"><h2>오늘의 독서 인증</h2><span id="bonbuCertBookLabel">-</span></div>
   <div class="cert-box">
     <textarea id="bonbuCertInput" placeholder="오늘 읽은 부분에 대한 한 줄 생각을 남겨보세요"></textarea>
+    <label class="signup-program-chip" style="margin:8px 0 0;display:inline-flex;">
+      <input type="checkbox" id="bonbuCertBest"> 🌟 베스트 후기로 공유하기 (다른 멤버도 볼 수 있어요)
+    </label>
     <button class="save-btn" onclick="submitCert()">인증하기</button>
   </div>
+
+  <div class="section-head"><h2>🌟 베스트 후기</h2></div>
+  <div id="bonbuBestList" style="margin:0 20px 8px;"><p class="ac-sub">불러오는 중...</p></div>
 
   <div class="section-head"><h2>이번 달 스탬프</h2><span id="bonbuStampCount">-</span></div>
   <div class="stamp-grid" id="stampGrid"></div>
@@ -1931,8 +1937,9 @@ function openSub(id){
     document.getElementById('routineNav').style.display = 'none';
     el.querySelector('.back-btn').style.visibility = 'visible';
     try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
+    try{ checkAndShowSeasonSurvey('bonbuseong','bonbuSeasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
     (async () => {
-      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); }
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); }
       catch(e){ console.error('bonbu library load failed', e); }
     })();
   }
@@ -2853,10 +2860,30 @@ let bonbuBooksCache = [];
 let bonbuProgressCache = {}; // book_id -> progress row
 let currentReadingBookId = null;
 
+async function loadBestReviews(){
+  const list = document.getElementById('bonbuBestList');
+  if(!list || !currentUser) return;
+  const [{ data: logs, error }, { data: names }] = await Promise.all([
+    sb.from('bonbu_reading_logs').select('user_id, note, log_date').eq('is_best', true).order('log_date', { ascending: false }).limit(20),
+    sb.from('bonbu_public_names').select('id, name'),
+  ]);
+  if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  if(!logs || logs.length === 0){
+    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 공유된 베스트 후기가 없어요.</p>';
+    return;
+  }
+  const nameMap = {};
+  (names||[]).forEach(n => nameMap[n.id] = n.name);
+  list.innerHTML = logs.map(l => {
+    const dateStr = new Date(l.log_date+'T00:00:00').toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
+    const who = nameMap[l.user_id] || '멤버';
+    return `<div class="memo-card"><p class="memo-date">${who} · ${dateStr}</p><p class="memo-text">${l.note}</p></div>`;
+  }).join('');
+}
 async function loadBonbuLibrary(){
   if(!currentUser) return;
   const [{ data: books, error: bErr }, { data: progress, error: pErr }] = await Promise.all([
-    sb.from('bonbu_books').select('*').order('sort_order'),
+    sb.from('bonbu_books').select('*').order('month_number'),
     sb.from('bonbu_book_progress').select('*').eq('user_id', currentUser.id),
   ]);
   if(bErr){ console.error('books load failed', bErr); return; }
@@ -2874,28 +2901,33 @@ async function loadBonbuLibrary(){
     readingList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 운영자가 등록한 책이 없어요.</p>';
   }
 
+  const thisMonth = new Date().getMonth() + 1;
+  const readingCards = [];
+
   bonbuBooksCache.forEach(book => {
     const prog = bonbuProgressCache[book.id];
-    const status = prog ? prog.status : 'upcoming';
-    if(status === 'reading'){
-      currentReadingBookId = book.id;
-      const card = document.createElement('div');
-      card.className = 'book-card current';
-      card.innerHTML = `<div class="book-cover">📖</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.subtitle||''}</p></div>`;
-      readingList.appendChild(card);
-    } else if(status === 'done'){
+    const isDone = prog && prog.status === 'done';
+    if(isDone){
       const stars = '★'.repeat(prog.rating||0) + '☆'.repeat(5-(prog.rating||0));
       const card = document.createElement('div');
       card.className = 'book-card';
       card.innerHTML = `<div class="book-cover">📗</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${stars}${prog.review?' · "'+prog.review+'"':''}</p></div>`;
       doneList.appendChild(card);
+    } else if(book.month_number <= thisMonth){
+      // 이번 달 또는 지난 달인데 아직 완독 안 한 책 → 읽는 중
+      if(!currentReadingBookId) currentReadingBookId = book.id; // 완독처리 대상은 가장 빠른 미완료 책
+      const card = document.createElement('div');
+      card.className = 'book-card current';
+      card.innerHTML = `<div class="book-cover">📖</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.month_number}월 책${book.subtitle?' · '+book.subtitle:''}</p></div>`;
+      readingCards.push(card);
     } else {
       const card = document.createElement('div');
       card.className = 'book-card muted';
-      card.innerHTML = `<div class="book-cover">📘</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.subtitle||'읽을 예정'}</p></div>`;
+      card.innerHTML = `<div class="book-cover">📘</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.month_number}월${book.subtitle?' · '+book.subtitle:''}</p></div>`;
       nextList.appendChild(card);
     }
   });
+  readingCards.forEach(c => readingList.appendChild(c));
 
   if(currentReadingBookId){
     const btn = document.createElement('button');
@@ -2917,23 +2949,27 @@ async function loadBonbuLibrary(){
 }
 async function loadTodayCert(){
   if(!currentUser) return;
-  const { data } = await sb.from('bonbu_reading_logs').select('note').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
+  const { data } = await sb.from('bonbu_reading_logs').select('note, is_best').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
   const input = document.getElementById('bonbuCertInput');
+  const bestCheck = document.getElementById('bonbuCertBest');
   if(input) input.value = data ? data.note : '';
+  if(bestCheck) bestCheck.checked = data ? !!data.is_best : false;
 }
 async function submitCert(){
   if(!currentUser) return;
   const input = document.getElementById('bonbuCertInput');
   const note = input.value.trim();
+  const isBest = document.getElementById('bonbuCertBest').checked;
   if(!note) return;
   const { error } = await sb.from('bonbu_reading_logs').upsert({
-    user_id: currentUser.id, log_date: dateKey(new Date()), note, book_id: currentReadingBookId,
+    user_id: currentUser.id, log_date: dateKey(new Date()), note, book_id: currentReadingBookId, is_best: isBest,
   }, { onConflict: 'user_id,log_date' });
   const t = document.getElementById('toast');
   if(error){
     t.textContent = '인증 실패: ' + error.message;
   } else {
     t.textContent = '오늘의 독서가 인증됐어요 · 스탬프 획득!';
+    try{ loadBestReviews(); }catch(e){}
     await renderStamps();
   }
   t.classList.add('show');
@@ -3001,6 +3037,7 @@ function setDemoMode(mode){
     try{ loadMyStats(); }catch(e){ console.error('stats load failed', e); }
     try{ loadTodayMissionStatus(); }catch(e){ console.error('mission status load failed', e); }
     try{ loadRoutineNotice(); }catch(e){ console.error('notice load failed', e); }
+    try{ checkAndShowSeasonSurvey('routinebu','seasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
   } else if(mode === 'bonbu'){
     bonbu.style.position = 'static';
     bonbu.style.transform = 'none';
@@ -3008,8 +3045,9 @@ function setDemoMode(mode){
     bonbu.style.paddingBottom = '40px';
     bonbuBack.style.visibility = 'hidden';
     try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
+    try{ checkAndShowSeasonSurvey('bonbuseong','bonbuSeasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
     (async () => {
-      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); }
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); }
       catch(e){ console.error('bonbu library load failed', e); }
     })();
   } else if(mode === 'admin'){
@@ -3018,6 +3056,7 @@ function setDemoMode(mode){
     try{ loadMemberList(); }catch(e){ console.error('member list load failed', e); }
     try{ loadFocusModeList(); }catch(e){ console.error('focus mode list load failed', e); }
     try{ loadDiscountList(); }catch(e){ console.error('discount list load failed', e); }
+    try{ loadSeasonSettings(); }catch(e){ console.error('season settings load failed', e); }
   }
 }
 function requestPasswordReset(){
@@ -3910,11 +3949,30 @@ async function loadBonbuNotice(){
     banner.style.display = 'none';
   }
 }
-function toggleSeasonSurvey(checkbox){
-  document.getElementById('seasonSurveyBanner').style.display = checkbox.checked ? 'flex' : 'none';
+async function toggleSeasonSurvey(checkbox){
+  const { error } = await sb.from('season_settings').update({ enabled: checkbox.checked }).eq('program','routinebu');
+  if(error){ console.error('season toggle failed', error); checkbox.checked = !checkbox.checked; return; }
 }
-function toggleBonbuSeasonSurvey(checkbox){
-  document.getElementById('bonbuSeasonSurveyBanner').style.display = checkbox.checked ? 'flex' : 'none';
+async function toggleBonbuSeasonSurvey(checkbox){
+  const { error } = await sb.from('season_settings').update({ enabled: checkbox.checked }).eq('program','bonbuseong');
+  if(error){ console.error('season toggle failed', error); checkbox.checked = !checkbox.checked; return; }
+}
+async function loadSeasonSettings(){
+  const { data, error } = await sb.from('season_settings').select('*');
+  if(error){ console.error('season settings load failed', error); return; }
+  (data||[]).forEach(s => {
+    const id = s.program === 'routinebu' ? 'seasonSurveyToggle' : 'bonbuSeasonSurveyToggle';
+    const el = document.getElementById(id);
+    if(el) el.checked = s.enabled;
+  });
+}
+async function checkAndShowSeasonSurvey(program, bannerId){
+  if(!currentUser) return;
+  const { data: setting } = await sb.from('season_settings').select('*').eq('program', program).maybeSingle();
+  const banner = document.getElementById(bannerId);
+  if(!banner || !setting || !setting.enabled){ if(banner) banner.style.display='none'; return; }
+  const { data: existing } = await sb.from('season_surveys').select('id').eq('user_id', currentUser.id).eq('program', program).eq('season_label', setting.season_label).maybeSingle();
+  banner.style.display = existing ? 'none' : 'flex';
 }
 
 /* ── 지수 추이 그래프 (실데이터) ── */
@@ -4049,18 +4107,39 @@ async function loadIdxMemoList(){
   });
   list.innerHTML = html;
 }
-function selectSeasonOpt(el){
+let seasonOptChoice = null;
+function selectSeasonOpt(el, choice){
   document.querySelectorAll('.se-option').forEach(o=>o.classList.remove('selected'));
   el.classList.add('selected');
+  seasonOptChoice = choice;
 }
+let seasonStarCount = 0;
 function setStar(n){
+  seasonStarCount = n;
   document.querySelectorAll('#seStars span').forEach((s,i)=>{
     s.classList.toggle('on', i < n);
   });
 }
-function submitSeasonEnd(){
-  closeSub('seasonend');
+async function submitSeasonEnd(){
+  if(!currentUser) return;
+  const program = document.getElementById('sub-bonbu').classList.contains('open') ? 'bonbuseong' : 'routinebu';
+  const { data: setting } = await sb.from('season_settings').select('season_label').eq('program', program).maybeSingle();
+  const review = document.getElementById('seasonReview').value.trim();
+  const { error } = await sb.from('season_surveys').upsert({
+    user_id: currentUser.id, program, season_label: setting ? setting.season_label : '2026-S3',
+    continue_choice: seasonOptChoice, rating: seasonStarCount || null, review: review || null,
+  }, { onConflict: 'user_id,program,season_label' });
   const t = document.getElementById('toast');
+  if(error){
+    t.textContent = '제출 실패: ' + error.message;
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2500);
+    return;
+  }
+  closeSub('seasonend');
+  const bannerId = program === 'bonbuseong' ? 'bonbuSeasonSurveyBanner' : 'seasonSurveyBanner';
+  const banner = document.getElementById(bannerId);
+  if(banner) banner.style.display = 'none';
   t.textContent = '설문이 제출됐어요, 감사해요!';
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
@@ -4083,16 +4162,6 @@ async function submitBookDone(){
   }, { onConflict: 'user_id,book_id' });
   if(error){ console.error('book done save failed', error); btn.disabled=false; btn.textContent='완독 등록'; return; }
 
-  // 다음 순서 책을 '읽는 중'으로 자동 승급
-  const doneBook = bonbuBooksCache.find(b=>b.id===currentReadingBookId);
-  const nextBook = bonbuBooksCache
-    .filter(b => b.sort_order > (doneBook?doneBook.sort_order:0) && (!bonbuProgressCache[b.id] || bonbuProgressCache[b.id].status==='upcoming'))
-    .sort((a,b)=>a.sort_order-b.sort_order)[0];
-  if(nextBook){
-    await sb.from('bonbu_book_progress').upsert({
-      user_id: currentUser.id, book_id: nextBook.id, status: 'reading',
-    }, { onConflict: 'user_id,book_id' });
-  }
   btn.disabled = false; btn.textContent = '완독 등록';
   bdStarCount = 0;
   document.getElementById('bdReview').value = '';
@@ -4161,19 +4230,39 @@ async function loadAdminBookList(){
     return;
   }
   wrap.innerHTML = data.map(b => `
-    <p class="ac-line">${b.sort_order+1}. <b>${b.title}</b>${b.subtitle?' · '+b.subtitle:''} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteBonbuBook('${b.id}')">삭제</span></p>
+    <p class="ac-line">${b.month_number}월 · <b>${b.title}</b>${b.subtitle?' · '+b.subtitle:''} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteBonbuBook('${b.id}')">삭제</span></p>
   `).join('');
 }
 async function addBonbuBook(){
   const title = document.getElementById('abTitle').value.trim();
   const subtitle = document.getElementById('abSubtitle').value.trim();
-  if(!title || !currentUser) return;
-  const { data: existing } = await sb.from('bonbu_books').select('sort_order').order('sort_order', { ascending: false }).limit(1);
-  const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
-  const { error } = await sb.from('bonbu_books').insert({ title, subtitle: subtitle || null, sort_order: nextOrder, created_by: currentUser.id });
-  if(error){ console.error('book add failed', error); return; }
+  const monthNumber = Number(document.getElementById('abMonth').value);
+  const t = document.getElementById('toast');
+  if(!title){
+    t.textContent = '책 제목을 입력해주세요';
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
+    return;
+  }
+  if(!currentUser){
+    t.textContent = '로그인 정보를 확인할 수 없어요';
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
+    return;
+  }
+  const { error } = await sb.from('bonbu_books').insert({ title, subtitle: subtitle || null, month_number: monthNumber, sort_order: monthNumber, created_by: currentUser.id });
+  if(error){
+    console.error('book add failed', error);
+    t.textContent = '책 추가 실패: ' + error.message;
+    t.classList.add('show');
+    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 3000);
+    return;
+  }
   document.getElementById('abTitle').value = '';
   document.getElementById('abSubtitle').value = '';
+  t.textContent = '책이 추가됐어요';
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1500);
   loadAdminBookList();
 }
 async function deleteBonbuBook(id){
@@ -4693,10 +4782,20 @@ function navMonth(dir){
     <input type="text" id="abTitle" placeholder="예: 부의 추월차선">
   </div>
   <div class="field">
-    <label>부제/월 표시 (선택)</label>
-    <input type="text" id="abSubtitle" placeholder="예: 10주년 스페셜 에디션 · 9월">
+    <label>부제 (선택)</label>
+    <input type="text" id="abSubtitle" placeholder="예: 10주년 스페셜 에디션">
   </div>
-  <button class="add-row" onclick="addBonbuBook()">＋ 책 추가 (목록 맨 뒤에)</button>
+  <div class="field">
+    <label>몇 월 책인가요?</label>
+    <select id="abMonth">
+      <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+      <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+      <option value="7">7월</option><option value="8">8월</option><option value="9" selected>9월</option>
+      <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+    </select>
+    <p class="field-hint">그 달이 되면 모든 멤버의 서재에 자동으로 "읽는 중"으로 떠요.</p>
+  </div>
+  <button class="add-row" onclick="addBonbuBook()">＋ 책 추가</button>
 
   <div class="section-head" style="margin-top:22px;">
     <h2>오늘의 독서인증 현황</h2>
