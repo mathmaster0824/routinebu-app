@@ -1196,7 +1196,7 @@
     <div style="display:flex;gap:8px;">
       <div class="bell" onclick="openSub('bonbu')" style="font-size:15px;">📚</div>
       <div class="bell" id="adminTopIcon" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}" style="font-size:15px;display:none;">🛠️</div>
-      <div class="bell">🔔<span class="dot"></span></div>
+      <div class="bell" onclick="openSub('notices')">🔔<span class="dot"></span></div>
     </div>
   </div>
 
@@ -1360,6 +1360,14 @@
     <textarea id="seasonReview" placeholder="이번 시즌 솔직한 후기를 남겨주세요"></textarea>
   </div>
   <button class="save-btn" onclick="submitSeasonEnd()">제출하기</button>
+</div>
+
+<!-- 공지사항 (멤버용 보기) -->
+<div class="subscreen" id="sub-notices">
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('notices')">←</button><h1 class="sub-title">공지사항</h1></div>
+  <div class="sub-body">
+    <div id="memberNoticeList"><p class="ac-sub">불러오는 중...</p></div>
+  </div>
 </div>
 
 <!-- 공지사항 작성 서브화면 -->
@@ -1913,6 +1921,9 @@ function openSub(id){
   }
   if(id === 'announce'){
     try{ loadAnnounceList(); }catch(e){ console.error('announce list load failed', e); }
+  }
+  if(id === 'notices'){
+    try{ loadMemberNoticeList(); }catch(e){ console.error('member notice list load failed', e); }
   }
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'none';
@@ -3860,6 +3871,20 @@ async function deleteNotice(id){
   const { error } = await sb.from('notices').delete().eq('id', id);
   if(error){ console.error('notice delete failed', error); return; }
   loadAnnounceList();
+}
+async function loadMemberNoticeList(){
+  if(!currentUser) return;
+  const list = document.getElementById('memberNoticeList');
+  const { data, error } = await sb.from('notices').select('*').eq('program','routinebu').order('created_at',{ascending:false});
+  if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  if(!data || data.length === 0){
+    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:30px 0;">📭 아직 특별한 공지가 없어요.</p>';
+    return;
+  }
+  list.innerHTML = data.map(n => {
+    const dateStr = new Date(n.created_at).toLocaleDateString('ko-KR', { year:'numeric', month:'numeric', day:'numeric' });
+    return `<div class="announce-row"><p class="ac-sub">${dateStr}</p><p class="ac-line">${n.content}</p></div>`;
+  }).join('');
 }
 async function loadRoutineNotice(){
   const { data } = await sb.from('notices').select('content').eq('program','routinebu').order('created_at',{ascending:false}).limit(1);
