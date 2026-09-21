@@ -1312,7 +1312,7 @@
     <button class="mode-switch-btn" id="adminModeBtn" style="display:none;width:calc(100% - 40px);margin:16px 20px 0;" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}">관리자 모드로 전환</button>
 
     <button class="mi-logout" onclick="doLogout()">로그아웃</button>
-    <p class="mi-logout-note">로그아웃을 누르기 전까지는 로그인 상태가 계속 유지돼요.</p>
+    <p class="mi-logout-note">브라우저(탭)를 완전히 닫으면 자동으로 로그아웃돼요.</p>
   </div>
 </div>
 
@@ -1851,7 +1851,9 @@
     box.innerHTML = '<p style="font-size:40px;margin:0 0 12px;">📡</p><p style="font-size:15px;font-weight:600;margin:0 0 8px;">네트워크 연결에 문제가 있어요</p><p style="font-size:13px;color:#78715E;margin:0 0 20px;">필수 스크립트를 불러오지 못했어요.<br>인터넷 연결을 확인하고 새로고침 해주세요.</p><button onclick="location.reload()" style="padding:12px 24px;border:none;border-radius:10px;background:#20402E;color:#fff;font-size:14px;font-weight:600;">새로고침</button>';
     document.body.appendChild(box);
   } else {
-    sb = window.supabase.createClient(SB_URL, SB_KEY);
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: { storage: window.sessionStorage }
+    });
   }
 </script>
 <script>
