@@ -1195,7 +1195,7 @@
     </div>
     <div style="display:flex;gap:8px;">
       <div class="bell" onclick="openSub('bonbu')" style="font-size:15px;">📚</div>
-      <div class="bell" id="adminTopIcon" onclick="setDemoMode('admin')" style="font-size:15px;display:none;">🛠️</div>
+      <div class="bell" id="adminTopIcon" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}" style="font-size:15px;display:none;">🛠️</div>
       <div class="bell">🔔<span class="dot"></span></div>
     </div>
   </div>
@@ -1309,7 +1309,7 @@
       <div class="mi-menu-item" onclick="requestPasswordReset()"><span>비밀번호 변경</span><span class="m-chev">›</span></div>
     </div>
 
-    <button class="mode-switch-btn" id="adminModeBtn" style="display:none;width:calc(100% - 40px);margin:16px 20px 0;" onclick="setDemoMode('admin')">관리자 모드로 전환</button>
+    <button class="mode-switch-btn" id="adminModeBtn" style="display:none;width:calc(100% - 40px);margin:16px 20px 0;" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}">관리자 모드로 전환</button>
 
     <button class="mi-logout" onclick="doLogout()">로그아웃</button>
     <p class="mi-logout-note">로그아웃을 누르기 전까지는 로그인 상태가 계속 유지돼요.</p>
