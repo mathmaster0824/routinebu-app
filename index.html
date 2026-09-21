@@ -1822,9 +1822,6 @@
   <div class="section-head" id="bonbuSectionCert"><h2>오늘의 독서 인증</h2><span id="bonbuCertBookLabel">-</span></div>
   <div class="cert-box">
     <textarea id="bonbuCertInput" placeholder="오늘 읽은 부분에 대한 한 줄 생각을 남겨보세요"></textarea>
-    <label class="signup-program-chip" style="margin:8px 0 0;display:inline-flex;">
-      <input type="checkbox" id="bonbuCertBest"> 🌟 베스트 후기로 공유하기 (다른 멤버도 볼 수 있어요)
-    </label>
     <button class="save-btn" onclick="submitCert()">인증하기</button>
   </div>
 
@@ -2949,20 +2946,17 @@ async function loadBonbuLibrary(){
 }
 async function loadTodayCert(){
   if(!currentUser) return;
-  const { data } = await sb.from('bonbu_reading_logs').select('note, is_best').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
+  const { data } = await sb.from('bonbu_reading_logs').select('note').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
   const input = document.getElementById('bonbuCertInput');
-  const bestCheck = document.getElementById('bonbuCertBest');
   if(input) input.value = data ? data.note : '';
-  if(bestCheck) bestCheck.checked = data ? !!data.is_best : false;
 }
 async function submitCert(){
   if(!currentUser) return;
   const input = document.getElementById('bonbuCertInput');
   const note = input.value.trim();
-  const isBest = document.getElementById('bonbuCertBest').checked;
   if(!note) return;
   const { error } = await sb.from('bonbu_reading_logs').upsert({
-    user_id: currentUser.id, log_date: dateKey(new Date()), note, book_id: currentReadingBookId, is_best: isBest,
+    user_id: currentUser.id, log_date: dateKey(new Date()), note, book_id: currentReadingBookId,
   }, { onConflict: 'user_id,log_date' });
   const t = document.getElementById('toast');
   if(error){
@@ -4398,33 +4392,50 @@ function switchProg(btn, prog){
 async function loadBonbuMemberList(){
   const list = document.getElementById('bonbuMemberList');
   if(!list) return;
-  const { data, error } = await sb.from('profiles')
-    .select('id, name, email, created_at')
-    .eq('approval_status', 'approved')
-    .contains('programs', ['bonbuseong'])
-    .order('created_at', { ascending: false });
+  const [{ data, error }, { data: todayLogs }] = await Promise.all([
+    sb.from('profiles')
+      .select('id, name, email, created_at')
+      .eq('approval_status', 'approved')
+      .contains('programs', ['bonbuseong'])
+      .order('created_at', { ascending: false }),
+    sb.from('bonbu_reading_logs').select('*').eq('log_date', dateKey(new Date())),
+  ]);
   if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
   if(!data || data.length === 0){
     list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 승인된 본부성 멤버가 없어요</p>';
     return;
   }
+  const logMap = {};
+  (todayLogs||[]).forEach(l => logMap[l.user_id] = l);
   list.innerHTML = '';
   data.forEach(m => {
+    const log = logMap[m.id];
     const wrap = document.createElement('div');
     wrap.className = 'member-row-wrap';
     wrap.innerHTML = `
       <div class="member-row" onclick="toggleMemberDetail(this)">
         <div class="mr-name">${m.name || '(이름 없음)'}</div>
+        <div class="mr-icons"><span class="mi ${log?'done':'missed'}">${log?'✓':'✕'}</span></div>
         <div class="mr-pct">-</div>
       </div>
       <div class="member-detail">
         <div class="md-row"><span>이메일</span><b>${m.email}</b></div>
         <div class="md-row"><span>가입일</span><b>${new Date(m.created_at).toLocaleDateString('ko-KR')}</b></div>
-        <p class="field-hint">독서인증·스탬프 등 상세 데이터 연동은 준비 중이에요.</p>
+        ${log ? `
+          <p class="field-hint" style="margin:10px 0 4px;">오늘의 인증</p>
+          <p class="ac-line" style="background:var(--surface-2);padding:8px 10px;border-radius:9px;">${log.note}</p>
+          <button class="md-link" style="width:100%;margin-top:8px;${log.is_best?'background:var(--gold);color:#2b220a;':''}" onclick="toggleBestReview('${log.id}', this)">${log.is_best ? '🌟 베스트로 선정됨 (해제하기)' : '🌟 베스트로 선정하기'}</button>
+        ` : '<p class="field-hint" style="margin-top:10px;">오늘 아직 인증을 안 했어요.</p>'}
       </div>
     `;
     list.appendChild(wrap);
   });
+}
+async function toggleBestReview(logId, btn){
+  const { data: cur } = await sb.from('bonbu_reading_logs').select('is_best').eq('id', logId).single();
+  const { error } = await sb.from('bonbu_reading_logs').update({ is_best: !cur.is_best }).eq('id', logId);
+  if(error){ console.error('toggle best failed', error); return; }
+  loadBonbuMemberList();
 }
 function toggleUnsubmittedBonbu(checkbox){
   document.querySelectorAll('#bonbuMemberList .member-row-wrap').forEach(wrap=>{
