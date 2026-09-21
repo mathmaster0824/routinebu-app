@@ -1486,9 +1486,10 @@
         <option value="15">15% · 투자공부를 병행하며 시스템이 갖춰졌다</option>
       </select>
     </div>
-    <div class="field"><label>이번 달 투자금액</label><input id="monthlyInvest" type="number" value="5000000" oninput="recomputeRoadmap()"></div>
+    <div class="field"><label>이번 달 투자금액</label><input id="monthlyInvest" type="number" value="0" oninput="recomputeRoadmap()"><p class="field-hint" id="monthlyInvestHint" style="margin-top:4px;"></p></div>
   </div>
 
+  <p class="field-hint" style="margin:10px 20px 0;">💡 이 로드맵은 정확한 예측이 아니라, <b>지금 페이스를 유지한다면 대략 이런 방향으로 간다</b>는 걸 보여주는 동기부여용 참고치예요. 물가상승·세금 등은 반영되지 않아요.</p>
   <div class="roadmap-chart-wrap"><canvas id="roadmapChart"></canvas></div>
 
   <div class="section-head"><h2>연도별 자산 표</h2></div>
@@ -2056,7 +2057,7 @@ function openSub(id){
   }
   if(id === 'roadmap'){
     (async () => {
-      try{ await loadAssets(); await loadLiabilities(); recomputeRoadmap(); }
+      try{ await loadAssets(); await loadLiabilities(); await loadMonthlyInvestActual(); recomputeRoadmap(); }
       catch(e){ console.error('assets/liabilities load failed', e); }
     })();
   }
@@ -2333,6 +2334,25 @@ function toggleAssetDetail(btn){
   const detail = btn.closest('.asset-card').querySelector('.asset-detail');
   detail.classList.toggle('open');
   btn.textContent = detail.classList.contains('open') ? '⌃' : '⌄';
+}
+async function loadMonthlyInvestActual(){
+  if(!currentUser) return;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+  const { data, error } = await sb.from('transactions')
+    .select('amount, ledger_categories!inner(linked_asset_id)')
+    .eq('user_id', currentUser.id)
+    .not('ledger_categories.linked_asset_id', 'is', null)
+    .gte('tx_date', monthStart)
+    .lte('tx_date', monthEnd);
+  if(error){ console.error('monthly invest calc failed', error); return; }
+  const sum = (data||[]).reduce((s,r) => s + (Number(r.amount)||0), 0);
+  const input = document.getElementById('monthlyInvest');
+  const hint = document.getElementById('monthlyInvestHint');
+  if(input) input.value = sum;
+  if(hint) hint.textContent = `이번 달 실제 투자 거래 합계로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
+  recomputeRoadmap();
 }
 function makeLiabilityCardEl(liab){
   const card = document.createElement('div');
