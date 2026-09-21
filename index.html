@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>루틴부 · 홈</title>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;padding:12px;font-size:12px;white-space:pre-wrap;';
+    box.textContent = '⚠️ 로딩 에러: ' + msg + ' (줄 ' + line + ')';
+    document.body ? document.body.appendChild(box) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(box); });
+    return false;
+  };
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -1826,13 +1835,15 @@
 <script>
   const SB_URL = 'https://mnrrcfpnmebuixpomuso.supabase.co';
   const SB_KEY = 'sb_publishable_4igpt7hQVEt8018z04rcag_Ons4nogB';
-  const sb = window.supabase.createClient(SB_URL, SB_KEY);
-  window.addEventListener('error', function(e){
+  let sb;
+  if(!window.supabase){
     const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;padding:12px;font-size:12px;white-space:pre-wrap;';
-    box.textContent = '⚠️ 에러: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')';
+    box.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#FAF6EC;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;text-align:center;font-family:sans-serif;';
+    box.innerHTML = '<p style="font-size:40px;margin:0 0 12px;">📡</p><p style="font-size:15px;font-weight:600;margin:0 0 8px;">네트워크 연결에 문제가 있어요</p><p style="font-size:13px;color:#78715E;margin:0 0 20px;">필수 스크립트를 불러오지 못했어요.<br>인터넷 연결을 확인하고 새로고침 해주세요.</p><button onclick="location.reload()" style="padding:12px 24px;border:none;border-radius:10px;background:#20402E;color:#fff;font-size:14px;font-weight:600;">새로고침</button>';
     document.body.appendChild(box);
-  });
+  } else {
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
+  }
 </script>
 <script>
 function addCustomRow(){
