@@ -1207,14 +1207,14 @@
 
   <div class="survival" id="survivalCard">
     <p class="survival-label">생존지수</p>
-    <div class="survival-num">47<span>%</span></div>
-    <div class="survival-bar"><i style="width:47%"></i></div>
+    <div class="survival-num" id="survivalNum">-<span>%</span></div>
+    <div class="survival-bar"><i id="survivalBar" style="width:0%"></i></div>
     <div class="survival-foot">
-      <span>8월 정산 기준</span>
+      <span id="survivalFootDate">-</span>
       <button onclick="document.getElementById('survivalCard').classList.toggle('open')">자세히</button>
     </div>
-    <div class="survival-detail">
-      지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 비노동소득으로 47% 감당할 수 있어요.<br>다음 정산은 9월 말에 갱신돼요.
+    <div class="survival-detail" id="survivalDetail">
+      자산·수입 데이터를 입력하면 계산돼요.
     </div>
   </div>
 
@@ -2454,8 +2454,47 @@ async function loadMonthlyInvestActual(){
   if(hint) hint.textContent = `이번 달 실제 투자 거래 합계로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
 }
-async function saveRoadmapSettings(){
+async function loadSurvivalIndex(){
   if(!currentUser) return;
+  const [{ data: assets }, { data: liabilities }, { data: invested }, { data: cats }] = await Promise.all([
+    sb.from('assets').select('amount').eq('user_id', currentUser.id),
+    sb.from('liabilities').select('amount').eq('user_id', currentUser.id),
+    sb.from('asset_investment_totals').select('invested_total'),
+    sb.from('ledger_categories').select('kind, income_tag, monthly_budget').eq('user_id', currentUser.id),
+  ]);
+  const assetSum = (assets||[]).reduce((s,a)=>s+Number(a.amount||0),0);
+  const investedSum = (invested||[]).reduce((s,i)=>s+Number(i.invested_total||0),0);
+  const liabilitySum = (liabilities||[]).reduce((s,l)=>s+Number(l.amount||0),0);
+  const netWorth = assetSum + investedSum - liabilitySum;
+
+  const nonLaborIncome = (cats||[]).filter(c=>c.kind==='income' && c.income_tag==='비노동수입').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
+  const totalExpenseBudget = (cats||[]).filter(c=>c.kind==='expense').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
+
+  const monthlyAssetIncome = netWorth * 0.04 / 12;
+  const survivalIncome = nonLaborIncome + monthlyAssetIncome;
+  const rate = totalExpenseBudget > 0 ? Math.min(survivalIncome / totalExpenseBudget, 1) * 100 : 0;
+  const rateRounded = Math.round(rate);
+
+  const numEl = document.getElementById('survivalNum');
+  const barEl = document.getElementById('survivalBar');
+  const detailEl = document.getElementById('survivalDetail');
+  const footEl = document.getElementById('survivalFootDate');
+  if(numEl) numEl.innerHTML = rateRounded + '<span>%</span>';
+  if(barEl) barEl.style.width = rateRounded + '%';
+  if(footEl){
+    const today = new Date();
+    footEl.textContent = `${today.getMonth()+1}월 정산 기준`;
+  }
+  if(detailEl){
+    if(totalExpenseBudget === 0){
+      detailEl.innerHTML = '가계부 카테고리에 월예산을 입력하면 생존지수가 계산돼요.';
+    } else {
+      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 비노동소득으로 ${rateRounded}% 감당할 수 있어요.<br>순자산 ${netWorth.toLocaleString()}원 · 비노동수입 ${nonLaborIncome.toLocaleString()}원 기준`;
+    }
+  }
+}
+
+async function saveRoadmapSettings(){
   const age = Number(document.getElementById('ageInput').value) || null;
   const rate = Number(document.getElementById('rateInput').value) || 6;
   const { error } = await sb.from('profiles').update({ roadmap_age: age, roadmap_rate: rate }).eq('id', currentUser.id);
@@ -2542,6 +2581,7 @@ function sumLiabilities(){
 function recomputeRoadmap(){
   const total = sumAssets() - sumLiabilities();
   document.getElementById('totalAssets').textContent = total.toLocaleString() + '원';
+  try{ loadSurvivalIndex(); }catch(e){}
 
   const age0 = Number(document.getElementById('ageInput').value) || 30;
   const rate = Number(document.getElementById('rateInput').value) / 100;
@@ -3032,6 +3072,7 @@ function setDemoMode(mode){
     try{ loadTodayMissionStatus(); }catch(e){ console.error('mission status load failed', e); }
     try{ loadRoutineNotice(); }catch(e){ console.error('notice load failed', e); }
     try{ checkAndShowSeasonSurvey('routinebu','seasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
+    try{ loadSurvivalIndex(); }catch(e){ console.error('survival index load failed', e); }
   } else if(mode === 'bonbu'){
     bonbu.style.position = 'static';
     bonbu.style.transform = 'none';
@@ -3524,6 +3565,7 @@ async function saveCategories(){
       when = v ? v + '부터' : '선택한 달부터';
     }
     closeSub('categories');
+    try{ loadSurvivalIndex(); }catch(e){}
     const t = document.getElementById('toast');
     t.textContent = `${when} 적용되도록 저장됐어요`;
     t.classList.add('show');
