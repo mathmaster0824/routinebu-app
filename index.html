@@ -2753,10 +2753,9 @@ function captureMorningBudget(){
   todaysMorningBudget = items;
 }
 
-function renderMorningBudget(){
-  const expenseItems = (FIXED_PAYMENTS[TODAY_DAY] || []).map(i => ({...i, type:'expense'}));
-  const incomeItems = (FIXED_INCOME[TODAY_DAY] || []).map(i => ({...i, type:'income'}));
-  const items = [...incomeItems, ...expenseItems];
+async function renderMorningBudget(){
+  if(currentUser && myCategoriesCache.length === 0) await loadMyCategories();
+  const items = currentUser ? getDueItemsForDate(new Date()) : [];
   const list = document.getElementById('budgetTodayList');
   const emptyNote = document.getElementById('budgetEmptyNote');
   if(!list) return;
@@ -2770,9 +2769,9 @@ function renderMorningBudget(){
     const field = document.createElement('div');
     field.className = 'field';
     field.innerHTML = `
-      <label><span class="tx-dot ${item.type}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· ${item.cat}</span></label>
-      <input type="number" value="${item.amt}" id="morningAmt${i}" data-type="${item.type}">
-      <p class="field-hint">오늘(${TODAY_DAY}일) ${item.type==='income'?'입금':'결제'} 예정 금액이에요. 실제로 다르면 미리 고쳐두세요.</p>
+      <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· ${item.category}</span></label>
+      <input type="number" value="${item.amount}" id="morningAmt${i}" data-type="${item.kind}">
+      <p class="field-hint">오늘 ${item.kind==='income'?'입금':'결제'} 예정 금액이에요. 실제로 다르면 미리 고쳐두세요.</p>
     `;
     list.appendChild(field);
   });
