@@ -1120,6 +1120,11 @@
         <p class="ob-task-desc">시세가 오르내리는 것들이에요. 주식, 코인 같은 거요.</p>
       </div>
 
+      <div class="ob-task-card" style="background:var(--gold-soft);border-color:var(--gold);">
+        <p class="ob-task-title">💡 결제일은 분류랑 별개예요</p>
+        <p class="ob-task-desc">"정기적으로 돈을 넣는지"는 ①②③ 어디에나 해당될 수 있어요. 예: 주식(③변동자산)을 매달 2일에 50만원씩 정기매수한다면, 연금(②고정투자자산)을 매달 10일에 33만원 넣는 것과 똑같이 가계부에 결제일로 등록돼요.</p>
+      </div>
+
       <div class="ob-preview-format">
         <p class="ob-preview-format-title">📋 나중에 "자산" 탭에서 이렇게 채우게 돼요 — 미리 준비해두면 편해요</p>
         <div class="ob-format-row"><span>이름</span><span>전세보증금</span></div>
@@ -1452,55 +1457,17 @@
   </div>
 
   <div class="section-head" style="margin-top:18px;"><h2>비유동자산</h2><span>수익률 없음</span></div>
-  <div class="asset-list" id="illiquidList">
-    <div class="asset-card">
-      <div class="asset-row">
-        <input class="a-name" type="text" value="전세보증금">
-        <input class="a-amt asset-input" type="number" value="250000000">
-        <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
-      </div>
-      <div class="asset-detail">
-        <div class="field"><label>만기일 (있는 경우만)</label><input type="date" value="2028-03-15"></div>
-        <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" placeholder="예: 연 2.5%"></div>
-        <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?">전세금 회수 후 건물 매입 자금으로 전환할 계획</textarea></div>
-      </div>
-    </div>
-  </div>
-  <button class="add-row" onclick="addAsset('illiquidList')">＋ 항목 추가</button>
+  <div class="asset-list" id="illiquidList"></div>
+  <button class="add-row" onclick="addAsset('비유동자산')">＋ 항목 추가</button>
 
   <div class="section-head"><h2>고정투자자산</h2><span>가계부에서 자동 반영</span></div>
-  <div class="asset-list" id="longList">
-    <div class="asset-card">
-      <div class="asset-row">
-        <input class="a-name" type="text" value="저축보험" readonly style="background:var(--surface-2);">
-        <input class="a-amt asset-input" type="number" value="30000000" readonly style="background:var(--surface-2);">
-        <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
-      </div>
-      <div class="asset-detail">
-        <div class="field"><label>만기일 (있는 경우만)</label><input type="date" value="2041-06-01"></div>
-        <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" value="연 2.8% (공시이율)"></div>
-        <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?">만기 시 목돈으로 받아 로드맵 목돈이벤트에 반영 예정</textarea></div>
-      </div>
-    </div>
-  </div>
-  <p class="field-hint" style="margin:2px 20px 0;">가계부에서 이 이름("저축보험")으로 지출을 기록하면 금액이 자동으로 더해져요. 이름이 여러 개면 각각 이름으로 따로 매칭돼요.</p>
+  <div class="asset-list" id="longList"></div>
+  <p class="field-hint" style="margin:2px 20px 0;">가계부에서 이 이름으로 지출을 기록하면 금액이 자동으로 더해져요. 이름이 여러 개면 각각 이름으로 따로 매칭돼요.</p>
+  <button class="add-row" onclick="addAsset('고정투자자산')">＋ 항목 추가</button>
 
   <div class="section-head"><h2>변동자산</h2><span>시장변동 반영, 매번 갱신</span></div>
-  <div class="asset-list" id="shortList">
-    <div class="asset-card">
-      <div class="asset-row">
-        <input class="a-name" type="text" value="배당주 계좌">
-        <input class="a-amt asset-input" type="number" value="20000000">
-        <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
-      </div>
-      <div class="asset-detail">
-        <div class="field"><label>만기일 (있는 경우만)</label><input type="date" placeholder="없으면 비워두세요"></div>
-        <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" placeholder="예: 배당수익률 4%"></div>
-        <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?">배당주를 꾸준히 모아서 매달 나오는 배당금을 '월급'처럼 만들 계획</textarea></div>
-      </div>
-    </div>
-  </div>
-  <button class="add-row" onclick="addAsset('shortList')">＋ 항목 추가</button>
+  <div class="asset-list" id="shortList"></div>
+  <button class="add-row" onclick="addAsset('변동자산')">＋ 항목 추가</button>
 
   <div class="section-head"><h2>로드맵 설정</h2></div>
   <div class="sub-body" style="padding-top:0;">
@@ -2072,6 +2039,9 @@ function openSub(id){
   if(id === 'categories'){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
   }
+  if(id === 'roadmap'){
+    try{ loadAssets(); }catch(e){ console.error('assets load failed', e); }
+  }
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'none';
     el.querySelector('.back-btn').style.visibility = 'visible';
@@ -2259,24 +2229,78 @@ function updateCount(){
 }
 
 /* ── 자산기록 → 로드맵 실시간 연동 ── */
-function addAsset(listId){
-  const wrap = document.getElementById(listId);
+const ASSET_LIST_ID = { '비유동자산':'illiquidList', '고정투자자산':'longList', '변동자산':'shortList' };
+function makeAssetCardEl(asset){
   const card = document.createElement('div');
   card.className = 'asset-card';
+  card.dataset.id = asset.id;
+  const typeOpts = ['비유동자산','고정투자자산','변동자산'].map(t=>`<option value="${t}" ${t===asset.asset_type?'selected':''}>${t}</option>`).join('');
   card.innerHTML = `
     <div class="asset-row">
-      <input class="a-name" type="text" placeholder="항목 이름">
-      <input class="a-amt asset-input" type="number" placeholder="금액" oninput="recomputeRoadmap()">
+      <input class="a-name" type="text" value="${asset.name||''}" placeholder="항목 이름" onchange="saveAssetField(this,'name')">
+      <input class="a-amt asset-input" type="number" value="${asset.amount||0}" placeholder="금액" oninput="recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
     <div class="asset-detail">
-      <div class="field"><label>만기일 (있는 경우만)</label><input type="date"></div>
-      <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" placeholder="예: 연 3%"></div>
-      <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?"></textarea></div>
+      <div class="field"><label>분류</label><select onchange="changeAssetType(this)">${typeOpts}</select></div>
+      <div class="field"><label>만기일 (있는 경우만)</label><input type="date" value="${asset.maturity_date||''}" onchange="saveAssetField(this,'maturity_date')"></div>
+      <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" value="${asset.fixed_rate||''}" placeholder="예: 연 3%" onchange="saveAssetField(this,'fixed_rate')"></div>
+      <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?" onchange="saveAssetField(this,'next_plan')">${asset.next_plan||''}</textarea></div>
+      <button class="add-row" style="border-color:var(--red);color:var(--red);" onclick="deleteAssetCard(this)">삭제</button>
     </div>
   `;
-  wrap.appendChild(card);
+  return card;
+}
+async function loadAssets(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('assets').select('*').eq('user_id', currentUser.id).order('created_at');
+  ['illiquidList','longList','shortList'].forEach(id => document.getElementById(id).innerHTML = '');
+  if(error){ console.error('assets load failed', error); return; }
+  (data||[]).forEach(a => {
+    const listId = ASSET_LIST_ID[a.asset_type] || 'shortList';
+    document.getElementById(listId).appendChild(makeAssetCardEl(a));
+  });
   recomputeRoadmap();
+}
+async function saveAssetField(el, field){
+  const card = el.closest('.asset-card');
+  const id = card.dataset.id;
+  if(!id) return;
+  let value = el.value;
+  if(field === 'amount') value = Number(value) || 0;
+  const { error } = await sb.from('assets').update({ [field]: value || null }).eq('id', id);
+  if(error) console.error('asset save failed', error);
+}
+async function changeAssetType(selectEl){
+  const card = selectEl.closest('.asset-card');
+  const id = card.dataset.id;
+  const newType = selectEl.value;
+  const { error } = await sb.from('assets').update({ asset_type: newType }).eq('id', id);
+  if(error){ console.error('asset type change failed', error); return; }
+  const newList = document.getElementById(ASSET_LIST_ID[newType]);
+  newList.appendChild(card);
+}
+async function deleteAssetCard(btn){
+  const card = btn.closest('.asset-card');
+  const id = card.dataset.id;
+  if(id){
+    const { error } = await sb.from('assets').delete().eq('id', id);
+    if(error){ console.error('asset delete failed', error); return; }
+  }
+  card.remove();
+  recomputeRoadmap();
+}
+async function addAsset(assetType){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('assets').insert({
+    user_id: currentUser.id, asset_type: assetType, name:'', amount:0,
+  }).select().single();
+  if(error){ console.error('asset add failed', error); return; }
+  const card = makeAssetCardEl(data);
+  document.getElementById(ASSET_LIST_ID[assetType]).appendChild(card);
+  card.querySelector('.asset-detail').classList.add('open');
+  card.querySelector('.asset-expand').textContent = '⌃';
+  card.querySelector('.a-name').focus();
 }
 function toggleAssetDetail(btn){
   const detail = btn.closest('.asset-card').querySelector('.asset-detail');
