@@ -1452,7 +1452,7 @@
   </div>
 
   <div class="asset-hero">
-    <p class="ah-label">오늘 기준 총자산</p>
+    <p class="ah-label">오늘 기준 총자산 (부채 차감, 순자산)</p>
     <div class="ah-num" id="totalAssets">0원</div>
   </div>
 
@@ -1468,6 +1468,10 @@
   <div class="section-head"><h2>변동자산</h2><span>시장변동 반영, 매번 갱신</span></div>
   <div class="asset-list" id="shortList"></div>
   <button class="add-row" onclick="addAsset('변동자산')">＋ 항목 추가</button>
+
+  <div class="section-head" style="margin-top:22px;"><h2>부채</h2><span style="color:var(--red);">순자산 계산시 차감</span></div>
+  <div class="asset-list" id="liabilityList"></div>
+  <button class="add-row" onclick="addLiability()">＋ 부채 항목 추가</button>
 
   <div class="section-head"><h2>로드맵 설정</h2></div>
   <div class="sub-body" style="padding-top:0;">
@@ -2051,7 +2055,10 @@ function openSub(id){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
   }
   if(id === 'roadmap'){
-    try{ loadAssets(); }catch(e){ console.error('assets load failed', e); }
+    (async () => {
+      try{ await loadAssets(); await loadLiabilities(); recomputeRoadmap(); }
+      catch(e){ console.error('assets/liabilities load failed', e); }
+    })();
   }
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'none';
@@ -2327,6 +2334,62 @@ function toggleAssetDetail(btn){
   detail.classList.toggle('open');
   btn.textContent = detail.classList.contains('open') ? '⌃' : '⌄';
 }
+function makeLiabilityCardEl(liab){
+  const card = document.createElement('div');
+  card.className = 'asset-card';
+  card.dataset.id = liab.id;
+  card.innerHTML = `
+    <div class="asset-row">
+      <input class="a-name" type="text" value="${liab.name||''}" placeholder="항목 이름 (예: 신용대출)" onchange="saveLiabilityField(this,'name')">
+      <input class="a-amt liability-input" type="number" value="${liab.amount||0}" placeholder="금액" oninput="recomputeRoadmap()" onchange="saveLiabilityField(this,'amount')">
+      <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
+    </div>
+    <div class="asset-detail">
+      <div class="field"><label>상환일/만기 (있는 경우만)</label><input type="date" value="${liab.due_date||''}" onchange="saveLiabilityField(this,'due_date')"></div>
+      <div class="field"><label>이자율 (있는 경우만)</label><input type="text" value="${liab.interest_rate||''}" placeholder="예: 연 5.2%" onchange="saveLiabilityField(this,'interest_rate')"></div>
+      <div class="field"><label>다음 계획</label><textarea placeholder="상환 계획 등" onchange="saveLiabilityField(this,'next_plan')">${liab.next_plan||''}</textarea></div>
+      <button class="add-row" style="border-color:var(--red);color:var(--red);" onclick="deleteLiabilityCard(this)">삭제</button>
+    </div>
+  `;
+  return card;
+}
+async function loadLiabilities(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('liabilities').select('*').eq('user_id', currentUser.id).order('created_at');
+  const list = document.getElementById('liabilityList');
+  list.innerHTML = '';
+  if(error){ console.error('liabilities load failed', error); return; }
+  (data||[]).forEach(l => list.appendChild(makeLiabilityCardEl(l)));
+}
+async function saveLiabilityField(el, field){
+  const card = el.closest('.asset-card');
+  const id = card.dataset.id;
+  if(!id) return;
+  let value = el.value;
+  if(field === 'amount') value = Number(value) || 0;
+  const { error } = await sb.from('liabilities').update({ [field]: value || null }).eq('id', id);
+  if(error) console.error('liability save failed', error);
+}
+async function deleteLiabilityCard(btn){
+  const card = btn.closest('.asset-card');
+  const id = card.dataset.id;
+  if(id){
+    const { error } = await sb.from('liabilities').delete().eq('id', id);
+    if(error){ console.error('liability delete failed', error); return; }
+  }
+  card.remove();
+  recomputeRoadmap();
+}
+async function addLiability(){
+  if(!currentUser) return;
+  const { data, error } = await sb.from('liabilities').insert({ user_id: currentUser.id, name:'', amount:0 }).select().single();
+  if(error){ console.error('liability add failed', error); return; }
+  const card = makeLiabilityCardEl(data);
+  document.getElementById('liabilityList').appendChild(card);
+  card.querySelector('.asset-detail').classList.add('open');
+  card.querySelector('.asset-expand').textContent = '⌃';
+  card.querySelector('.a-name').focus();
+}
 function sumAssets(){
   let sum = 0;
   document.querySelectorAll('.asset-card').forEach(card => {
@@ -2337,8 +2400,13 @@ function sumAssets(){
   return sum;
 }
 let roadmapChart;
+function sumLiabilities(){
+  let sum = 0;
+  document.querySelectorAll('.liability-input').forEach(i => sum += Number(i.value) || 0);
+  return sum;
+}
 function recomputeRoadmap(){
-  const total = sumAssets();
+  const total = sumAssets() - sumLiabilities();
   document.getElementById('totalAssets').textContent = total.toLocaleString() + '원';
 
   const age0 = Number(document.getElementById('ageInput').value) || 30;
