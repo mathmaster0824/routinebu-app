@@ -1583,6 +1583,11 @@
 <!-- 월말정산 서브화면 -->
 <div class="subscreen" id="sub-monthsettle">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('monthsettle')">←</button><h1 class="sub-title" id="monthsettleTitle">월말정산</h1></div>
+  <div class="week-nav">
+    <button class="wn-arrow" onclick="navMonthSettle(-1)">‹</button>
+    <span class="wn-label" id="monthsettleNavLabel">-</span>
+    <button class="wn-arrow" onclick="navMonthSettle(1)">›</button>
+  </div>
   <div class="sub-body">
 
     <div class="ms-metric-row">
@@ -2022,13 +2027,21 @@ async function renderWeekSettle(){
 }
 const MS_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D85A30','#D4537E','#888780','#8B5CF6','#F59E0B'];
 let msIncChartInstance, msExpChartInstance;
+let monthSettleOffset = 0;
+function navMonthSettle(dir){
+  monthSettleOffset += dir;
+  renderMonthSettle();
+}
 async function renderMonthSettle(){
   if(!currentUser) return;
   if(myCategoriesCache.length === 0) await loadMyCategories();
-  const today = new Date();
-  const monthStart = dateKey(new Date(today.getFullYear(), today.getMonth(), 1));
-  const monthEnd = dateKey(new Date(today.getFullYear(), today.getMonth()+1, 0));
-  document.getElementById('monthsettleTitle').textContent = `월말정산 · ${today.getMonth()+1}월`;
+  const base = new Date();
+  const target = new Date(base.getFullYear(), base.getMonth() + monthSettleOffset, 1);
+  const monthStart = dateKey(target);
+  const monthEnd = dateKey(new Date(target.getFullYear(), target.getMonth()+1, 0));
+  const label = `${target.getFullYear()}년 ${target.getMonth()+1}월${monthSettleOffset===0?' · 이번 달':''}`;
+  document.getElementById('monthsettleTitle').textContent = `월말정산 · ${target.getMonth()+1}월`;
+  document.getElementById('monthsettleNavLabel').textContent = label;
 
   const { data, error } = await sb.from('transactions').select('*')
     .eq('user_id', currentUser.id).gte('tx_date', monthStart).lte('tx_date', monthEnd);
