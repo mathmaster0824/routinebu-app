@@ -1304,7 +1304,7 @@
 
     <div class="section-head" style="padding:0;margin:22px 0 8px;"><h2>설정</h2></div>
     <div class="mi-menu">
-      <div class="mi-menu-item" onclick="openSub('categories')"><span>가계부 항목표 수정</span><span class="m-chev">›</span></div>
+      <div class="mi-menu-item" onclick="openSub('categories')"><span>월예산(고정지출) 관리</span><span class="m-chev">›</span></div>
       <div class="mi-menu-item" onclick="openSub('idx')"><span>커스텀 지표 이름 바꾸기</span><span class="m-chev">›</span></div>
       <div class="mi-menu-item" onclick="requestPasswordReset()"><span>비밀번호 변경</span><span class="m-chev">›</span></div>
     </div>
@@ -1625,7 +1625,7 @@
 
 <!-- 카테고리 관리 서브화면 -->
 <div class="subscreen" id="sub-categories">
-  <div class="sub-top"><button class="back-btn" onclick="closeSub('categories')">←</button><h1 class="sub-title">가계부 항목표</h1></div>
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('categories')">←</button><h1 class="sub-title">월예산(고정지출) 관리</h1></div>
   <div class="sub-body">
     <p class="se-intro">"지출 고정화"가 계획소비의 핵심이에요 — 모든 항목에 <b>결제일</b>을 적어두면, 매달 그 날짜에 이미 기록되어 있어요. 한 항목이 여러 날짜에 나눠 나가면 "여러 날짜로 나누기"를 써보세요.</p>
 
@@ -3325,14 +3325,45 @@ function recalcGroceryActual(){
   cmp.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 }
 
+function existingCatNames(listId, opts){
+  opts = opts || {};
+  const sel = opts.rowSelector || '.cat-card';
+  const names = [...document.getElementById(listId).querySelectorAll(sel)].map(el => {
+    const dd = el.querySelector('.cat-name-select');
+    const txt = el.querySelector('.cat-name-new, .cat-select, .cat-income-name');
+    if(dd && dd.style.display !== 'none') return dd.value !== '__new__' ? dd.value : (txt?txt.value:'');
+    return txt ? txt.value : '';
+  }).map(v=>(v||'').trim()).filter(Boolean);
+  return [...new Set(names)];
+}
+function handleCatNameDropdown(select){
+  const wrap = select.closest('.cat-name-field');
+  const input = wrap.querySelector('.cat-name-new');
+  if(select.value === '__new__'){
+    input.style.display = 'block';
+    select.style.display = 'none';
+    input.focus();
+  }
+}
 function addCatRow(listId, type){
   const wrap = document.getElementById(listId);
+  const existing = existingCatNames(listId, { rowSelector: type==='expense' ? '.cat-card' : '.cat-row' });
+  const nameFieldHtml = `
+    <span class="cat-name-field" style="position:relative;flex:1;">
+      <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
+        <option value="">카테고리 선택</option>
+        ${existing.map(n=>`<option value="${n}">${n}</option>`).join('')}
+        <option value="__new__">＋ 새 이름 직접입력</option>
+      </select>
+      <input class="cat-name-new cat-select" type="text" placeholder="새 카테고리 이름" style="display:none;">
+    </span>
+  `;
   if(type === 'expense'){
     const card = document.createElement('div');
     card.className = 'cat-card';
     card.innerHTML = `
       <div class="cat-row-top">
-        <input class="cat-select" type="text" placeholder="카테고리 이름">
+        ${nameFieldHtml}
         <input class="cat-name-input" type="text" placeholder="상품명(선택)">
         <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
       </div>
@@ -3347,7 +3378,7 @@ function addCatRow(listId, type){
   } else {
     const row = document.createElement('div');
     row.className = 'cat-row';
-    row.innerHTML = `<input class="cat-day" type="text" placeholder="일"><input type="text" placeholder="항목 이름"><select class="cat-tag-select"><option>노동수입</option><option>비노동수입</option><option>이벤트수입</option></select><input type="number" placeholder="월예산"><button class="cat-del" onclick="this.parentElement.remove()">✕</button>`;
+    row.innerHTML = `<input class="cat-day" type="text" placeholder="일">${nameFieldHtml}<select class="cat-tag-select"><option>노동수입</option><option>비노동수입</option><option>이벤트수입</option></select><input type="number" placeholder="월예산"><button class="cat-del" onclick="this.parentElement.remove()">✕</button>`;
     wrap.appendChild(row);
   }
 }
@@ -3478,7 +3509,7 @@ async function loadCategories(){
       const disabled = c.income_tag === '이벤트수입';
       row.innerHTML = `
         <input class="cat-day" type="text" placeholder="${disabled?'-':'일'}" value="${disabled?'':(c.payment_day||'')}" ${disabled?'disabled':''}>
-        <input type="text" value="${c.name||c.category}">
+        <input class="cat-income-name" type="text" value="${c.name||c.category}">
         <select class="cat-tag-select">
           <option ${c.income_tag==='노동수입'?'selected':''}>노동수입</option>
           <option ${c.income_tag==='비노동수입'?'selected':''}>비노동수입</option>
@@ -3491,6 +3522,14 @@ async function loadCategories(){
     }
   });
 }
+function getCatNameFromRow(row){
+  const dd = row.querySelector('.cat-name-select');
+  if(dd){
+    return dd.value === '__new__' ? row.querySelector('.cat-name-new').value.trim() : dd.value.trim();
+  }
+  const plain = row.querySelector('.cat-select, .cat-income-name');
+  return plain ? plain.value.trim() : '';
+}
 async function saveCategories(){
   if(!currentUser) return;
   const btn = document.querySelector('#sub-categories .save-btn');
@@ -3498,7 +3537,7 @@ async function saveCategories(){
   try{
     // 지출 항목 파싱 (자유 텍스트)
     const expensePayload = [...document.querySelectorAll('#catExpenseList .cat-card')].map(card => {
-      const category = card.querySelector('.cat-select').value.trim();
+      const category = getCatNameFromRow(card);
       const nameInput = card.querySelector('.cat-name-input').value.trim();
       const splitRows = [...card.querySelectorAll('.cat-split-row')].map(r => {
         const inputs = r.querySelectorAll('input');
@@ -3537,12 +3576,24 @@ async function saveCategories(){
 
     // 수입 항목 파싱
     const incomePayload = [...document.querySelectorAll('#catIncomeList .cat-row')].map(row => {
-      const nameInput = row.querySelector('input[type="text"]').value.trim();
+      const nameInput = getCatNameFromRow(row);
       const dayInput = row.querySelector('.cat-day').value.trim();
       const tag = row.querySelector('.cat-tag-select').value;
       const budget = Number(row.querySelector('input[type="number"]').value) || 0;
       return { category: nameInput, name: nameInput, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
+
+    // 완전히 동일한 이름 중복 체크 (지출/수입 각각)
+    const expNames = expensePayload.map(r=>r.category);
+    const incNames = incomePayload.map(r=>r.category);
+    const dupExp = expNames.filter((n,i)=>expNames.indexOf(n)!==i);
+    const dupInc = incNames.filter((n,i)=>incNames.indexOf(n)!==i);
+    if(dupExp.length > 0 || dupInc.length > 0){
+      const dupList = [...new Set([...dupExp, ...dupInc])].join(', ');
+      alert(`같은 이름의 카테고리가 중복으로 있어요: "${dupList}"\n이름을 다르게 바꾸거나 하나를 지워주세요.`);
+      btn.disabled = false; btn.textContent = '저장';
+      return;
+    }
 
     // 기존 항목 전부 삭제 후 새로 저장 (splits는 cascade로 함께 삭제됨)
     const { error: delErr } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
