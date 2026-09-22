@@ -1104,7 +1104,7 @@
       <p class="group-label income" style="margin-top:16px;">수입 항목</p>
       <div id="obIncomeRows">
       <div class="ob-item-row" data-tag="노동수입"><input class="cat-day" type="text" placeholder="일" style="flex:0.5;"><input type="text" value="월급"><span class="ob-tag">노동수입</span><input type="number" placeholder="월예산"></div>
-      <div class="ob-item-row" data-tag="비노동수입"><input class="cat-day" type="text" placeholder="일" style="flex:0.5;"><input type="text" value="배당금"><span class="ob-tag">비노동수입</span><input type="number" placeholder="월예산"></div>
+      <div class="ob-item-row" data-tag="금융수입"><input class="cat-day" type="text" placeholder="일" style="flex:0.5;"><input type="text" value="배당금"><span class="ob-tag">금융수입</span><input type="number" placeholder="월예산"></div>
       <div class="ob-item-row" data-tag="이벤트수입"><input class="cat-day" type="text" placeholder="-" style="flex:0.5;" disabled><input type="text" value="용돈"><span class="ob-tag event">이벤트수입</span><input type="number" placeholder="예산없음" disabled></div>
       </div>
 
@@ -2109,7 +2109,7 @@ document.addEventListener('input', function(e){
     recalcTotal(e.target.closest('.settle-group'));
   }
 });
-const INCOME_TAGS = ['노동수입','비노동수입','이벤트수입'];
+const INCOME_TAGS = ['노동수입','금융수입','이벤트수입'];
 function incomeOptions(selected){
   return INCOME_TAGS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
@@ -2480,7 +2480,7 @@ async function loadSurvivalIndex(){
   const liabilitySum = (liabilities||[]).reduce((s,l)=>s+Number(l.amount||0),0);
   const netWorth = assetSum + investedSum - liabilitySum;
 
-  const nonLaborIncome = (cats||[]).filter(c=>c.kind==='income' && c.income_tag==='비노동수입').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
+  const nonLaborIncome = (cats||[]).filter(c=>c.kind==='income' && c.income_tag==='금융수입').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
   const totalExpenseBudget = (cats||[]).filter(c=>c.kind==='expense').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
 
   const monthlyAssetIncome = netWorth * 0.04 / 12;
@@ -2502,7 +2502,7 @@ async function loadSurvivalIndex(){
     if(totalExpenseBudget === 0){
       detailEl.innerHTML = '가계부 카테고리에 월예산을 입력하면 생존지수가 계산돼요.';
     } else {
-      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 비노동소득으로 ${rateRounded}% 감당할 수 있어요.<br>순자산 ${netWorth.toLocaleString()}원 · 비노동수입 ${nonLaborIncome.toLocaleString()}원 기준`;
+      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 금융소득으로 ${rateRounded}% 감당할 수 있어요.<br>순자산 ${netWorth.toLocaleString()}원 · 금융수입 ${nonLaborIncome.toLocaleString()}원 기준`;
     }
   }
 }
@@ -3325,6 +3325,7 @@ function recalcGroceryActual(){
   cmp.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 }
 
+const DEFAULT_EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금','이벤트'];
 function existingCatNames(listId, opts){
   opts = opts || {};
   const sel = opts.rowSelector || '.cat-card';
@@ -3334,7 +3335,8 @@ function existingCatNames(listId, opts){
     if(dd && dd.style.display !== 'none') return dd.value !== '__new__' ? dd.value : (txt?txt.value:'');
     return txt ? txt.value : '';
   }).map(v=>(v||'').trim()).filter(Boolean);
-  return [...new Set(names)];
+  const base = opts.includeDefaults ? DEFAULT_EXPENSE_CATS : [];
+  return [...new Set([...base, ...names])];
 }
 function handleCatNameDropdown(select){
   const wrap = select.closest('.cat-name-field');
@@ -3347,7 +3349,7 @@ function handleCatNameDropdown(select){
 }
 function addCatRow(listId, type){
   const wrap = document.getElementById(listId);
-  const existing = existingCatNames(listId, { rowSelector: type==='expense' ? '.cat-card' : '.cat-row' });
+  const existing = existingCatNames(listId, { rowSelector: type==='expense' ? '.cat-card' : '.cat-row', includeDefaults: type==='expense' });
   const nameFieldHtml = `
     <span class="cat-name-field" style="position:relative;flex:1;">
       <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
@@ -3378,7 +3380,7 @@ function addCatRow(listId, type){
   } else {
     const row = document.createElement('div');
     row.className = 'cat-row';
-    row.innerHTML = `<input class="cat-day" type="text" placeholder="일">${nameFieldHtml}<select class="cat-tag-select"><option>노동수입</option><option>비노동수입</option><option>이벤트수입</option></select><input type="number" placeholder="월예산"><button class="cat-del" onclick="this.parentElement.remove()">✕</button>`;
+    row.innerHTML = `<input class="cat-day" type="text" placeholder="일">${nameFieldHtml}<select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select><input type="number" placeholder="월예산"><button class="cat-del" onclick="this.parentElement.remove()">✕</button>`;
     wrap.appendChild(row);
   }
 }
@@ -3512,7 +3514,7 @@ async function loadCategories(){
         <input class="cat-income-name" type="text" value="${c.name||c.category}">
         <select class="cat-tag-select">
           <option ${c.income_tag==='노동수입'?'selected':''}>노동수입</option>
-          <option ${c.income_tag==='비노동수입'?'selected':''}>비노동수입</option>
+          <option ${c.income_tag==='금융수입'?'selected':''}>금융수입</option>
           <option ${c.income_tag==='이벤트수입'?'selected':''}>이벤트수입</option>
         </select>
         <input type="number" placeholder="${disabled?'예산없음':'월예산'}" value="${c.monthly_budget||''}" ${disabled?'disabled':''}>
