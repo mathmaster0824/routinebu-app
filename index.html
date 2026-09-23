@@ -3356,8 +3356,15 @@ function filterCardsByDay(containerIds, day, cardSelector){
     if(!el) return;
     el.querySelectorAll(cardSelector).forEach(card => {
       if(!day){ card.style.display = ''; return; }
-      const hasSplitRows = card.querySelectorAll('.cat-split-row').length > 0;
-      if(hasSplitRows){ card.style.display = ''; return; }
+      const splitRows = [...card.querySelectorAll('.cat-split-row')];
+      if(splitRows.length > 0){
+        const matches = splitRows.some(r => {
+          const dayInput = r.querySelector('input');
+          return dayInput && dayInput.value.trim() === day;
+        });
+        card.style.display = matches ? '' : 'none';
+        return;
+      }
       const dayInput = card.querySelector('.cat-day');
       const matches = dayInput && dayInput.value.trim() === day;
       card.style.display = matches ? '' : 'none';
