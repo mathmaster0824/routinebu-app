@@ -3336,7 +3336,7 @@ function handleCatNameDropdown(select){
 }
 function addCatRow(listId, type){
   const wrap = document.getElementById(listId);
-  const existing = existingCatNames(listId, { rowSelector: type==='expense' ? '.cat-card' : '.cat-row', includeDefaults: type==='expense' });
+  const existing = existingCatNames(listId, { rowSelector: '.cat-card', includeDefaults: type==='expense' });
   const nameFieldHtml = `
     <span class="cat-name-field" style="position:relative;flex:1;">
       <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
@@ -3365,10 +3365,20 @@ function addCatRow(listId, type){
     `;
     wrap.appendChild(card);
   } else {
-    const row = document.createElement('div');
-    row.className = 'cat-row';
-    row.innerHTML = `<input class="cat-day" type="text" placeholder="일">${nameFieldHtml}<select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select><input type="number" placeholder="월예산"><button class="cat-del" onclick="this.parentElement.remove()">✕</button>`;
-    wrap.appendChild(row);
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.innerHTML = `
+      <div class="cat-row-top">
+        ${nameFieldHtml}
+        <select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+        <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
+      </div>
+      <div class="cat-row-bottom">
+        <input class="cat-day" type="text" placeholder="결제일">
+        <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
+      </div>
+    `;
+    wrap.appendChild(card);
   }
 }
 function toggleCatSplit(link){
@@ -3492,22 +3502,26 @@ async function loadCategories(){
       const cat = { id:c.id, category:c.category, name:c.name, payment_day:c.payment_day, monthly_budget:c.monthly_budget, splits:(c.category_splits||[]).map(s=>({day_label:s.day_label, amount:s.amount})) };
       expenseList.appendChild(makeCatCardEl(cat));
     } else {
-      const row = document.createElement('div');
-      row.className = 'cat-row';
-      if(c.id) row.dataset.id = c.id;
+      const card = document.createElement('div');
+      card.className = 'cat-card';
+      if(c.id) card.dataset.id = c.id;
       const disabled = c.income_tag === '이벤트수입';
-      row.innerHTML = `
-        <input class="cat-day" type="text" placeholder="${disabled?'-':'일'}" value="${disabled?'':(c.payment_day||'')}" ${disabled?'disabled':''}>
-        <input class="cat-income-name" type="text" value="${c.name||c.category}">
-        <select class="cat-tag-select">
-          <option ${c.income_tag==='노동수입'?'selected':''}>노동수입</option>
-          <option ${c.income_tag==='금융수입'?'selected':''}>금융수입</option>
-          <option ${c.income_tag==='이벤트수입'?'selected':''}>이벤트수입</option>
-        </select>
-        <input type="number" placeholder="${disabled?'예산없음':'월예산'}" value="${c.monthly_budget||''}" ${disabled?'disabled':''}>
-        <button class="cat-del" onclick="this.parentElement.remove()">✕</button>
+      card.innerHTML = `
+        <div class="cat-row-top">
+          <input class="cat-income-name" type="text" value="${c.name||c.category}" style="flex:1.2;">
+          <select class="cat-tag-select">
+            <option ${c.income_tag==='노동수입'?'selected':''}>노동수입</option>
+            <option ${c.income_tag==='금융수입'?'selected':''}>금융수입</option>
+            <option ${c.income_tag==='이벤트수입'?'selected':''}>이벤트수입</option>
+          </select>
+          <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
+        </div>
+        <div class="cat-row-bottom">
+          <input class="cat-day" type="text" placeholder="${disabled?'-':'결제일'}" value="${disabled?'':(c.payment_day||'')}" ${disabled?'disabled':''}>
+          <input class="cat-budget" type="text" inputmode="numeric" placeholder="${disabled?'예산없음':'월예산'}" value="${c.monthly_budget?Number(c.monthly_budget).toLocaleString():''}" oninput="formatMoneyInput(this)" ${disabled?'disabled':''}>
+        </div>
       `;
-      incomeList.appendChild(row);
+      incomeList.appendChild(card);
     }
   });
 }
@@ -3564,11 +3578,11 @@ async function saveCategories(){
     });
 
     // 수입 항목 파싱
-    const incomePayload = [...document.querySelectorAll('#catIncomeList .cat-row')].map(row => {
+    const incomePayload = [...document.querySelectorAll('#catIncomeList .cat-card')].map(row => {
       const nameInput = getCatNameFromRow(row);
       const dayInput = row.querySelector('.cat-day').value.trim();
       const tag = row.querySelector('.cat-tag-select').value;
-      const budget = Number(row.querySelector('input[type="number"]').value) || 0;
+      const budget = rawMoney(row.querySelector('.cat-budget'));
       return { category: nameInput, name: nameInput, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
 
