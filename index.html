@@ -805,7 +805,7 @@
   .ob-level-card.selected{border-color:var(--brand);background:var(--surface-2);}
   .ob-level-name{font-size:14px;font-weight:700;margin:0 0 3px;}
   .ob-level-desc{font-size:12px;color:var(--ink-faint);margin:0;}
-  .ob-item-row{display:flex;gap:8px;margin:0 20px 8px;align-items:center;}
+  .ob-item-row{margin:0 20px 8px;padding:10px;background:var(--surface);border-radius:12px;border:0.5px solid var(--line);}
   .ob-item-row input[type="text"]{
     flex:1;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);
     background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px;
@@ -860,6 +860,16 @@
     flex:1;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);
     background:var(--surface);color:var(--ink);font-family:inherit;font-size:12.5px;text-align:right;
   }
+  .day-picker-strip{
+    display:flex;flex-wrap:wrap;gap:5px;margin:0 20px 12px;
+  }
+  .day-picker-cell{
+    width:30px;height:30px;border-radius:8px;border:0.5px solid var(--line);
+    background:var(--surface);color:var(--ink-soft);font-family:inherit;font-size:11.5px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .day-picker-cell.last{width:auto;padding:0 8px;}
+  .day-picker-cell.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700;}
   .cat-tag-select{
     flex:1;padding:9px 6px;border-radius:9px;border:0.5px solid var(--line);
     background:var(--surface);color:var(--ink-soft);font-family:inherit;font-size:11px;
@@ -1081,18 +1091,21 @@
         <select id="obPeriodType"><option value="block">날짜블록 (1~7일 / 8~14일 / 15~21일 / 22~말일)</option><option value="week">캘린더 주 (월~일)</option></select>
       </div>
 
-      <p class="group-label expense" style="margin-top:16px;">지출 항목</p>
+      <p class="ob-hint" style="margin:14px 20px 6px;"><b>날짜를 먼저 고르세요</b> — 그 날짜에 나가는 지출과 들어오는 수입을 같이 정리할 수 있어요. 같은 날짜 다시 누르면 전체보기로 돌아가요.</p>
+      <div class="day-picker-strip" id="obDayPicker"></div>
+      <p class="field-hint" id="obDayFilterStatus" style="margin:0 20px 10px;"></p>
+
+      <p class="group-label expense" style="margin-top:10px;">지출 항목</p>
       <p class="ob-hint" style="margin:0 20px 8px;">본인에게 필요한 만큼 직접 추가해보세요. "＋" 누르면 자주 쓰는 카테고리 목록이 드롭다운으로 뜨고, 없으면 직접 이름을 입력할 수 있어요.</p>
       <div id="obExpenseRows"></div>
       <button class="add-row" onclick="addObRow('obExpenseAdd')">＋ 지출 항목 추가</button>
       <div id="obExpenseAdd"></div>
 
       <p class="group-label income" style="margin-top:16px;">수입 항목</p>
-      <div id="obIncomeRows">
-      <div class="ob-item-row" data-tag="노동수입"><input class="cat-day" type="text" placeholder="일" style="flex:0.5;"><input type="text" value="월급"><span class="ob-tag">노동수입</span><input type="number" placeholder="월예산"></div>
-      <div class="ob-item-row" data-tag="금융수입"><input class="cat-day" type="text" placeholder="일" style="flex:0.5;"><input type="text" value="배당금"><span class="ob-tag">금융수입</span><input type="number" placeholder="월예산"></div>
-      <div class="ob-item-row" data-tag="이벤트수입"><input class="cat-day" type="text" placeholder="-" style="flex:0.5;" disabled><input type="text" value="용돈"><span class="ob-tag event">이벤트수입</span><input type="number" placeholder="예산없음" disabled></div>
-      </div>
+      <p class="ob-hint" style="margin:0 20px 8px;">노동수입·금융수입·이벤트수입 중 구분을 골라 필요한 만큼 추가해보세요.</p>
+      <div id="obIncomeRows"></div>
+      <button class="add-row" onclick="addObIncomeRow('obIncomeAdd')">＋ 수입 항목 추가</button>
+      <div id="obIncomeAdd"></div>
 
       <button class="save-btn" id="task1Btn" style="margin:18px 20px 0;width:calc(100% - 40px);" onclick="saveTask1()">다음 과제로 →</button>
       <p class="field-hint" id="task1Msg" style="text-align:center;margin-top:8px;"></p>
@@ -1611,7 +1624,7 @@
 
 <!-- 카테고리 관리 서브화면 -->
 <div class="subscreen" id="sub-categories">
-  <div class="sub-top"><button class="back-btn" onclick="closeSub('categories')">←</button><h1 class="sub-title">월예산(고정지출) 관리</h1></div>
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('categories')">←</button><h1 class="sub-title">월예산(고정지출) 관리</h1><button class="mode-switch-btn" style="width:auto;padding:6px 12px;font-size:11.5px;margin:0 0 0 auto;color:var(--red);border-color:var(--red);white-space:nowrap;" onclick="resetAllCategories()">전체 초기화</button></div>
   <div class="sub-body">
     <p class="se-intro">"지출 고정화"가 계획소비의 핵심이에요 — 모든 항목에 <b>결제일</b>을 적어두면, 매달 그 날짜에 이미 기록되어 있어요. 한 항목이 여러 날짜에 나눠 나가면 "여러 날짜로 나누기"를 써보세요.</p>
 
@@ -1631,8 +1644,12 @@
       <select><option>날짜블록 (1~7일 / 8~14일 / 15~21일 / 22~말일)</option><option>캘린더 주 (월~일)</option></select>
     </div>
 
-    <p class="group-label expense" style="margin-top:16px;">지출 항목 (자유롭게 수정)</p>
-    <p class="ob-hint" style="margin:0 20px 8px;">이름을 직접 고치거나 지우거나 새로 추가할 수 있어요. 결제일·월예산도 본인 것으로 입력해주세요.</p>
+    <p class="ob-hint" style="margin:12px 20px 6px;"><b>날짜를 먼저 고르세요</b> — 그 날짜에 나가는 지출·투자·들어오는 수입을 한 번에 정리할 수 있어요. 같은 날짜 다시 누르면 전체보기로 돌아가요.</p>
+    <div class="day-picker-strip" id="expDayPicker"></div>
+    <p class="field-hint" id="dayFilterStatus" style="margin:0 20px 10px;"></p>
+
+    <p class="group-label expense" style="margin-top:10px;">지출</p>
+    <p class="ob-hint" style="margin:0 20px 8px;">카테고리는 "용돈"처럼 여러 번 재사용해도 괜찮아요. 같은 카테고리로 여러 개 만들 땐 <b>세부항목</b> 칸에 "찌"/"쫑"처럼 구분되게 적어주세요.</p>
     <div id="catExpenseList"></div>
     <button class="add-row" onclick="addCatRow('catExpenseList','expense')">＋ 지출 항목 추가</button>
 
@@ -1651,8 +1668,7 @@
     <div id="assetLinkList_변동자산"></div>
     <button class="add-row" onclick="addAssetLinkRow('변동자산')">＋ 변동자산 항목 추가</button>
 
-    <p class="group-label income" style="margin-top:20px;">수입 항목</p>
-    <div class="cat-header-row"><span>결제일</span><span>이름</span><span>월예산</span></div>
+    <p class="group-label income" style="margin-top:20px;">수입</p>
     <div id="catIncomeList"></div>
     <p class="field-hint" style="margin:2px 20px 0;">이벤트수입은 불규칙해서 결제일이 없어요.</p>
     <button class="add-row" onclick="addCatRow('catIncomeList','income')">＋ 수입 항목 추가</button>
@@ -1883,6 +1899,7 @@ function openSub(id){
   }
   if(id === 'categories'){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
+    try{ renderExpDayPicker(); selectedExpDay = null; }catch(e){ console.error('day picker render failed', e); }
   }
   if(id === 'ledger'){
     try{ initLedgerView(); }catch(e){ console.error('ledger init failed', e); }
@@ -3112,7 +3129,10 @@ function showOnboard(step){
   else if(step === 'signup') document.getElementById('onboardSignup').style.display = 'block';
   else if(step === 'pending') document.getElementById('onboardPending').style.display = 'block';
   else if(step === 1) document.getElementById('onboardStep1').style.display = 'block';
-  else if(step === 2) document.getElementById('onboardStep2').style.display = 'block';
+  else if(step === 2){
+    document.getElementById('onboardStep2').style.display = 'block';
+    try{ renderObDayPicker(); selectedObDay = null; }catch(e){ console.error('ob day picker render failed', e); }
+  }
   else if(step === 3) document.getElementById('onboardStep3').style.display = 'block';
   else if(step === 4) document.getElementById('onboardStep4').style.display = 'block';
 }
@@ -3313,6 +3333,103 @@ function recalcGroceryActual(){
 }
 
 const DEFAULT_EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금','이벤트'];
+function renderDayPickerGeneric(stripId, onSelect){
+  const strip = document.getElementById(stripId);
+  if(!strip) return;
+  strip.innerHTML = '';
+  for(let d=1; d<=31; d++){
+    const cell = document.createElement('div');
+    cell.className = 'day-picker-cell';
+    cell.textContent = d;
+    cell.onclick = () => onSelect(String(d), cell);
+    strip.appendChild(cell);
+  }
+  const lastCell = document.createElement('div');
+  lastCell.className = 'day-picker-cell last';
+  lastCell.textContent = '말일';
+  lastCell.onclick = () => onSelect('말일', lastCell);
+  strip.appendChild(lastCell);
+}
+function filterCardsByDay(containerIds, day, cardSelector){
+  containerIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.querySelectorAll(cardSelector).forEach(card => {
+      if(!day){ card.style.display = ''; return; }
+      const hasSplitRows = card.querySelectorAll('.cat-split-row').length > 0;
+      if(hasSplitRows){ card.style.display = ''; return; }
+      const dayInput = card.querySelector('.cat-day');
+      const matches = dayInput && dayInput.value.trim() === day;
+      card.style.display = matches ? '' : 'none';
+    });
+  });
+}
+
+/* ── 카테고리 관리 화면용 날짜 피커 ── */
+let selectedExpDay = null;
+function renderExpDayPicker(){
+  renderDayPickerGeneric('expDayPicker', selectExpDay);
+}
+function selectExpDay(day, cellEl){
+  const statusEl = document.getElementById('dayFilterStatus');
+  if(selectedExpDay === day){
+    selectedExpDay = null;
+    cellEl.classList.remove('active');
+    filterCardsByDay(['catExpenseList','catIncomeList','assetLinkList_비유동자산','assetLinkList_고정투자자산','assetLinkList_변동자산'], null, '.cat-card');
+    if(statusEl) statusEl.textContent = '';
+    return;
+  }
+  document.querySelectorAll('#expDayPicker .day-picker-cell').forEach(c=>c.classList.remove('active'));
+  selectedExpDay = day;
+  cellEl.classList.add('active');
+  filterCardsByDay(['catExpenseList','catIncomeList','assetLinkList_비유동자산','assetLinkList_고정투자자산','assetLinkList_변동자산'], day, '.cat-card');
+  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. 지출·수입에 새 항목을 추가하면 이 날짜로 자동 채워져요.`;
+  addCatRow('catExpenseList', 'expense');
+  addCatRow('catIncomeList', 'income');
+}
+
+/* ── 온보딩 과제1용 날짜 피커 ── */
+let selectedObDay = null;
+function renderObDayPicker(){
+  renderDayPickerGeneric('obDayPicker', selectObDay);
+}
+function selectObDay(day, cellEl){
+  const statusEl = document.getElementById('obDayFilterStatus');
+  if(selectedObDay === day){
+    selectedObDay = null;
+    cellEl.classList.remove('active');
+    filterCardsByDay(['obExpenseRows','obExpenseAdd','obIncomeRows','obIncomeAdd'], null, '.ob-item-row');
+    if(statusEl) statusEl.textContent = '';
+    return;
+  }
+  document.querySelectorAll('#obDayPicker .day-picker-cell').forEach(c=>c.classList.remove('active'));
+  selectedObDay = day;
+  cellEl.classList.add('active');
+  filterCardsByDay(['obExpenseRows','obExpenseAdd','obIncomeRows','obIncomeAdd'], day, '.ob-item-row');
+  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. 새 항목을 추가하면 이 날짜로 자동 채워져요.`;
+  addObRow('obExpenseAdd');
+  addObIncomeRow('obIncomeAdd');
+}
+async function resetAllCategories(){
+  if(!currentUser) return;
+  const confirmed = confirm('정말 전체 초기화하시겠어요?\n지금까지 만든 모든 지출·수입 카테고리(자산연결 포함)가 삭제돼요.\n이미 기록된 가계부 거래내역은 지워지지 않아요.');
+  if(!confirmed) return;
+  const btn = document.querySelector('#sub-categories .sub-top .mode-switch-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '초기화 중...'; }
+  const { error } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
+  if(btn){ btn.disabled = false; btn.textContent = '전체 초기화'; }
+  if(error){
+    alert('초기화 실패: ' + error.message);
+    return;
+  }
+  await loadCategories();
+  selectedExpDay = null;
+  try{ renderExpDayPicker(); }catch(e){}
+  const t = document.getElementById('toast');
+  t.textContent = '전체 초기화됐어요. 새로 만들어보세요.';
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2000);
+}
 function existingCatNames(listId, opts){
   opts = opts || {};
   const sel = opts.rowSelector || '.cat-card';
@@ -3353,11 +3470,11 @@ function addCatRow(listId, type){
     card.innerHTML = `
       <div class="cat-row-top">
         ${nameFieldHtml}
-        <input class="cat-name-input" type="text" placeholder="상품명(선택)">
+        <input class="cat-name-input" type="text" placeholder="세부항목(예: 찌, 쫑)">
         <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
       </div>
       <div class="cat-row-bottom">
-        <input class="cat-day" type="text" placeholder="결제일">
+        <input class="cat-day" type="text" placeholder="결제일" value="${selectedExpDay || ''}">
         <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
       </div>
       <p class="cat-split-link" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ›</p>
@@ -3374,7 +3491,7 @@ function addCatRow(listId, type){
         <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
       </div>
       <div class="cat-row-bottom">
-        <input class="cat-day" type="text" placeholder="결제일">
+        <input class="cat-day" type="text" placeholder="결제일" value="${selectedExpDay || ''}">
         <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
       </div>
     `;
@@ -3422,7 +3539,7 @@ function makeCatCardEl(cat){
   card.innerHTML = `
     <div class="cat-row-top">
       <input class="cat-select" type="text" placeholder="카테고리 이름" value="${cat.category||''}">
-      <input class="cat-name-input" type="text" placeholder="상품명(선택)" value="${cat.name && cat.name!==cat.category ? cat.name : ''}">
+      <input class="cat-name-input" type="text" placeholder="세부항목(예: 찌, 쫑)" value="${cat.name && cat.name!==cat.category ? cat.name : ''}">
       <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
     </div>
     <div class="cat-row-bottom">
@@ -3586,14 +3703,14 @@ async function saveCategories(){
       return { category: nameInput, name: nameInput, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
 
-    // 완전히 동일한 이름 중복 체크 (지출/수입 각각)
-    const expNames = expensePayload.map(r=>r.category);
-    const incNames = incomePayload.map(r=>r.category);
-    const dupExp = expNames.filter((n,i)=>expNames.indexOf(n)!==i);
-    const dupInc = incNames.filter((n,i)=>incNames.indexOf(n)!==i);
-    if(dupExp.length > 0 || dupInc.length > 0){
-      const dupList = [...new Set([...dupExp, ...dupInc])].join(', ');
-      alert(`같은 이름의 카테고리가 중복으로 있어요: "${dupList}"\n이름을 다르게 바꾸거나 하나를 지워주세요.`);
+    // 완전히 동일한 "카테고리+세부항목" 조합만 중복으로 체크 (같은 카테고리 재사용은 정상)
+    const expKeys = expensePayload.map(r=>r.category+'|'+r.name);
+    const incKeys = incomePayload.map(r=>r.category+'|'+r.name);
+    const dupExpKeys = expKeys.filter((k,i)=>expKeys.indexOf(k)!==i);
+    const dupIncKeys = incKeys.filter((k,i)=>incKeys.indexOf(k)!==i);
+    if(dupExpKeys.length > 0 || dupIncKeys.length > 0){
+      const dupList = [...new Set([...dupExpKeys, ...dupIncKeys])].map(k=>k.replace('|',' - ')).join(', ');
+      alert(`카테고리+세부항목이 완전히 똑같은 게 있어요: "${dupList}"\n세부항목 이름을 다르게 구분해주세요. (같은 카테고리를 여러 번 쓰는 건 괜찮아요!)`);
       btn.disabled = false; btn.textContent = '저장';
       return;
     }
@@ -3840,26 +3957,33 @@ async function saveTask1(){
     const expenseRows = [...document.querySelectorAll('#obExpenseRows .ob-item-row, #obExpenseAdd .ob-item-row')];
     const expensePayload = expenseRows.map(row => {
       const category = getCatNameFromRow(row);
-      const budgetInput = row.querySelector('input[type="number"]');
+      const nameInput = row.querySelector('.cat-name-input');
+      const detail = nameInput ? nameInput.value.trim() : '';
+      const dayInput = row.querySelector('.cat-day');
+      const budgetInput = row.querySelector('.cat-budget');
       return {
         user_id: currentUser.id,
         kind: 'expense',
-        category, name: category,
-        monthly_budget: Number(budgetInput ? budgetInput.value : 0) || 0,
+        category, name: detail || category,
+        payment_day: dayInput ? (dayInput.value.trim() || null) : null,
+        monthly_budget: budgetInput ? (rawMoney(budgetInput) || 0) : 0,
       };
     }).filter(r => r.category);
 
-    const incomeRows = [...document.querySelectorAll('#obIncomeRows .ob-item-row')];
+    const incomeRows = [...document.querySelectorAll('#obIncomeRows .ob-item-row, #obIncomeAdd .ob-item-row')];
     const incomePayload = incomeRows.map(row => {
-      const nameInput = row.querySelector('input[type="text"]');
-      const amtInput = row.querySelector('input[type="number"]');
+      const category = getCatNameFromRow(row);
+      const tagSelect = row.querySelector('.cat-tag-select');
+      const dayInput = row.querySelector('.cat-day');
+      const budgetInput = row.querySelector('.cat-budget');
+      const tag = tagSelect ? tagSelect.value : '노동수입';
       return {
         user_id: currentUser.id,
         kind: 'income',
-        category: nameInput.value.trim(),
-        name: nameInput.value.trim(),
-        income_tag: row.dataset.tag,
-        monthly_budget: Number(amtInput.value) || 0,
+        category, name: category,
+        income_tag: tag,
+        payment_day: (tag === '이벤트수입' || !dayInput) ? null : (dayInput.value.trim() || null),
+        monthly_budget: budgetInput ? (rawMoney(budgetInput) || 0) : 0,
       };
     }).filter(r => r.category);
 
@@ -3945,20 +4069,53 @@ async function checkExistingSession(){
 function addObRow(targetId){
   const wrap = document.getElementById(targetId);
   const row = document.createElement('div');
-  row.className = 'ob-item-row';
+  row.className = 'ob-item-row cat-card';
   const existing = [...document.querySelectorAll('#obExpenseRows .ob-item-row, #obExpenseAdd .ob-item-row')]
     .map(r => getCatNameFromRow(r)).filter(Boolean);
   const options = [...new Set([...DEFAULT_EXPENSE_CATS, ...existing])];
   row.innerHTML = `
-    <span class="cat-name-field" style="position:relative;flex:1;">
-      <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
-        <option value="">카테고리 선택</option>
-        ${options.map(n=>`<option value="${n}">${n}</option>`).join('')}
-        <option value="__new__">＋ 새 이름 직접입력</option>
-      </select>
-      <input class="cat-name-new" type="text" placeholder="새 카테고리 이름" style="display:none;">
-    </span>
-    <input type="number" placeholder="월 예산">
+    <div class="cat-row-top">
+      <span class="cat-name-field" style="position:relative;flex:1;">
+        <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
+          <option value="">카테고리 선택</option>
+          ${options.map(n=>`<option value="${n}">${n}</option>`).join('')}
+          <option value="__new__">＋ 새 이름 직접입력</option>
+        </select>
+        <input class="cat-name-new" type="text" placeholder="새 카테고리 이름" style="display:none;">
+      </span>
+      <input class="cat-name-input" type="text" placeholder="세부항목(선택)">
+      <button class="cat-del" onclick="this.closest('.ob-item-row').remove()">✕</button>
+    </div>
+    <div class="cat-row-bottom">
+      <input class="cat-day" type="text" placeholder="결제일" value="${selectedObDay || ''}">
+      <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
+    </div>
+  `;
+  wrap.appendChild(row);
+}
+function addObIncomeRow(targetId){
+  const wrap = document.getElementById(targetId);
+  const row = document.createElement('div');
+  row.className = 'ob-item-row cat-card';
+  const existing = [...document.querySelectorAll('#obIncomeRows .ob-item-row, #obIncomeAdd .ob-item-row')]
+    .map(r => getCatNameFromRow(r)).filter(Boolean);
+  row.innerHTML = `
+    <div class="cat-row-top">
+      <span class="cat-name-field" style="position:relative;flex:1;">
+        <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
+          <option value="">카테고리 선택</option>
+          ${existing.map(n=>`<option value="${n}">${n}</option>`).join('')}
+          <option value="__new__">＋ 새 이름 직접입력</option>
+        </select>
+        <input class="cat-name-new" type="text" placeholder="새 이름 (예: 월급)" style="display:none;">
+      </span>
+      <select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+      <button class="cat-del" onclick="this.closest('.ob-item-row').remove()">✕</button>
+    </div>
+    <div class="cat-row-bottom">
+      <input class="cat-day" type="text" placeholder="결제일" value="${selectedObDay || ''}">
+      <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" oninput="formatMoneyInput(this)">
+    </div>
   `;
   wrap.appendChild(row);
 }
