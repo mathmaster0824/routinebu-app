@@ -3710,18 +3710,6 @@ async function saveCategories(){
       return { category: nameInput, name: nameInput, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
 
-    // 완전히 동일한 "카테고리+세부항목" 조합만 중복으로 체크 (같은 카테고리 재사용은 정상)
-    const expKeys = expensePayload.map(r=>r.category+'|'+r.name);
-    const incKeys = incomePayload.map(r=>r.category+'|'+r.name);
-    const dupExpKeys = expKeys.filter((k,i)=>expKeys.indexOf(k)!==i);
-    const dupIncKeys = incKeys.filter((k,i)=>incKeys.indexOf(k)!==i);
-    if(dupExpKeys.length > 0 || dupIncKeys.length > 0){
-      const dupList = [...new Set([...dupExpKeys, ...dupIncKeys])].map(k=>k.replace('|',' - ')).join(', ');
-      alert(`카테고리+세부항목이 완전히 똑같은 게 있어요: "${dupList}"\n세부항목 이름을 다르게 구분해주세요. (같은 카테고리를 여러 번 쓰는 건 괜찮아요!)`);
-      btn.disabled = false; btn.textContent = '저장';
-      return;
-    }
-
     // 기존 항목 전부 삭제 후 새로 저장 (splits는 cascade로 함께 삭제됨)
     const { error: delErr } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
     if(delErr) throw delErr;
