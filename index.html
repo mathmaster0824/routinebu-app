@@ -336,6 +336,8 @@
     background:var(--surface);color:var(--ink);font-family:inherit;font-size:12.5px;text-align:right;
   }
   .tx-row.fixed{background:var(--gold-soft);border-radius:9px;padding:8px 10px;margin:0 0 6px;display:block;}
+  .tx-row.fixed.skipped{background:var(--surface-2);opacity:.55;}
+  .tx-row.fixed.skipped .tx-fixed-name{text-decoration:line-through;}
   .tx-fixed-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
   .tx-fixed-badge{
     flex:none;font-size:9.5px;font-weight:700;background:var(--gold);color:#3a2f0d;
@@ -1303,6 +1305,7 @@
 
     <div class="section-head" style="padding:0;margin:22px 0 8px;"><h2>설정</h2></div>
     <div class="mi-menu">
+      <div class="mi-menu-item" onclick="openSub('catsettings')"><span>카테고리 설정 (이름 관리)</span><span class="m-chev">›</span></div>
       <div class="mi-menu-item" onclick="openSub('categories')"><span>월예산(고정지출) 관리</span><span class="m-chev">›</span></div>
       <div class="mi-menu-item" onclick="openSub('idx')"><span>커스텀 지표 이름 바꾸기</span><span class="m-chev">›</span></div>
       <div class="mi-menu-item" onclick="requestPasswordReset()"><span>비밀번호 변경</span><span class="m-chev">›</span></div>
@@ -1588,6 +1591,7 @@
     <button class="wn-arrow" onclick="navMonthSettle(1)">›</button>
   </div>
   <div class="sub-body">
+    <p class="field-hint" style="margin:0 0 12px;">💡 고정 항목은 따로 수정 안 했으면 <b>예산 그대로</b> 실제로 집계돼요. 그 달에 없었으면 가계부에서 ✕로 지워주세요.</p>
 
     <div class="ms-metric-row">
       <div class="ms-metric income"><p>총 수입</p><b id="msIncomeTotal">0원</b></div>
@@ -1623,10 +1627,36 @@
 </div>
 
 <!-- 카테고리 관리 서브화면 -->
+<!-- 카테고리 설정 (이름만 관리) -->
+<div class="subscreen" id="sub-catsettings">
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('catsettings')">←</button><h1 class="sub-title">카테고리 설정</h1></div>
+  <div class="sub-body">
+    <p class="se-intro">여기선 <b>카테고리 이름만</b> 관리해요. 결제일·금액은 "월예산"에서 입력해요.</p>
+
+    <p class="group-label expense">지출 카테고리</p>
+    <div id="csExpenseList"></div>
+    <div class="field" style="margin-top:6px;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="csNewExpense" placeholder="새 카테고리 이름 (예: 여가활동비)" style="flex:1;">
+        <button class="add-row" style="width:auto;padding:0 16px;margin:0;" onclick="addNewCategoryName('expense')">추가</button>
+      </div>
+    </div>
+
+    <p class="group-label" style="margin-top:20px;color:var(--gold);">투자 (자산연결) — 고정</p>
+    <p class="field-hint" style="margin:0 20px 10px;">비유동자산·고정투자자산·변동자산은 이름·삭제가 불가능한 고정 카테고리예요. 실제 자산 연결은 "월예산"에서 해요.</p>
+
+    <p class="group-label income" style="margin-top:16px;">수입 카테고리</p>
+    <p class="field-hint" style="margin:0 20px 10px;">노동수입 · 금융수입 · 이벤트수입 3종으로 고정이에요. 세부항목(월급, 배당금 등)은 "월예산"에서 자유롭게 적어요.</p>
+
+    <button class="save-btn" style="margin-top:20px;" onclick="closeSub('catsettings');openSub('categories');">월예산 입력하러 가기 →</button>
+  </div>
+</div>
+
 <div class="subscreen" id="sub-categories">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('categories')">←</button><h1 class="sub-title">월예산(고정지출) 관리</h1><button class="mode-switch-btn" style="width:auto;padding:6px 12px;font-size:11.5px;margin:0 0 0 auto;color:var(--red);border-color:var(--red);white-space:nowrap;" onclick="resetAllCategories()">전체 초기화</button></div>
   <div class="sub-body">
     <p class="se-intro">"지출 고정화"가 계획소비의 핵심이에요 — 모든 항목에 <b>결제일</b>을 적어두면, 매달 그 날짜에 이미 기록되어 있어요. 한 항목이 여러 날짜에 나눠 나가면 "여러 날짜로 나누기"를 써보세요.</p>
+    <p class="demo-link" onclick="openSub('catsettings')" style="margin:0 20px 10px;">⚙️ 카테고리 이름 새로 만들거나 정리하려면 → 카테고리 설정</p>
 
     <div class="field" style="margin-top:14px;">
       <label>이 변경사항, 언제부터 적용할까요?</label>
@@ -1901,6 +1931,9 @@ function openSub(id){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
     try{ renderExpDayPicker(); selectedExpDay = null; }catch(e){ console.error('day picker render failed', e); }
   }
+  if(id === 'catsettings'){
+    try{ loadCatSettingsList(); }catch(e){ console.error('catsettings load failed', e); }
+  }
   if(id === 'ledger'){
     try{ initLedgerView(); }catch(e){ console.error('ledger init failed', e); }
   }
@@ -1996,8 +2029,12 @@ async function renderWeekSettle(){
 
   myCategoriesCache.forEach(cat => {
     const dayAmounts = weekDates.map(d => {
-      const tx = (weekTxCache[dateKey(d)] || []).filter(t => t.category_id === cat.id);
-      return tx.reduce((s,t)=>s+Number(t.amount),0);
+      const key = dateKey(d);
+      const tx = weekTxCache[key] || [];
+      const dueItem = getDueItemsForDate(d).find(x=>x.category_id===cat.id);
+      const fixedAmt = dueItem ? actualAmountForItem(dueItem, key, tx) : 0;
+      const manualAmt = tx.filter(t=>t.category_id===cat.id && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
+      return fixedAmt + manualAmt;
     });
     const total = dayAmounts.reduce((s,v)=>s+v,0);
     const budget = weekDates.reduce((s,d) => {
@@ -2051,27 +2088,39 @@ async function renderMonthSettle(){
     .eq('user_id', currentUser.id).gte('tx_date', monthStart).lte('tx_date', monthEnd);
   if(error){ console.error('monthsettle load failed', error); return; }
   const tx = data || [];
+  const txByDate = {};
+  tx.forEach(t => { if(!txByDate[t.tx_date]) txByDate[t.tx_date]=[]; txByDate[t.tx_date].push(t); });
 
   const catMap = {};
   myCategoriesCache.forEach(c => catMap[c.id] = c);
 
   const incomeByCat = {}, expenseByCat = {};
   let incomeTotal = 0, expenseTotal = 0;
-  tx.forEach(t => {
-    const cat = catMap[t.category_id];
-    const label = cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
-    if(t.kind === 'income'){
-      incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount);
-      incomeTotal += Number(t.amount);
-    } else {
-      expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount);
-      expenseTotal += Number(t.amount);
-    }
-  });
+
+  const daysInMonth = new Date(target.getFullYear(), target.getMonth()+1, 0).getDate();
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(target.getFullYear(), target.getMonth(), day);
+    const key = dateKey(d);
+    const dayTx = txByDate[key] || [];
+    getDueItemsForDate(d).forEach(item => {
+      const amt = actualAmountForItem(item, key, dayTx);
+      const cat = catMap[item.category_id];
+      const label = cat ? (cat.name || cat.category) : item.name;
+      if(item.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + amt; incomeTotal += amt; }
+      else { expenseByCat[label] = (expenseByCat[label]||0) + amt; expenseTotal += amt; }
+    });
+    dayTx.filter(t => !t.is_auto_fixed).forEach(t => {
+      const cat = catMap[t.category_id];
+      const label = cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
+      if(t.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount); incomeTotal += Number(t.amount); }
+      else { expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount); expenseTotal += Number(t.amount); }
+    });
+  }
 
   document.getElementById('msIncomeTotal').textContent = incomeTotal.toLocaleString()+'원';
   document.getElementById('msExpenseTotal').textContent = expenseTotal.toLocaleString()+'원';
-  document.getElementById('msEmptyNote').style.display = (tx.length===0) ? 'block' : 'none';
+  const hasAnyData = Object.keys(incomeByCat).length > 0 || Object.keys(expenseByCat).length > 0;
+  document.getElementById('msEmptyNote').style.display = hasAnyData ? 'none' : 'block';
 
   const incList = document.getElementById('msIncomeList');
   const expList = document.getElementById('msExpenseList');
@@ -2117,10 +2166,13 @@ const INCOME_TAGS = ['노동수입','금융수입','이벤트수입'];
 function incomeOptions(selected){
   return INCOME_TAGS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
-function catOptions(selected){
-  const names = myCategoriesCache.filter(c=>c.kind==='expense').map(c=>c.category);
-  if(names.length === 0) return `<option>${selected||'카테고리 없음'}</option>`;
-  return names.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
+function catOptions(selectedId){
+  const rows = myCategoriesCache.filter(c=>c.kind==='expense');
+  if(rows.length === 0) return `<option value="">카테고리 없음</option>`;
+  return rows.map(c => {
+    const label = (c.name && c.name !== c.category) ? `${c.category} · ${c.name}` : c.category;
+    return `<option value="${c.id}"${c.id===selectedId?' selected':''}>${label}</option>`;
+  }).join('');
 }
 
 /* ── 가계부: 실제 카테고리/거래 데이터 ── */
@@ -2192,14 +2244,14 @@ async function showRealDay(el, d){
     const existing = dayTx.find(tx => tx.category_id === item.category_id && tx.is_auto_fixed);
     const amt = existing ? existing.amount : item.amount;
     const row = document.createElement('div');
-    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '');
+    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (existing && Number(existing.amount) === 0 ? ' skipped' : '');
     row.dataset.txId = existing ? existing.id : '';
     row.dataset.categoryId = item.category_id;
     row.dataset.autoFixed = '1';
     row.dataset.kind = item.kind;
     const catSelectHtml = item.kind === 'income'
       ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
-      : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
+      : `<select class="tx-cat" disabled>${catOptions(item.category_id)}</select>`;
     row.innerHTML = `
       <div class="tx-fixed-top">
         <span class="tx-dot ${item.kind}"></span><span class="tx-fixed-badge${item.kind==='income'?' income':''}">고정</span>
@@ -2209,6 +2261,7 @@ async function showRealDay(el, d){
         <span class="tx-fixed-name">${item.name}</span>
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
         <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveFixedTx(this)">
+        <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
       </div>`;
     list.appendChild(row);
   });
@@ -2220,7 +2273,7 @@ async function showRealDay(el, d){
     row.dataset.txId = tx.id;
     const catHtml = tx.kind === 'income'
       ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
-      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
+      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_id||'')}</select>`;
     row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
     list.appendChild(row);
   });
@@ -2232,6 +2285,13 @@ async function showRealDay(el, d){
     emptyNote.textContent = '이 날은 아직 기록이 없어요. 아래 버튼으로 추가해보세요.';
     list.appendChild(emptyNote);
   }
+}
+async function skipFixedTx(btn){
+  const row = btn.closest('.tx-row');
+  const input = row.querySelector('.tx-input');
+  input.value = '0';
+  await saveFixedTx(input);
+  row.classList.add('skipped');
 }
 async function saveFixedTx(input){
   const row = input.closest('.tx-row');
@@ -3333,6 +3393,22 @@ function recalcGroceryActual(){
 }
 
 const DEFAULT_EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금','이벤트'];
+function toggleIncomeEventFields(select){
+  const card = select.closest('.cat-card');
+  const dayInput = card.querySelector('.cat-day');
+  const budgetInput = card.querySelector('.cat-budget');
+  const isEvent = select.value === '이벤트수입';
+  if(dayInput){
+    dayInput.disabled = isEvent;
+    dayInput.placeholder = isEvent ? '-' : '결제일';
+    if(isEvent) dayInput.value = '';
+  }
+  if(budgetInput){
+    budgetInput.disabled = isEvent;
+    budgetInput.placeholder = isEvent ? '예산없음' : '월예산';
+    if(isEvent) budgetInput.value = '';
+  }
+}
 function renderDayPickerGeneric(stripId, onSelect){
   const strip = document.getElementById(stripId);
   if(!strip) return;
@@ -3493,8 +3569,8 @@ function addCatRow(listId, type){
     card.className = 'cat-card';
     card.innerHTML = `
       <div class="cat-row-top">
-        ${nameFieldHtml}
-        <select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+        <select class="cat-tag-select" onchange="toggleIncomeEventFields(this)"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+        <input class="cat-name-input" type="text" placeholder="세부항목(예: 월급, 배당금)">
         <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
       </div>
       <div class="cat-row-bottom">
@@ -3582,7 +3658,7 @@ function makeAssetLinkRowEl(assetType, cat, myAssets){
       <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
     </div>
     <div class="cat-row-bottom">
-      <input class="cat-day" type="text" placeholder="결제일" value="${hasSplit?'':(cat&&cat.payment_day||'')}" ${hasSplit?'disabled':''}>
+      <input class="cat-day" type="text" placeholder="결제일" value="${hasSplit?'':(cat&&cat.payment_day || (!cat && selectedExpDay) || '')}" ${hasSplit?'disabled':''}>
       <input class="cat-budget" type="text" inputmode="numeric" placeholder="월예산" value="${cat&&cat.monthly_budget?Number(cat.monthly_budget).toLocaleString():''}" oninput="formatMoneyInput(this)" ${hasSplit?'readonly':''}>
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
@@ -3632,12 +3708,12 @@ async function loadCategories(){
       const disabled = c.income_tag === '이벤트수입';
       card.innerHTML = `
         <div class="cat-row-top">
-          <input class="cat-income-name" type="text" value="${c.name||c.category}" style="flex:1.2;">
-          <select class="cat-tag-select">
+          <select class="cat-tag-select" onchange="toggleIncomeEventFields(this)">
             <option ${c.income_tag==='노동수입'?'selected':''}>노동수입</option>
             <option ${c.income_tag==='금융수입'?'selected':''}>금융수입</option>
             <option ${c.income_tag==='이벤트수입'?'selected':''}>이벤트수입</option>
           </select>
+          <input class="cat-name-input" type="text" placeholder="세부항목(예: 월급, 배당금)" value="${c.name && c.name!==c.income_tag ? c.name : ''}">
           <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
         </div>
         <div class="cat-row-bottom">
@@ -3703,11 +3779,12 @@ async function saveCategories(){
 
     // 수입 항목 파싱
     const incomePayload = [...document.querySelectorAll('#catIncomeList .cat-card')].map(row => {
-      const nameInput = getCatNameFromRow(row);
-      const dayInput = row.querySelector('.cat-day').value.trim();
       const tag = row.querySelector('.cat-tag-select').value;
+      const detailInput = row.querySelector('.cat-name-input');
+      const detail = detailInput ? detailInput.value.trim() : '';
+      const dayInput = row.querySelector('.cat-day').value.trim();
       const budget = rawMoney(row.querySelector('.cat-budget'));
-      return { category: nameInput, name: nameInput, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
+      return { category: tag, name: detail || tag, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
 
     // 기존 항목 전부 삭제 후 새로 저장 (splits는 cascade로 함께 삭제됨)
@@ -3967,15 +4044,16 @@ async function saveTask1(){
 
     const incomeRows = [...document.querySelectorAll('#obIncomeRows .ob-item-row, #obIncomeAdd .ob-item-row')];
     const incomePayload = incomeRows.map(row => {
-      const category = getCatNameFromRow(row);
       const tagSelect = row.querySelector('.cat-tag-select');
+      const tag = tagSelect ? tagSelect.value : '노동수입';
+      const detailInput = row.querySelector('.cat-name-input');
+      const detail = detailInput ? detailInput.value.trim() : '';
       const dayInput = row.querySelector('.cat-day');
       const budgetInput = row.querySelector('.cat-budget');
-      const tag = tagSelect ? tagSelect.value : '노동수입';
       return {
         user_id: currentUser.id,
         kind: 'income',
-        category, name: category,
+        category: tag, name: detail || tag,
         income_tag: tag,
         payment_day: (tag === '이벤트수입' || !dayInput) ? null : (dayInput.value.trim() || null),
         monthly_budget: budgetInput ? (rawMoney(budgetInput) || 0) : 0,
@@ -4092,19 +4170,10 @@ function addObIncomeRow(targetId){
   const wrap = document.getElementById(targetId);
   const row = document.createElement('div');
   row.className = 'ob-item-row cat-card';
-  const existing = [...document.querySelectorAll('#obIncomeRows .ob-item-row, #obIncomeAdd .ob-item-row')]
-    .map(r => getCatNameFromRow(r)).filter(Boolean);
   row.innerHTML = `
     <div class="cat-row-top">
-      <span class="cat-name-field" style="position:relative;flex:1;">
-        <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
-          <option value="">카테고리 선택</option>
-          ${existing.map(n=>`<option value="${n}">${n}</option>`).join('')}
-          <option value="__new__">＋ 새 이름 직접입력</option>
-        </select>
-        <input class="cat-name-new" type="text" placeholder="새 이름 (예: 월급)" style="display:none;">
-      </span>
-      <select class="cat-tag-select"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+      <select class="cat-tag-select" onchange="toggleIncomeEventFields(this)"><option>노동수입</option><option>금융수입</option><option>이벤트수입</option></select>
+      <input class="cat-name-input" type="text" placeholder="세부항목(예: 월급, 배당금)">
       <button class="cat-del" onclick="this.closest('.ob-item-row').remove()">✕</button>
     </div>
     <div class="cat-row-bottom">
@@ -4489,6 +4558,60 @@ async function loadFocusModeList(){
   }
   card.innerHTML = data.map(m => `<p class="ac-line"><b>${m.name || m.email}</b> · 진행중</p>`).join('');
 }
+async function loadCatSettingsList(){
+  if(!currentUser) return;
+  const list = document.getElementById('csExpenseList');
+  list.innerHTML = '<p class="ac-sub">불러오는 중...</p>';
+  const { data, error } = await sb.from('ledger_categories').select('category').eq('user_id', currentUser.id).eq('kind','expense');
+  if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+  const counts = {};
+  (data||[]).forEach(r => { counts[r.category] = (counts[r.category]||0) + 1; });
+  const names = Object.keys(counts).sort();
+  if(names.length === 0){
+    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 만든 카테고리가 없어요. 아래에서 추가해보세요.</p>';
+    return;
+  }
+  list.innerHTML = names.map(n => `
+    <div class="cs-row" style="display:flex;gap:8px;align-items:center;margin:0 20px 8px;">
+      <input type="text" value="${n}" data-old="${n}" style="flex:1;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);background:var(--surface);font-family:inherit;font-size:13px;">
+      <span class="field-hint" style="white-space:nowrap;">${counts[n]}개 항목</span>
+      <button class="cat-del" onclick="renameCategoryGlobal(this)">저장</button>
+      <button class="cat-del" style="color:var(--red);" onclick="deleteCategoryGlobal('${n}', ${counts[n]})">✕</button>
+    </div>
+  `).join('');
+}
+async function renameCategoryGlobal(btn){
+  const input = btn.closest('.cs-row').querySelector('input');
+  const oldName = input.dataset.old;
+  const newName = input.value.trim();
+  if(!newName || newName === oldName) return;
+  const { error } = await sb.from('ledger_categories').update({ category: newName }).eq('user_id', currentUser.id).eq('kind','expense').eq('category', oldName);
+  if(error){ alert('이름 변경 실패: ' + error.message); return; }
+  loadCatSettingsList();
+}
+async function deleteCategoryGlobal(name, count){
+  const confirmed = confirm(`"${name}" 카테고리를 삭제하면 그 안의 ${count}개 항목이 전부 지워져요.\n(이미 기록된 가계부 거래내역은 남아있어요)\n정말 삭제하시겠어요?`);
+  if(!confirmed) return;
+  const { error } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id).eq('kind','expense').eq('category', name);
+  if(error){ alert('삭제 실패: ' + error.message); return; }
+  loadCatSettingsList();
+}
+async function addNewCategoryName(type){
+  const input = document.getElementById('csNewExpense');
+  const name = input.value.trim();
+  if(!name || !currentUser) return;
+  const { error } = await sb.from('ledger_categories').insert({
+    user_id: currentUser.id, kind: 'expense', category: name, name: name,
+    monthly_budget: 0, payment_day: null,
+  });
+  if(error){ alert('추가 실패: ' + error.message); return; }
+  input.value = '';
+  loadCatSettingsList();
+  const t = document.getElementById('toast');
+  t.textContent = `"${name}" 카테고리가 추가됐어요. 월예산에서 금액을 채워주세요.`;
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
+}
 async function loadAdminBookList(){
   const wrap = document.getElementById('adminBookList');
   if(!wrap) return;
@@ -4775,6 +4898,10 @@ async function navWeek(dir){
     try{ await renderWeekSettle(); }catch(e){ console.error('weeksettle refresh failed', e); }
   }
 }
+function actualAmountForItem(item, key, txList){
+  const match = (txList||[]).find(t => t.category_id === item.category_id && t.tx_date === key && t.is_auto_fixed);
+  return match ? Number(match.amount) : item.amount; // 기록 없으면 예산금액을 그대로 실제로 간주
+}
 function renderWeekGrid(weekStart){
   const grid = document.getElementById('grid7');
   grid.querySelectorAll('.g-cell').forEach(c=>c.remove());
@@ -4784,9 +4911,12 @@ function renderWeekGrid(weekStart){
     const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
     const key = dateKey(d);
     const tx = weekTxCache[key] || [];
-    const expenseSum = tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
     const due = getDueItemsForDate(d);
-    const dueBudget = due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
+    const dueExpenseItems = due.filter(x=>x.kind==='expense');
+    const fixedActual = dueExpenseItems.reduce((s,item)=> s + actualAmountForItem(item, key, tx), 0);
+    const manualActual = tx.filter(t=>t.kind==='expense' && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
+    const expenseSum = fixedActual + manualActual;
+    const dueBudget = dueExpenseItems.reduce((s,x)=>s+x.amount,0);
 
     const cell = document.createElement('div');
     cell.className = 'g-cell';
@@ -4825,10 +4955,14 @@ function refreshLedgerSummary(){
   let budget = 0, actual = 0;
   for(let i=0;i<7;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
+    const key = dateKey(d);
     const due = getDueItemsForDate(d);
-    budget += due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
-    const tx = weekTxCache[dateKey(d)] || [];
-    actual += tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
+    const dueExpenseItems = due.filter(x=>x.kind==='expense');
+    budget += dueExpenseItems.reduce((s,x)=>s+x.amount,0);
+    const tx = weekTxCache[key] || [];
+    const fixedActual = dueExpenseItems.reduce((s,item)=> s + actualAmountForItem(item, key, tx), 0);
+    const manualActual = tx.filter(t=>t.kind==='expense' && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
+    actual += fixedActual + manualActual;
   }
   document.getElementById('lsBudget').textContent = budget.toLocaleString()+'원';
   document.getElementById('lsActual').textContent = actual.toLocaleString()+'원';
