@@ -4951,7 +4951,7 @@ function renderWeekGrid(weekStart){
       const diff = dueBudget - expenseSum;
       cell.classList.add(diff >= 0 ? 'ok' : 'over');
       const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
-      inner += `<small>${diff>=0?'-':'+'}${diffText}</small>`;
+      inner += `<small>${diff>=0?'+':'-'}${diffText}</small>`;
     }
     cell.innerHTML = inner;
     cell.onclick = () => showRealDay(cell, d);
@@ -5088,7 +5088,7 @@ async function renderMonthGrid(){
       const diff = dueBudget - expenseSum;
       state = diff >= 0 ? 'ok' : 'over';
       const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
-      label = (diff>=0?'-':'+') + diffText;
+      label = (diff>=0?'+':'-') + diffText;
     }
     cell.className = 'm-cell ' + state;
     cell.innerHTML = state==='nospend' ? `${day}<small>무지출</small>` : `${day}<small>${label}</small>`;
