@@ -2166,13 +2166,10 @@ const INCOME_TAGS = ['노동수입','금융수입','이벤트수입'];
 function incomeOptions(selected){
   return INCOME_TAGS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
-function catOptions(selectedId){
-  const rows = myCategoriesCache.filter(c=>c.kind==='expense');
-  if(rows.length === 0) return `<option value="">카테고리 없음</option>`;
-  return rows.map(c => {
-    const label = (c.name && c.name !== c.category) ? `${c.category} · ${c.name}` : c.category;
-    return `<option value="${c.id}"${c.id===selectedId?' selected':''}>${label}</option>`;
-  }).join('');
+function catOptions(selected){
+  const names = [...new Set(myCategoriesCache.filter(c=>c.kind==='expense' && !c.linked_asset_id).map(c=>c.category))];
+  if(names.length === 0) return `<option value="">카테고리 없음</option>`;
+  return names.map(n => `<option${n===selected?' selected':''}>${n}</option>`).join('');
 }
 
 /* ── 가계부: 실제 카테고리/거래 데이터 ── */
@@ -2251,7 +2248,7 @@ async function showRealDay(el, d){
     row.dataset.kind = item.kind;
     const catSelectHtml = item.kind === 'income'
       ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
-      : `<select class="tx-cat" disabled>${catOptions(item.category_id)}</select>`;
+      : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
     row.innerHTML = `
       <div class="tx-fixed-top">
         <span class="tx-dot ${item.kind}"></span><span class="tx-fixed-badge${item.kind==='income'?' income':''}">고정</span>
@@ -2273,7 +2270,7 @@ async function showRealDay(el, d){
     row.dataset.txId = tx.id;
     const catHtml = tx.kind === 'income'
       ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
-      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_id||'')}</select>`;
+      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
     row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
     list.appendChild(row);
   });
@@ -2326,9 +2323,8 @@ async function saveManualTx(el){
   const amount = rawMoney(amtInput);
   const kind = row.querySelector('.tx-dot').classList.contains('income') ? 'income' : 'expense';
   const key = dateKey(selectedDayDate);
-  const myCat = myCategoriesCache.find(c => c.kind===kind && c.category===category);
   const payload = {
-    user_id: currentUser.id, category_id: myCat ? myCat.id : null, category_snapshot: category,
+    user_id: currentUser.id, category_id: null, category_snapshot: category,
     name, amount, kind, tx_date: key, is_auto_fixed: false,
   };
   if(row.dataset.txId){
@@ -2514,21 +2510,39 @@ function toggleAssetDetail(btn){
 }
 async function loadMonthlyInvestActual(){
   if(!currentUser) return;
+  if(myCategoriesCache.length === 0) await loadMyCategories();
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
-  const { data, error } = await sb.from('transactions')
-    .select('amount, ledger_categories!inner(linked_asset_id)')
-    .eq('user_id', currentUser.id)
-    .not('ledger_categories.linked_asset_id', 'is', null)
-    .gte('tx_date', monthStart)
-    .lte('tx_date', monthEnd);
+  const year = now.getFullYear(), month = now.getMonth();
+  const monthStartKey = dateKey(new Date(year, month, 1));
+  const monthEndKey = dateKey(new Date(year, month+1, 0));
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const investCategoryIds = new Set(myCategoriesCache.filter(c => c.linked_asset_id).map(c => c.id));
+
+  const { data, error } = await sb.from('transactions').select('*')
+    .eq('user_id', currentUser.id).gte('tx_date', monthStartKey).lte('tx_date', monthEndKey);
   if(error){ console.error('monthly invest calc failed', error); return; }
-  const sum = (data||[]).reduce((s,r) => s + (Number(r.amount)||0), 0);
+  const txByDate = {};
+  (data||[]).forEach(t => { if(!txByDate[t.tx_date]) txByDate[t.tx_date]=[]; txByDate[t.tx_date].push(t); });
+
+  let sum = 0;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const key = dateKey(d);
+    const dayTx = txByDate[key] || [];
+    getDueItemsForDate(d).forEach(item => {
+      if(item.kind === 'expense' && investCategoryIds.has(item.category_id)){
+        sum += actualAmountForItem(item, key, dayTx);
+      }
+    });
+  }
+  (data||[]).filter(t => !t.is_auto_fixed && t.category_id && investCategoryIds.has(t.category_id))
+    .forEach(t => { sum += Number(t.amount); });
+
   const input = document.getElementById('monthlyInvest');
   const hint = document.getElementById('monthlyInvestHint');
   if(input) input.value = sum;
-  if(hint) hint.textContent = `이번 달 실제 투자 거래 합계로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
+  if(hint) hint.textContent = `이번 달 투자예산(안 건드린 것 포함) 기준으로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
 }
 async function loadSurvivalIndex(){
