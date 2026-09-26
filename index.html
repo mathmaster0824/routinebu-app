@@ -1597,6 +1597,10 @@
       <div class="ms-metric income"><p>총 수입</p><b id="msIncomeTotal">0원</b></div>
       <div class="ms-metric expense"><p>총 지출</p><b id="msExpenseTotal">0원</b></div>
     </div>
+    <div class="ms-metric-row" style="margin-top:8px;">
+      <div class="ms-metric" style="background:var(--gold-soft);"><p>이번 달 투자금액</p><b id="msInvestAmount" style="color:var(--brand-deep);">0원</b></div>
+      <div class="ms-metric" style="background:var(--gold-soft);"><p>투자 비율 (수입 대비)</p><b id="msInvestRatio" style="color:var(--brand-deep);">0%</b></div>
+    </div>
 
     <p class="group-label income">수입 내역</p>
     <div id="msIncomeList"></div>
@@ -2105,7 +2109,12 @@ async function renderMonthSettle(){
     getDueItemsForDate(d).forEach(item => {
       const amt = actualAmountForItem(item, key, dayTx);
       const cat = catMap[item.category_id];
-      const label = cat ? (cat.name || cat.category) : item.name;
+      let label;
+      if(cat && cat.linked_asset_id){
+        label = cat.category === '비유동자산' ? '비유동투자' : cat.category === '고정투자자산' ? '고정투자' : '변동투자';
+      } else {
+        label = cat ? cat.category : item.category;
+      }
       if(item.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + amt; incomeTotal += amt; }
       else { expenseByCat[label] = (expenseByCat[label]||0) + amt; expenseTotal += amt; }
     });
@@ -2121,6 +2130,11 @@ async function renderMonthSettle(){
   document.getElementById('msExpenseTotal').textContent = expenseTotal.toLocaleString()+'원';
   const hasAnyData = Object.keys(incomeByCat).length > 0 || Object.keys(expenseByCat).length > 0;
   document.getElementById('msEmptyNote').style.display = hasAnyData ? 'none' : 'block';
+
+  const investTotal = (expenseByCat['비유동투자']||0) + (expenseByCat['고정투자']||0) + (expenseByCat['변동투자']||0);
+  const investRatio = incomeTotal > 0 ? Math.round(investTotal/incomeTotal*100) : 0;
+  document.getElementById('msInvestAmount').textContent = investTotal.toLocaleString()+'원';
+  document.getElementById('msInvestRatio').textContent = investRatio+'%';
 
   const incList = document.getElementById('msIncomeList');
   const expList = document.getElementById('msExpenseList');
