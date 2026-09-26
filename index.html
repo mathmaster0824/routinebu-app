@@ -1548,6 +1548,7 @@
       <button class="dd-add expense" onclick="addTx('expense')">＋ 지출 추가</button>
       <button class="dd-add income" onclick="addTx('income')">＋ 수입 추가</button>
     </div>
+    <button class="dd-add" style="width:100%;margin-top:8px;background:var(--gold-soft);color:var(--brand-deep);border-color:var(--gold);" onclick="addInvestTx()">＋ 투자 기록 추가 (날짜 상관없이, 자산에도 자동 반영)</button>
   </div>
 
   <button class="save-btn" onclick="openSub('weeksettle')" style="background:var(--gold);color:#2b220a;">일요일 주말정산 보기</button>
@@ -2237,6 +2238,10 @@ async function showRealDay(el, d){
   selectedDayDate = d;
   const dow = ['일','월','화','수','목','금','토'][d.getDay()];
   document.querySelector('.dd-title').textContent = `${dow} ${d.getMonth()+1}/${d.getDate()} 상세내역`;
+  if(myAssetsCache.length === 0 && currentUser){
+    const { data: assetData } = await sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id);
+    myAssetsCache = assetData || [];
+  }
 
   const key = dateKey(d);
   const list = document.getElementById('dayTxList');
@@ -2277,11 +2282,25 @@ async function showRealDay(el, d){
     list.appendChild(row);
   });
 
+  const investCatIds = new Set(myCategoriesCache.filter(c=>c.linked_asset_id).map(c=>c.id));
+  const assetMapForRender = {};
+  myAssetsCache.forEach(a => assetMapForRender[a.id] = a);
   const manualTx = dayTx.filter(tx => !tx.is_auto_fixed);
   manualTx.forEach(tx => {
     const row = document.createElement('div');
     row.className = 'tx-row';
     row.dataset.txId = tx.id;
+    if(tx.category_id && investCatIds.has(tx.category_id)){
+      const investCats = myCategoriesCache.filter(c => c.linked_asset_id);
+      const options = investCats.map(c => {
+        const asset = assetMapForRender[c.linked_asset_id];
+        const label = asset ? `${c.category} · ${asset.name}` : c.category;
+        return `<option value="${c.id}"${c.id===tx.category_id?' selected':''}>${label}</option>`;
+      }).join('');
+      row.innerHTML = `<span class="tx-dot expense"></span><select class="tx-invest-cat" onchange="saveInvestTx(this.closest('.tx-row').querySelector('.tx-input'))">${options}</select><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveInvestTx(this)"><button class="row-del" onclick="deleteInvestTx(this)">✕</button>`;
+      list.appendChild(row);
+      return;
+    }
     const catHtml = tx.kind === 'income'
       ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
       : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
@@ -2303,6 +2322,60 @@ async function skipFixedTx(btn){
   input.value = '0';
   await saveFixedTx(input);
   row.classList.add('skipped');
+}
+async function addInvestTx(){
+  if(myAssetsCache.length === 0 && currentUser){
+    const { data } = await sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id);
+    myAssetsCache = data || [];
+  }
+  const assetMap = {};
+  myAssetsCache.forEach(a => assetMap[a.id] = a);
+  const investCats = myCategoriesCache.filter(c => c.linked_asset_id);
+  const list = document.getElementById('dayTxList');
+  const row = document.createElement('div');
+  row.className = 'tx-row';
+  const options = investCats.map(c => {
+    const asset = assetMap[c.linked_asset_id];
+    const label = asset ? `${c.category} · ${asset.name}` : c.category;
+    return `<option value="${c.id}">${label}</option>`;
+  }).join('');
+  row.innerHTML = `<span class="tx-dot expense"></span><select class="tx-invest-cat" onchange="saveInvestTx(this.closest('.tx-row').querySelector('.tx-input'))">${options || '<option value="">투자 카테고리 없음 (월예산에서 먼저 만들어주세요)</option>'}</select><input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)" onchange="saveInvestTx(this)"><button class="row-del" onclick="deleteInvestTx(this)">✕</button>`;
+  list.appendChild(row);
+}
+async function saveInvestTx(input){
+  const row = input.closest('.tx-row');
+  const catId = row.querySelector('.tx-invest-cat').value;
+  if(!catId || !selectedDayDate) return;
+  const amount = rawMoney(input);
+  const key = dateKey(selectedDayDate);
+  const payload = { user_id: currentUser.id, category_id: catId, amount, kind:'expense', tx_date:key, is_auto_fixed:false };
+  if(row.dataset.txId){
+    const { error } = await sb.from('transactions').update(payload).eq('id', row.dataset.txId);
+    if(error){ console.error('invest tx update failed', error); return; }
+    const tx = weekTxCache[key]?.find(t=>t.id===row.dataset.txId);
+    if(tx){ tx.amount = amount; tx.category_id = catId; }
+  } else {
+    const { data, error } = await sb.from('transactions').insert(payload).select().single();
+    if(error){ console.error('invest tx insert failed', error); return; }
+    row.dataset.txId = data.id;
+    if(!weekTxCache[key]) weekTxCache[key] = [];
+    weekTxCache[key].push(data);
+  }
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
+}
+async function deleteInvestTx(btn){
+  const row = btn.closest('.tx-row');
+  const id = row.dataset.txId;
+  if(id){
+    const { error } = await sb.from('transactions').delete().eq('id', id);
+    if(error){ console.error('invest tx delete failed', error); return; }
+    const key = dateKey(selectedDayDate);
+    if(weekTxCache[key]) weekTxCache[key] = weekTxCache[key].filter(t=>t.id!==id);
+  }
+  row.remove();
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
 }
 async function saveFixedTx(input){
   const row = input.closest('.tx-row');
@@ -3420,7 +3493,7 @@ function recalcGroceryActual(){
   cmp.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
 }
 
-const DEFAULT_EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금','이벤트'];
+const DEFAULT_EXPENSE_CATS = ['대출','보험','계모임','식비','관리비','교육비','용돈','통신','주유','병원비','성장비','국민건강','국민연금','이벤트','변동지출'];
 function toggleIncomeEventFields(select){
   const card = select.closest('.cat-card');
   const dayInput = card.querySelector('.cat-day');
@@ -4590,7 +4663,7 @@ async function loadCatSettingsList(){
   if(!currentUser) return;
   const list = document.getElementById('csExpenseList');
   list.innerHTML = '<p class="ac-sub">불러오는 중...</p>';
-  const { data, error } = await sb.from('ledger_categories').select('category').eq('user_id', currentUser.id).eq('kind','expense');
+  const { data, error } = await sb.from('ledger_categories').select('category').eq('user_id', currentUser.id).eq('kind','expense').is('linked_asset_id', null);
   if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
   const counts = {};
   (data||[]).forEach(r => { counts[r.category] = (counts[r.category]||0) + 1; });
