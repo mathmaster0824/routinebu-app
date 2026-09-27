@@ -317,6 +317,16 @@
   }
   .dd-title{font-size:12.5px;font-weight:600;margin:0 0 8px;color:var(--ink-soft);}
   .tx-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;}
+  .invest-row-card{background:var(--surface);border-radius:9px;padding:10px;margin-bottom:6px;}
+  .invest-row-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .invest-row-top select{flex:1;padding:8px 6px;border-radius:8px;border:0.5px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:12px;}
+  .invest-detail-area select,.invest-detail-area input{
+    width:100%;box-sizing:border-box;margin-bottom:6px;padding:9px 10px;border-radius:9px;
+    border:0.5px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:13px;
+  }
+  .invest-save-row{display:flex;gap:8px;}
+  .invest-save-row input{flex:1;margin-bottom:0;}
+  .invest-save-row button{margin-bottom:0;flex:none;}
   .tx-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;margin-right:2px;}
   .tx-dot.expense{background:var(--red);}
   .tx-dot.income{background:var(--green);}
@@ -2006,12 +2016,18 @@ function closeSub(id){
     document.getElementById('routineNav').style.display = 'flex';
   }
 }
+const _saveTimers = {};
+function debouncedCall(key, fn, delay){
+  clearTimeout(_saveTimers[key]);
+  _saveTimers[key] = setTimeout(fn, delay || 600);
+}
 function addTx(type){
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
   row.className = 'tx-row';
+  row.dataset.tempId = 'tmp'+Date.now()+Math.random();
   const cats = type==='expense' ? catOptions('') : incomeOptions('');
-  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
+  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
   list.appendChild(row);
 }
 async function renderWeekSettle(){
@@ -2276,7 +2292,7 @@ async function showRealDay(el, d){
       <div class="tx-fixed-bottom">
         <span class="tx-fixed-name">${item.name}</span>
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
-        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveFixedTx(this)">
+        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
         <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
       </div>`;
     list.appendChild(row);
@@ -2304,7 +2320,7 @@ async function showRealDay(el, d){
     const catHtml = tx.kind === 'income'
       ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
       : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
-    row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this)" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
+    row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('${tx.id}', ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
     list.appendChild(row);
   });
 
@@ -2326,23 +2342,25 @@ async function skipFixedTx(btn){
 function addInvestTx(){
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
-  row.className = 'tx-row invest-row';
+  row.className = 'invest-row-card';
   row.innerHTML = `
-    <span class="tx-dot expense"></span>
-    <select class="invest-type-select" onchange="handleInvestTypeChange(this)">
-      <option value="">투자 종류 선택</option>
-      <option value="비유동자산">비유동투자</option>
-      <option value="고정투자자산">고정투자</option>
-      <option value="변동자산">변동투자</option>
-    </select>
-    <button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>
-    <div class="invest-detail-area" style="width:100%;margin-top:8px;"></div>
+    <div class="invest-row-top">
+      <span class="tx-dot expense"></span>
+      <select class="invest-type-select" onchange="handleInvestTypeChange(this)">
+        <option value="">투자 종류 선택</option>
+        <option value="비유동자산">비유동투자</option>
+        <option value="고정투자자산">고정투자</option>
+        <option value="변동자산">변동투자</option>
+      </select>
+      <button class="row-del" onclick="this.closest('.invest-row-card').remove()">✕</button>
+    </div>
+    <div class="invest-detail-area"></div>
   `;
   list.appendChild(row);
 }
 async function handleInvestTypeChange(select){
   const assetType = select.value;
-  const area = select.closest('.invest-row').querySelector('.invest-detail-area');
+  const area = select.closest('.invest-row-card').querySelector('.invest-detail-area');
   if(!assetType){ area.innerHTML = ''; return; }
   if(myAssetsCache.length === 0 && currentUser){
     const { data } = await sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id);
@@ -2356,14 +2374,14 @@ async function handleInvestTypeChange(select){
     return `<option value="${c.id}">${asset ? asset.name : c.name}</option>`;
   }).join('');
   area.innerHTML = `
-    <select class="invest-asset-select" onchange="handleInvestAssetChange(this)" style="width:100%;margin-bottom:6px;">
+    <select class="invest-asset-select" onchange="handleInvestAssetChange(this)">
       <option value="">${investCats.length ? '기존 항목 선택' : '기존 항목 없음'}</option>
       ${options}
       <option value="__new__">＋ 새 투자 만들기</option>
     </select>
-    <input class="invest-new-name" type="text" placeholder="새 투자 이름 (예: OO프로젝트)" style="display:none;width:100%;margin-bottom:6px;">
-    <div style="display:flex;gap:8px;">
-      <input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)" style="flex:1;">
+    <input class="invest-new-name" type="text" placeholder="새 투자 이름 (예: OO프로젝트)" style="display:none;">
+    <div class="invest-save-row">
+      <input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)">
       <button class="add-row-sm" onclick="saveInvestTxNew(this)">저장</button>
     </div>
   `;
@@ -2375,7 +2393,7 @@ function handleInvestAssetChange(select){
 }
 async function saveInvestTxNew(btn){
   const area = btn.closest('.invest-detail-area');
-  const row = btn.closest('.invest-row');
+  const row = btn.closest('.invest-row-card');
   const assetType = row.querySelector('.invest-type-select').value;
   const assetSelect = area.querySelector('.invest-asset-select');
   const amountInput = area.querySelector('.tx-input');
@@ -3645,9 +3663,7 @@ function selectExpDay(day, cellEl){
   selectedExpDay = day;
   cellEl.classList.add('active');
   filterCardsByDay(['catExpenseList','catIncomeList','assetLinkList_비유동자산','assetLinkList_고정투자자산','assetLinkList_변동자산'], day, '.cat-card');
-  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. 지출·수입에 새 항목을 추가하면 이 날짜로 자동 채워져요.`;
-  addCatRow('catExpenseList', 'expense');
-  addCatRow('catIncomeList', 'income');
+  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. "+추가" 버튼을 누르면 이 날짜로 자동 채워져요.`;
 }
 
 /* ── 온보딩 과제1용 날짜 피커 ── */
@@ -3668,9 +3684,7 @@ function selectObDay(day, cellEl){
   selectedObDay = day;
   cellEl.classList.add('active');
   filterCardsByDay(['obExpenseRows','obExpenseAdd','obIncomeRows','obIncomeAdd'], day, '.ob-item-row');
-  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. 새 항목을 추가하면 이 날짜로 자동 채워져요.`;
-  addObRow('obExpenseAdd');
-  addObIncomeRow('obIncomeAdd');
+  if(statusEl) statusEl.textContent = `"${day}"에 해당하는 항목만 보여요. "+추가" 버튼을 누르면 이 날짜로 자동 채워져요.`;
 }
 async function resetAllCategories(){
   if(!currentUser) return;
