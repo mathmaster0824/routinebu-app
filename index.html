@@ -325,8 +325,8 @@
     border:0.5px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:13px;
   }
   .invest-save-row{display:flex;gap:8px;}
-  .invest-save-row input{flex:1;margin-bottom:0;}
-  .invest-save-row button{margin-bottom:0;flex:none;}
+  .invest-save-row input{flex:1;min-width:0;width:auto;margin-bottom:0;}
+  .invest-save-row button{margin-bottom:0;flex:none;width:auto;padding:0 16px;}
   .tx-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;margin-right:2px;}
   .tx-dot.expense{background:var(--red);}
   .tx-dot.income{background:var(--green);}
@@ -2100,6 +2100,12 @@ function navMonthSettle(dir){
   monthSettleOffset += dir;
   renderMonthSettle();
 }
+// 비유동자산·고정투자자산·변동자산에 연결된 지출은 전부 '투자' 한 줄로 묶는다
+const INVEST_CATS = ['비유동자산','고정투자자산','변동자산','비유동투자','고정투자','변동투자'];
+function isInvestCat(cat, fallbackName){
+  if(cat) return !!cat.linked_asset_id || INVEST_CATS.includes(cat.category);
+  return INVEST_CATS.includes(fallbackName);
+}
 async function renderMonthSettle(){
   if(!currentUser) return;
   if(myCategoriesCache.length === 0) await loadMyCategories();
@@ -2134,18 +2140,14 @@ async function renderMonthSettle(){
     getDueItemsForDate(d).forEach(item => {
       const amt = actualAmountForItem(item, key, dayTx);
       const cat = catMap[item.category_id];
-      let label;
-      if(cat && cat.linked_asset_id){
-        label = cat.category === '비유동자산' ? '비유동투자' : cat.category === '고정투자자산' ? '고정투자' : '변동투자';
-      } else {
-        label = cat ? cat.category : item.category;
-      }
+      const label = isInvestCat(cat, item.category) ? '투자' : (cat ? cat.category : item.category);
       if(item.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + amt; incomeTotal += amt; }
       else { expenseByCat[label] = (expenseByCat[label]||0) + amt; expenseTotal += amt; }
     });
     dayTx.filter(t => !t.is_auto_fixed).forEach(t => {
       const cat = catMap[t.category_id];
-      const label = cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
+      const label = (t.kind !== 'income' && isInvestCat(cat, t.category_snapshot)) ? '투자'
+        : cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
       if(t.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount); incomeTotal += Number(t.amount); }
       else { expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount); expenseTotal += Number(t.amount); }
     });
@@ -2156,7 +2158,7 @@ async function renderMonthSettle(){
   const hasAnyData = Object.keys(incomeByCat).length > 0 || Object.keys(expenseByCat).length > 0;
   document.getElementById('msEmptyNote').style.display = hasAnyData ? 'none' : 'block';
 
-  const investTotal = (expenseByCat['비유동투자']||0) + (expenseByCat['고정투자']||0) + (expenseByCat['변동투자']||0);
+  const investTotal = expenseByCat['투자'] || 0;
   const investRatio = incomeTotal > 0 ? Math.round(investTotal/incomeTotal*100) : 0;
   document.getElementById('msInvestAmount').textContent = investTotal.toLocaleString()+'원';
   document.getElementById('msInvestRatio').textContent = investRatio+'%';
@@ -2414,7 +2416,8 @@ async function saveInvestTxNew(btn){
   const assetSelect = area.querySelector('.invest-asset-select');
   const amountInput = area.querySelector('.tx-input');
   const amount = rawMoney(amountInput);
-  if(!amount || !selectedDayDate) return;
+  if(!amount){ alert('투자금액을 입력해주세요'); amountInput.focus(); return; }
+  if(!selectedDayDate) return;
   const key = row.dataset.dayKey || dateKey(selectedDayDate);
   btn.disabled = true; btn.textContent = '저장 중...';
 
