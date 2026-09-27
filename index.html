@@ -1648,7 +1648,7 @@
     </div>
 
     <p class="group-label" style="margin-top:20px;color:var(--gold);">투자 (자산연결) — 고정</p>
-    <p class="field-hint" style="margin:0 20px 10px;">비유동자산·고정투자자산·변동자산은 이름·삭제가 불가능한 고정 카테고리예요. 실제 자산 연결은 "월예산"에서 해요.</p>
+    <p class="field-hint" style="margin:0 20px 10px;">비유동자산·고정투자자산·변동자산은 이름·삭제가 불가능한 고정 카테고리예요. 실제 자산 연결은 "월예산"에서 해요. (비유동자산은 결제일 없이 이벤트성으로, 넣을 때마다 가계부에서 기록해요)</p>
 
     <p class="group-label income" style="margin-top:16px;">수입 카테고리</p>
     <p class="field-hint" style="margin:0 20px 10px;">노동수입 · 금융수입 · 이벤트수입 3종으로 고정이에요. 세부항목(월급, 배당금 등)은 "월예산"에서 자유롭게 적어요.</p>
@@ -1689,9 +1689,9 @@
     <button class="add-row" onclick="addCatRow('catExpenseList','expense')">＋ 지출 항목 추가</button>
 
     <p class="group-label" style="margin-top:20px;color:var(--gold);">투자 (자산과 직접 연결 — 이름·삭제 고정)</p>
-    <p class="ob-hint" style="margin:0 20px 8px;">비유동자산·고정투자자산·변동자산, 어떤 분류든 정기적으로 돈을 넣는 자산이면 여기 등록하세요. <b>자산 이름은 직접 입력하지 않고 드롭다운으로 골라요</b> — 오타로 연결이 어긋나는 걸 막기 위해서예요. 기록한 금액은 그 기간 지출로도 잡히고, 선택한 자산에 자동으로 누적돼요.</p>
+    <p class="ob-hint" style="margin:0 20px 8px;">비유동자산·고정투자자산·변동자산, 어떤 분류든 돈을 넣는 자산이면 여기 등록하세요. <b>자산 이름은 직접 입력하지 않고 드롭다운으로 골라요</b> — 오타로 연결이 어긋나는 걸 막기 위해서예요. 기록한 금액은 그 기간 지출로도 잡히고, 선택한 자산에 자동으로 누적돼요.</p>
 
-    <p class="group-label" style="margin:14px 0 4px 20px;font-size:11.5px;color:var(--ink-faint);">① 비유동자산</p>
+    <p class="group-label" style="margin:14px 0 4px 20px;font-size:11.5px;color:var(--ink-faint);">① 비유동자산 <span style="font-weight:400;">(이벤트성 — 결제일 없이, 넣을 때마다 가계부에서 기록)</span></p>
     <div id="assetLinkList_비유동자산"></div>
     <button class="add-row" onclick="addAssetLinkRow('비유동자산')">＋ 비유동자산 항목 추가</button>
 
@@ -2323,24 +2323,102 @@ async function skipFixedTx(btn){
   await saveFixedTx(input);
   row.classList.add('skipped');
 }
-async function addInvestTx(){
+function addInvestTx(){
+  const list = document.getElementById('dayTxList');
+  const row = document.createElement('div');
+  row.className = 'tx-row invest-row';
+  row.innerHTML = `
+    <span class="tx-dot expense"></span>
+    <select class="invest-type-select" onchange="handleInvestTypeChange(this)">
+      <option value="">투자 종류 선택</option>
+      <option value="비유동자산">비유동투자</option>
+      <option value="고정투자자산">고정투자</option>
+      <option value="변동자산">변동투자</option>
+    </select>
+    <button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>
+    <div class="invest-detail-area" style="width:100%;margin-top:8px;"></div>
+  `;
+  list.appendChild(row);
+}
+async function handleInvestTypeChange(select){
+  const assetType = select.value;
+  const area = select.closest('.invest-row').querySelector('.invest-detail-area');
+  if(!assetType){ area.innerHTML = ''; return; }
   if(myAssetsCache.length === 0 && currentUser){
     const { data } = await sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id);
     myAssetsCache = data || [];
   }
+  const investCats = myCategoriesCache.filter(c => c.linked_asset_id && c.category === assetType);
   const assetMap = {};
   myAssetsCache.forEach(a => assetMap[a.id] = a);
-  const investCats = myCategoriesCache.filter(c => c.linked_asset_id);
-  const list = document.getElementById('dayTxList');
-  const row = document.createElement('div');
-  row.className = 'tx-row';
   const options = investCats.map(c => {
     const asset = assetMap[c.linked_asset_id];
-    const label = asset ? `${c.category} · ${asset.name}` : c.category;
-    return `<option value="${c.id}">${label}</option>`;
+    return `<option value="${c.id}">${asset ? asset.name : c.name}</option>`;
   }).join('');
-  row.innerHTML = `<span class="tx-dot expense"></span><select class="tx-invest-cat" onchange="saveInvestTx(this.closest('.tx-row').querySelector('.tx-input'))">${options || '<option value="">투자 카테고리 없음 (월예산에서 먼저 만들어주세요)</option>'}</select><input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)" onchange="saveInvestTx(this)"><button class="row-del" onclick="deleteInvestTx(this)">✕</button>`;
-  list.appendChild(row);
+  area.innerHTML = `
+    <select class="invest-asset-select" onchange="handleInvestAssetChange(this)" style="width:100%;margin-bottom:6px;">
+      <option value="">${investCats.length ? '기존 항목 선택' : '기존 항목 없음'}</option>
+      ${options}
+      <option value="__new__">＋ 새 투자 만들기</option>
+    </select>
+    <input class="invest-new-name" type="text" placeholder="새 투자 이름 (예: OO프로젝트)" style="display:none;width:100%;margin-bottom:6px;">
+    <div style="display:flex;gap:8px;">
+      <input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)" style="flex:1;">
+      <button class="add-row-sm" onclick="saveInvestTxNew(this)">저장</button>
+    </div>
+  `;
+}
+function handleInvestAssetChange(select){
+  const area = select.closest('.invest-detail-area');
+  const nameInput = area.querySelector('.invest-new-name');
+  nameInput.style.display = select.value === '__new__' ? 'block' : 'none';
+}
+async function saveInvestTxNew(btn){
+  const area = btn.closest('.invest-detail-area');
+  const row = btn.closest('.invest-row');
+  const assetType = row.querySelector('.invest-type-select').value;
+  const assetSelect = area.querySelector('.invest-asset-select');
+  const amountInput = area.querySelector('.tx-input');
+  const amount = rawMoney(amountInput);
+  if(!amount || !selectedDayDate) return;
+  const key = dateKey(selectedDayDate);
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  let categoryId = assetSelect.value;
+  if(categoryId === '__new__'){
+    const newName = area.querySelector('.invest-new-name').value.trim();
+    if(!newName){ alert('새 투자 이름을 입력해주세요'); btn.disabled=false; btn.textContent='저장'; return; }
+    const { data: newAsset, error: assetErr } = await sb.from('assets').insert({
+      user_id: currentUser.id, asset_type: assetType, name: newName, amount: 0,
+    }).select().single();
+    if(assetErr){ alert('자산 생성 실패: ' + assetErr.message); btn.disabled=false; btn.textContent='저장'; return; }
+    myAssetsCache.push(newAsset);
+    const { data: newCat, error: catErr } = await sb.from('ledger_categories').insert({
+      user_id: currentUser.id, kind: 'expense', category: assetType, name: newName, linked_asset_id: newAsset.id,
+    }).select().single();
+    if(catErr){ alert('카테고리 생성 실패: ' + catErr.message); btn.disabled=false; btn.textContent='저장'; return; }
+    myCategoriesCache.push(newCat);
+    categoryId = newCat.id;
+  }
+  if(!categoryId){ alert('투자 항목을 선택해주세요'); btn.disabled=false; btn.textContent='저장'; return; }
+
+  const { data, error } = await sb.from('transactions').insert({
+    user_id: currentUser.id, category_id: categoryId, amount, kind:'expense', tx_date:key, is_auto_fixed:false,
+  }).select().single();
+  if(error){ alert('저장 실패: ' + error.message); btn.disabled=false; btn.textContent='저장'; return; }
+  if(!weekTxCache[key]) weekTxCache[key] = [];
+  weekTxCache[key].push(data);
+
+  refreshWeekGridDisplay();
+  refreshLedgerSummary();
+  showRealDay(null, selectedDayDate);
+
+  const t = document.getElementById('toast');
+  t.textContent = assetType === '고정투자자산'
+    ? '투자 기록됐어요! 매달 같은 금액이 맞는지 자산 탭에서 한번 확인해보세요.'
+    : '투자 기록됐어요! 자산 탭에서 누적 금액을 확인해보세요.';
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 3000);
 }
 async function saveInvestTx(input){
   const row = input.closest('.tx-row');
