@@ -1090,12 +1090,12 @@
         <p class="ob-level-name">고급</p>
         <p class="ob-level-desc">+ 투자계획안</p>
       </div>
-      <p class="ob-hint">※ "집중모드"는 고급 멤버 중 운영자가 나중에 별도로 지정해드려요. 지금은 고를 수 없어요.</p>
+      <p class="ob-hint">※ "집중모드"는 레벨과 상관없이, 운영자가 나중에 별도로 지정해드려요. 지금은 고를 수 없어요.</p>
       <button class="save-btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="showOnboard(2)">다음</button>
     </div>
 
     <div id="onboardStep2" style="display:none;">
-      <p class="ob-progress">과제 1 / 3 · 가계부 항목 정리</p>
+      <p class="ob-progress">과제 1 / 2 · 가계부 항목 정리</p>
       <p class="ob-hint">나의 고정지출을 확인하고, 월말 예산을 기록해요. 필요한 항목만 직접 추가하시면 돼요.</p>
 
       <div class="field">
@@ -1124,7 +1124,7 @@
     </div>
 
     <div id="onboardStep3" style="display:none;">
-      <p class="ob-progress">과제 2 / 3 · 자산정리</p>
+      <p class="ob-progress">과제 2 / 2 · 자산정리</p>
       <p class="ob-hint">지금 가진 자산을 세 가지로 나눠서 정리해요. 처음이라 낯설 수 있는데, 하나씩만 따라오시면 돼요.</p>
 
       <div class="ob-task-card">
@@ -1172,7 +1172,7 @@
 
       <p class="ob-hint" style="margin-top:14px;">여기서는 이름·분류만 가볍게 적어두고, 정확한 금액·만기일 등은 홈 화면의 "자산" 탭에서 천천히 채우셔도 돼요.</p>
 
-      <button class="save-btn" id="task2Btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="saveTask2()">다음 과제로 →</button>
+      <button class="save-btn" id="task2Btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="saveTask2()">모든 과제 완료, 시작하기 🎉</button>
       <p class="field-hint" id="task2Msg" style="text-align:center;margin-top:8px;"></p>
     </div>
 
@@ -1202,7 +1202,7 @@
   <div class="topbar">
     <div>
       <div class="greet">안녕하세요, <b id="greetName">회원</b>님</div>
-      <div class="date">9월 16일 수요일</div>
+      <div class="date" id="homeDateText">9월 16일 수요일</div>
     </div>
     <div style="display:flex;gap:8px;">
       <div class="bell" onclick="openSub('bonbu')" style="font-size:15px;">📚</div>
@@ -1259,10 +1259,13 @@
     </div>
   </div>
 
+  <div id="focusOnlySection">
   <div class="section-head" style="margin-top:8px;"><h2>이번 주 식단 <span class="badge focus" style="margin-left:4px;">집중모드</span></h2><span onclick="openSub('mealplan')" style="cursor:pointer;text-decoration:underline;">식단 페이지 →</span></div>
   <div class="week-strip" id="homeMealChecklist"></div>
 
-
+  <div class="section-head" style="margin-top:8px;"><h2>이번 주 미션 <span class="badge focus" style="margin-left:4px;">집중모드</span></h2></div>
+  <div id="focusMissionMemberArea"></div>
+  </div>
 
   <div class="section-head"><h2>나의 기록</h2></div>
   <div class="streak-row">
@@ -1275,9 +1278,9 @@
 <div class="bottomnav" id="routineNav" style="display:none;">
   <div class="nav-item" id="navHome" onclick="closeAllSubs()"><div class="nav-icon">🏠</div>홈</div>
   <div class="nav-item" onclick="openSub('ledger')"><div class="nav-icon">📒</div>가계부</div>
-  <div class="nav-item" onclick="openSub('idx')"><div class="nav-icon">📊</div>지수</div>
-  <div class="nav-item" onclick="openSub('roadmap')"><div class="nav-icon">📈</div>자산</div>
-  <div class="nav-item" onclick="openSub('invest')"><div class="nav-icon">🎯</div>투자계획</div>
+  <div class="nav-item" id="navIdx" onclick="openSub('idx')"><div class="nav-icon">📊</div>지수</div>
+  <div class="nav-item" id="navAsset" onclick="openSub('roadmap')"><div class="nav-icon">📈</div>자산</div>
+  <div class="nav-item" id="navInvest" onclick="openSub('invest')"><div class="nav-icon">🎯</div>투자계획</div>
   <div class="nav-item" onclick="openSub('myinfo')"><div class="nav-icon">👤</div>내정보</div>
 </div>
 
@@ -2728,26 +2731,67 @@ async function loadMonthlyInvestActual(){
   if(hint) hint.textContent = `이번 달 투자예산(안 건드린 것 포함) 기준으로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
 }
+async function computeMonthActuals(year, month){
+  if(myCategoriesCache.length === 0) await loadMyCategories();
+  const monthStartKey = dateKey(new Date(year, month, 1));
+  const monthEndKey = dateKey(new Date(year, month+1, 0));
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const { data: txData } = await sb.from('transactions').select('*')
+    .eq('user_id', currentUser.id).gte('tx_date', monthStartKey).lte('tx_date', monthEndKey);
+  const txByDate = {};
+  (txData||[]).forEach(t => { if(!txByDate[t.tx_date]) txByDate[t.tx_date]=[]; txByDate[t.tx_date].push(t); });
+  const catMap = {};
+  myCategoriesCache.forEach(c => catMap[c.id] = c);
+
+  let nonLaborIncome = 0, livingExpense = 0;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const key = dateKey(d);
+    const dayTx = txByDate[key] || [];
+    getDueItemsForDate(d).forEach(item => {
+      const cat = catMap[item.category_id];
+      if(cat && cat.linked_asset_id) return; // 투자는 생존지출에서 제외
+      const amt = actualAmountForItem(item, key, dayTx);
+      if(item.kind === 'income' && item.income_tag === '금융수입') nonLaborIncome += amt;
+      else if(item.kind === 'expense') livingExpense += amt;
+    });
+    dayTx.filter(t => !t.is_auto_fixed).forEach(t => {
+      const cat = catMap[t.category_id];
+      if(cat && cat.linked_asset_id) return; // 투자는 제외
+      if(t.kind === 'income'){
+        if(t.category_snapshot === '금융수입') nonLaborIncome += Number(t.amount);
+      } else {
+        livingExpense += Number(t.amount);
+      }
+    });
+  }
+  return { nonLaborIncome, livingExpense };
+}
 async function loadSurvivalIndex(){
   if(!currentUser) return;
-  const [{ data: assets }, { data: liabilities }, { data: invested }, { data: cats }] = await Promise.all([
+  const [{ data: assets }, { data: liabilities }, { data: invested }] = await Promise.all([
     sb.from('assets').select('amount').eq('user_id', currentUser.id),
     sb.from('liabilities').select('amount').eq('user_id', currentUser.id),
     sb.from('asset_investment_totals').select('invested_total'),
-    sb.from('ledger_categories').select('kind, income_tag, monthly_budget').eq('user_id', currentUser.id),
   ]);
   const assetSum = (assets||[]).reduce((s,a)=>s+Number(a.amount||0),0);
   const investedSum = (invested||[]).reduce((s,i)=>s+Number(i.invested_total||0),0);
   const liabilitySum = (liabilities||[]).reduce((s,l)=>s+Number(l.amount||0),0);
   const netWorth = assetSum + investedSum - liabilitySum;
-
-  const nonLaborIncome = (cats||[]).filter(c=>c.kind==='income' && c.income_tag==='금융수입').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
-  const totalExpenseBudget = (cats||[]).filter(c=>c.kind==='expense').reduce((s,c)=>s+Number(c.monthly_budget||0),0);
-
   const monthlyAssetIncome = netWorth * 0.04 / 12;
-  const survivalIncome = nonLaborIncome + monthlyAssetIncome;
-  const rate = totalExpenseBudget > 0 ? Math.min(survivalIncome / totalExpenseBudget, 1) * 100 : 0;
-  const rateRounded = Math.round(rate);
+
+  const now = new Date();
+  const thisMonth = await computeMonthActuals(now.getFullYear(), now.getMonth());
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonth = await computeMonthActuals(lastMonthDate.getFullYear(), lastMonthDate.getMonth());
+
+  function calcRate(m){
+    const survivalIncome = m.nonLaborIncome + monthlyAssetIncome;
+    return m.livingExpense > 0 ? Math.min(survivalIncome / m.livingExpense, 1) * 100 : 0;
+  }
+  const rateRounded = Math.round(calcRate(thisMonth));
+  const lastRateRounded = Math.round(calcRate(lastMonth));
+  const diff = rateRounded - lastRateRounded;
 
   const numEl = document.getElementById('survivalNum');
   const barEl = document.getElementById('survivalBar');
@@ -2756,14 +2800,19 @@ async function loadSurvivalIndex(){
   if(numEl) numEl.innerHTML = rateRounded + '<span>%</span>';
   if(barEl) barEl.style.width = rateRounded + '%';
   if(footEl){
-    const today = new Date();
-    footEl.textContent = `${today.getMonth()+1}월 정산 기준`;
+    footEl.textContent = `${now.getMonth()+1}월 정산 기준`;
   }
   if(detailEl){
-    if(totalExpenseBudget === 0){
-      detailEl.innerHTML = '가계부 카테고리에 월예산을 입력하면 생존지수가 계산돼요.';
+    if(thisMonth.livingExpense === 0){
+      detailEl.innerHTML = '가계부에 실제 지출 기록이 쌓이면 생존지수가 계산돼요.';
     } else {
-      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 금융소득으로 ${rateRounded}% 감당할 수 있어요.<br>순자산 ${netWorth.toLocaleString()}원 · 금융수입 ${nonLaborIncome.toLocaleString()}원 기준`;
+      let compareLine = '';
+      if(lastMonth.livingExpense > 0){
+        if(diff > 0) compareLine = `<br>📈 지난달보다 ${diff}%p 올랐어요! 아끼거나 더 모은 덕분이에요.`;
+        else if(diff < 0) compareLine = `<br>📉 지난달보다 ${Math.abs(diff)}%p 내려갔어요.`;
+        else compareLine = `<br>지난달과 동일해요.`;
+      }
+      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 금융소득으로 ${rateRounded}% 감당할 수 있어요.<br>이번 달 생활비 ${thisMonth.livingExpense.toLocaleString()}원 · 금융수입 ${thisMonth.nonLaborIncome.toLocaleString()}원 기준 (투자 제외)${compareLine}`;
     }
   }
 }
@@ -2905,6 +2954,14 @@ function recomputeRoadmap(){
 document.addEventListener('DOMContentLoaded', () => {
   setDemoMode('login');
   checkExistingSession();
+  try{
+    const dEl = document.getElementById('homeDateText');
+    if(dEl){
+      const today = new Date();
+      const dow = ['일','월','화','수','목','금','토'][today.getDay()];
+      dEl.textContent = `${today.getMonth()+1}월 ${today.getDate()}일 ${dow}요일`;
+    }
+  }catch(e){ console.error('date display failed', e); }
   try{ colorizeSettleRows(); }catch(e){ console.error('colorize failed', e); }
   try{ renderMorningBudget(); renderEveningSettle(); }catch(e){ console.error('daily budget init failed', e); }
   try{ renderHomeMealChecklist(); renderFridge(); }catch(e){ console.error('meal checklist init failed', e); }
@@ -3364,6 +3421,7 @@ function setDemoMode(mode){
     try{ loadApprovalList(); }catch(e){ console.error('approval list load failed', e); }
     try{ loadMemberList(); }catch(e){ console.error('member list load failed', e); }
     try{ loadFocusModeList(); }catch(e){ console.error('focus mode list load failed', e); }
+    try{ loadFocusMissionAdmin(); }catch(e){ console.error('focus mission admin load failed', e); }
     try{ loadDiscountList(); }catch(e){ console.error('discount list load failed', e); }
     try{ loadSeasonSettings(); }catch(e){ console.error('season settings load failed', e); }
   }
@@ -4178,6 +4236,10 @@ async function routeAfterAuth(){
     showOnboard(profile.onboarding_step + 2); // 0→2(과제1), 1→3(과제2), 2→4(과제3)
     return;
   }
+  try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
+  if(profile.is_focus_mode){
+    try{ loadMemberFocusMission(); }catch(e){ console.error('focus mission load failed', e); }
+  }
   setDemoMode('routine');
 }
 async function doLogout(){
@@ -4205,6 +4267,7 @@ async function checkApprovalStatus(){
     } else if(profile.onboarding_step < 3){
       showOnboard(profile.onboarding_step + 2);
     } else {
+      try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
       setDemoMode('routine');
     }
   } else {
@@ -4288,13 +4351,14 @@ async function saveTask2(){
       const { error } = await sb.from('assets').insert(payload);
       if(error) throw error;
     }
-    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 2 }).eq('id', currentUser.id);
+    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3 }).eq('id', currentUser.id);
     if(profErr) throw profErr;
-    showOnboard(4);
+    try{ applyLevelVisibility({ level: selectedLevel, is_focus_mode: false }); }catch(e){ console.error('level visibility failed', e); }
+    setDemoMode('routine');
   } catch(e){
     msg.textContent = '저장 중 문제가 생겼어요: ' + e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '다음 과제로 →';
+    btn.disabled = false; btn.textContent = '모든 과제 완료, 시작하기 🎉';
   }
 }
 
@@ -4316,6 +4380,7 @@ async function saveTask3(){
     }
     const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3 }).eq('id', currentUser.id);
     if(profErr) throw profErr;
+    try{ applyLevelVisibility({ level: selectedLevel, is_focus_mode: false }); }catch(e){ console.error('level visibility failed', e); }
     setDemoMode('routine');
   } catch(e){
     msg.textContent = '저장 중 문제가 생겼어요: ' + e.message;
@@ -4705,13 +4770,6 @@ async function saveLevelAdjust(userId, btn){
   const detail = btn.closest('.member-detail');
   const level = detail.querySelector('.level-adjust-select').value;
   const is_focus_mode = detail.querySelector('.focus-adjust-check').checked;
-  if(is_focus_mode && level !== '고급'){
-    const t = document.getElementById('toast');
-    t.textContent = '집중모드는 고급 레벨에서만 지정할 수 있어요';
-    t.classList.add('show');
-    setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
-    return;
-  }
   btn.disabled = true; btn.textContent = '저장 중...';
   const { error } = await sb.from('profiles').update({ level, is_focus_mode }).eq('id', userId);
   btn.disabled = false; btn.textContent = '레벨 저장';
@@ -4750,6 +4808,133 @@ async function loadFocusModeList(){
     return;
   }
   card.innerHTML = data.map(m => `<p class="ac-line"><b>${m.name || m.email}</b> · 진행중</p>`).join('');
+}
+function applyLevelVisibility(profile){
+  const level = profile.level;
+  const isFocus = !!profile.is_focus_mode;
+  const showIdx = level === '중급' || level === '고급';
+  const showAsset = level === '중급' || level === '고급';
+  const showInvest = level === '고급';
+
+  const idxMission = document.querySelector('.mission[data-target="idx"]');
+  if(idxMission) idxMission.style.display = showIdx ? '' : 'none';
+  const budgetMission = document.querySelector('.mission[data-target="budget"]');
+  if(budgetMission) budgetMission.style.display = isFocus ? '' : 'none';
+  const settleMission = document.querySelector('.mission[data-target="settle"]');
+  if(settleMission) settleMission.style.display = isFocus ? '' : 'none';
+
+  const focusSection = document.getElementById('focusOnlySection');
+  if(focusSection) focusSection.style.display = isFocus ? '' : 'none';
+
+  const navIdx = document.getElementById('navIdx');
+  if(navIdx) navIdx.style.display = showIdx ? '' : 'none';
+  const navAsset = document.getElementById('navAsset');
+  if(navAsset) navAsset.style.display = showAsset ? '' : 'none';
+  const navInvest = document.getElementById('navInvest');
+  if(navInvest) navInvest.style.display = showInvest ? '' : 'none';
+
+  try{ updateCount(); }catch(e){}
+}
+async function loadMemberFocusMission(){
+  const area = document.getElementById('focusMissionMemberArea');
+  if(!area || !currentUser) return;
+  const weekKey = thisWeekMondayKey();
+  const { data: mission } = await sb.from('focus_weekly_missions').select('*').eq('week_start', weekKey).maybeSingle();
+  if(!mission){
+    area.innerHTML = '<p class="ac-sub" style="text-align:center;padding:6px 0;">이번 주 미션이 아직 등록되지 않았어요.</p>';
+    return;
+  }
+  const { data: sub } = await sb.from('focus_mission_submissions').select('*').eq('mission_id', mission.id).eq('user_id', currentUser.id).maybeSingle();
+
+  let statusHtml;
+  if(!sub){
+    statusHtml = `
+      <input type="file" accept="image/*" id="missionPhotoInput" style="display:none;" onchange="uploadMissionPhoto('${mission.id}', this)">
+      <button class="add-row" onclick="document.getElementById('missionPhotoInput').click()">📷 인증사진 올리기</button>
+    `;
+  } else if(sub.status === 'pending'){
+    statusHtml = `<img src="${sub.photo_url}" style="width:100%;border-radius:12px;margin-top:8px;"><p class="field-hint" style="margin-top:6px;">운영자 확인 대기중이에요.</p>`;
+  } else if(sub.status === 'approved'){
+    statusHtml = `<img src="${sub.photo_url}" style="width:100%;border-radius:12px;margin-top:8px;"><p style="color:var(--green);font-weight:600;margin-top:6px;">✓ 미션 완료 승인됐어요!</p>`;
+  } else {
+    statusHtml = `<img src="${sub.photo_url}" style="width:100%;border-radius:12px;margin-top:8px;"><p style="color:var(--red);margin-top:6px;">반려됐어요. 다시 올려주세요.</p>
+      <input type="file" accept="image/*" id="missionPhotoInput" style="display:none;" onchange="uploadMissionPhoto('${mission.id}', this)">
+      <button class="add-row" onclick="document.getElementById('missionPhotoInput').click()">📷 다시 올리기</button>`;
+  }
+  area.innerHTML = `<div class="admin-card"><p class="ac-line"><b>${mission.title}</b></p>${statusHtml}</div>`;
+}
+async function uploadMissionPhoto(missionId, input){
+  const file = input.files[0];
+  if(!file || !currentUser) return;
+  const ext = file.name.split('.').pop();
+  const path = `${currentUser.id}/${missionId}.${ext}`;
+  const { error: upErr } = await sb.storage.from('focus-mission-photos').upload(path, file, { upsert: true });
+  if(upErr){ alert('업로드 실패: ' + upErr.message); return; }
+  const { data: urlData } = sb.storage.from('focus-mission-photos').getPublicUrl(path);
+  const { error } = await sb.from('focus_mission_submissions').upsert({
+    mission_id: missionId, user_id: currentUser.id, photo_url: urlData.publicUrl, status: 'pending',
+  }, { onConflict: 'mission_id,user_id' });
+  if(error){ alert('제출 실패: ' + error.message); return; }
+  loadMemberFocusMission();
+}
+function thisWeekMondayKey(){
+  return dateKey(getThisWeekMonday());
+}
+async function loadFocusMissionAdmin(){
+  const area = document.getElementById('focusMissionArea');
+  if(!area) return;
+  const weekKey = thisWeekMondayKey();
+  const { data: mission, error } = await sb.from('focus_weekly_missions').select('*').eq('week_start', weekKey).maybeSingle();
+  if(error){ area.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
+
+  if(!mission){
+    area.innerHTML = `
+      <div class="admin-card">
+        <p class="field-hint" style="margin-bottom:8px;">이번 주(${weekKey}~) 미션이 아직 없어요.</p>
+        <input type="text" id="newMissionTitle" placeholder="예: 냉장고 정리" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+        <button class="add-row" onclick="createFocusMission()">이번 주 미션 등록</button>
+      </div>
+    `;
+    return;
+  }
+
+  const { data: subs } = await sb.from('focus_mission_submissions').select('*, profiles:user_id(name, email)').eq('mission_id', mission.id);
+  const { data: focusMembers } = await sb.from('profiles').select('id, name, email').eq('is_focus_mode', true).eq('approval_status','approved').contains('programs', ['routinebu']);
+
+  const subMap = {};
+  (subs||[]).forEach(s => subMap[s.user_id] = s);
+
+  const rows = (focusMembers||[]).map(m => {
+    const s = subMap[m.id];
+    let statusHtml;
+    if(!s) statusHtml = '<span class="field-hint">미제출</span>';
+    else if(s.status === 'pending') statusHtml = `<img src="${s.photo_url}" style="width:100%;border-radius:9px;margin:6px 0;"><div style="display:flex;gap:8px;"><button class="add-row-sm" onclick="reviewFocusSubmission('${s.id}','approved')">✓ 완료 승인</button><button class="add-row-sm" style="color:var(--red);" onclick="reviewFocusSubmission('${s.id}','rejected')">✕ 반려</button></div>`;
+    else if(s.status === 'approved') statusHtml = `<img src="${s.photo_url}" style="width:100%;border-radius:9px;margin:6px 0;"><span style="color:var(--green);">✓ 승인됨</span>`;
+    else statusHtml = `<img src="${s.photo_url}" style="width:100%;border-radius:9px;margin:6px 0;"><span style="color:var(--red);">✕ 반려됨 <button class="add-row-sm" onclick="reviewFocusSubmission('${s.id}','pending')">다시 대기</button></span>`;
+    return `<div class="admin-card" style="margin-bottom:8px;"><p class="ac-line"><b>${m.name || m.email}</b></p>${statusHtml}</div>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="admin-card" style="margin-bottom:10px;">
+      <p class="ac-line"><b>${mission.title}</b></p>
+      <p class="field-hint">${weekKey} 주 미션</p>
+    </div>
+    ${rows || '<p class="ac-sub" style="text-align:center;padding:6px 0;">현재 집중모드 멤버가 없어요.</p>'}
+  `;
+}
+async function createFocusMission(){
+  const title = document.getElementById('newMissionTitle').value.trim();
+  if(!title || !currentUser) return;
+  const { error } = await sb.from('focus_weekly_missions').insert({
+    week_start: thisWeekMondayKey(), title, created_by: currentUser.id,
+  });
+  if(error){ alert('등록 실패: ' + error.message); return; }
+  loadFocusMissionAdmin();
+}
+async function reviewFocusSubmission(id, status){
+  const { error } = await sb.from('focus_mission_submissions').update({ status, reviewed_at: new Date().toISOString() }).eq('id', id);
+  if(error){ alert('처리 실패: ' + error.message); return; }
+  loadFocusMissionAdmin();
 }
 async function loadCatSettingsList(){
   if(!currentUser) return;
@@ -4895,11 +5080,72 @@ async function loadMemberList(){
           <input type="checkbox" class="focus-adjust-check" ${m.is_focus_mode?'checked':''}> 집중모드 지정
         </label>
         <button class="md-link" style="width:100%;" onclick="saveLevelAdjust('${m.id}', this)">레벨 저장</button>
-        <p class="field-hint" style="margin-top:8px;">가계부·자산 등 상세 데이터 연동은 준비 중이에요.</p>
+        <div class="field" style="margin-top:14px;">
+          <label>프로그램 참여</label>
+          <div style="display:flex;gap:16px;">
+            <label class="signup-program-chip"><input type="checkbox" ${(m.programs||[]).includes('routinebu')?'checked':''} onchange="toggleMemberProgram('${m.id}','routinebu',this)"> 루틴부</label>
+            <label class="signup-program-chip"><input type="checkbox" ${(m.programs||[]).includes('bonbuseong')?'checked':''} onchange="toggleMemberProgram('${m.id}','bonbuseong',this)"> 본부성</label>
+          </div>
+          <p class="field-hint" style="margin-top:6px;">끄면 그 프로그램 데이터가 삭제돼요. 둘 다 꺼지면 계정 자체 삭제는 Claude에게 직접 요청해주세요.</p>
+        </div>
       </div>
     `;
     list.appendChild(wrap);
   });
+}
+async function toggleMemberProgram(userId, program, checkbox){
+  const turningOn = checkbox.checked;
+  const progLabel = program === 'routinebu' ? '루틴부' : '본부성';
+
+  if(!turningOn){
+    const confirmed = confirm(`이 멤버의 "${progLabel}" 참여를 끌까요?\n${progLabel} 관련 데이터(가계부/자산/기록 등)가 전부 삭제돼요.\n(계정 자체는 안 지워져요)`);
+    if(!confirmed){ checkbox.checked = true; return; }
+    const typed = prompt(`정말 진행하려면 "${progLabel}"라고 정확히 입력해주세요.`);
+    if(typed !== progLabel){
+      checkbox.checked = true;
+      alert('입력이 일치하지 않아 취소됐어요.');
+      return;
+    }
+  }
+
+  const { data: profile, error: profErr } = await sb.from('profiles').select('programs').eq('id', userId).single();
+  if(profErr){ alert('조회 실패: ' + profErr.message); checkbox.checked = !turningOn; return; }
+  let programs = profile.programs || [];
+
+  if(turningOn){
+    if(!programs.includes(program)) programs = [...programs, program];
+  } else {
+    programs = programs.filter(p => p !== program);
+    if(program === 'routinebu'){
+      await sb.from('ledger_categories').delete().eq('user_id', userId);
+      await sb.from('transactions').delete().eq('user_id', userId);
+      await sb.from('assets').delete().eq('user_id', userId);
+      await sb.from('liabilities').delete().eq('user_id', userId);
+      await sb.from('investment_goals').delete().eq('user_id', userId);
+      await sb.from('mission_logs').delete().eq('user_id', userId);
+      await sb.from('season_surveys').delete().eq('user_id', userId).eq('program','routinebu');
+      await sb.from('profiles').update({ onboarding_step: 0, level: null, is_focus_mode: false }).eq('id', userId);
+    } else {
+      await sb.from('bonbu_book_progress').delete().eq('user_id', userId);
+      await sb.from('bonbu_reading_logs').delete().eq('user_id', userId);
+      await sb.from('season_surveys').delete().eq('user_id', userId).eq('program','bonbuseong');
+    }
+  }
+
+  const { error: updErr } = await sb.from('profiles').update({ programs }).eq('id', userId);
+  if(updErr){ alert('저장 실패: ' + updErr.message); checkbox.checked = !turningOn; return; }
+
+  const t = document.getElementById('toast');
+  if(programs.length === 0){
+    t.textContent = `${progLabel} 제거 완료. 두 프로그램 다 꺼졌어요 — 계정 삭제가 필요하면 Claude에게 이메일과 함께 요청해주세요.`;
+  } else {
+    t.textContent = turningOn ? `${progLabel} 참여 켜졌어요.` : `${progLabel} 데이터가 삭제되고 참여가 꺼졌어요.`;
+  }
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 3000);
+
+  loadMemberList();
+  try{ loadBonbuMemberList(); }catch(e){}
 }
 async function loadApprovalList(program, cardId, countId){
   program = program || 'routinebu';
@@ -4985,7 +5231,7 @@ async function loadBonbuMemberList(){
   if(!list) return;
   const [{ data, error }, { data: todayLogs }] = await Promise.all([
     sb.from('profiles')
-      .select('id, name, email, created_at')
+      .select('id, name, email, programs, created_at')
       .eq('approval_status', 'approved')
       .contains('programs', ['bonbuseong'])
       .order('created_at', { ascending: false }),
@@ -5017,6 +5263,14 @@ async function loadBonbuMemberList(){
           <p class="ac-line" style="background:var(--surface-2);padding:8px 10px;border-radius:9px;">${log.note}</p>
           <button class="md-link" style="width:100%;margin-top:8px;${log.is_best?'background:var(--gold);color:#2b220a;':''}" onclick="toggleBestReview('${log.id}', this)">${log.is_best ? '🌟 베스트로 선정됨 (해제하기)' : '🌟 베스트로 선정하기'}</button>
         ` : '<p class="field-hint" style="margin-top:10px;">오늘 아직 인증을 안 했어요.</p>'}
+        <div class="field" style="margin-top:14px;">
+          <label>프로그램 참여</label>
+          <div style="display:flex;gap:16px;">
+            <label class="signup-program-chip"><input type="checkbox" ${(m.programs||[]).includes('routinebu')?'checked':''} onchange="toggleMemberProgram('${m.id}','routinebu',this)"> 루틴부</label>
+            <label class="signup-program-chip"><input type="checkbox" ${(m.programs||[]).includes('bonbuseong')?'checked':''} onchange="toggleMemberProgram('${m.id}','bonbuseong',this)"> 본부성</label>
+          </div>
+          <p class="field-hint" style="margin-top:6px;">끄면 그 프로그램 데이터가 삭제돼요. 둘 다 꺼지면 계정 자체 삭제는 Claude에게 직접 요청해주세요.</p>
+        </div>
       </div>
     `;
     list.appendChild(wrap);
@@ -5374,6 +5628,11 @@ function navMonth(dir){
 
   <div class="section-head"><h2>집중모드</h2></div>
   <div class="admin-card" id="focusModeCard">
+    <p class="ac-sub" style="text-align:center;padding:6px 0;">불러오는 중...</p>
+  </div>
+
+  <div class="section-head"><h2>이번 주 집중모드 미션</h2></div>
+  <div id="focusMissionArea">
     <p class="ac-sub" style="text-align:center;padding:6px 0;">불러오는 중...</p>
   </div>
 
