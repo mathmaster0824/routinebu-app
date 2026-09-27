@@ -2029,6 +2029,7 @@ function addTx(type){
   const row = document.createElement('div');
   row.className = 'tx-row';
   row.dataset.tempId = 'tmp'+Date.now()+Math.random();
+  row.dataset.dayKey = dateKey(selectedDayDate);
   const cats = type==='expense' ? catOptions('') : incomeOptions('');
   row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
   list.appendChild(row);
@@ -2052,8 +2053,10 @@ async function renderWeekSettle(){
   let anyRow = false;
 
   myCategoriesCache.forEach(cat => {
+    const todayKeyForWeekSettle = dateKey(new Date());
     const dayAmounts = weekDates.map(d => {
       const key = dateKey(d);
+      if(key > todayKeyForWeekSettle) return 0; // 미래 날짜는 아직 집계하지 않음
       const tx = weekTxCache[key] || [];
       const dueItem = getDueItemsForDate(d).find(x=>x.category_id===cat.id);
       const fixedAmt = dueItem ? actualAmountForItem(dueItem, key, tx) : 0;
@@ -2122,9 +2125,11 @@ async function renderMonthSettle(){
   let incomeTotal = 0, expenseTotal = 0;
 
   const daysInMonth = new Date(target.getFullYear(), target.getMonth()+1, 0).getDate();
+  const todayKeyForSettle = dateKey(new Date());
   for(let day=1; day<=daysInMonth; day++){
     const d = new Date(target.getFullYear(), target.getMonth(), day);
     const key = dateKey(d);
+    if(key > todayKeyForSettle) continue; // 아직 안 지난 미래 날짜는 집계에서 제외
     const dayTx = txByDate[key] || [];
     getDueItemsForDate(d).forEach(item => {
       const amt = actualAmountForItem(item, key, dayTx);
@@ -2236,7 +2241,12 @@ function getDueItemsForDate(d){
   });
   return items;
 }
-function dateKey(d){ return d.toISOString().slice(0,10); }
+function dateKey(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
 async function loadWeekTransactions(weekStart){
   if(!currentUser) return;
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate()+6);
@@ -2284,6 +2294,7 @@ async function showRealDay(el, d){
     row.dataset.categoryId = item.category_id;
     row.dataset.autoFixed = '1';
     row.dataset.kind = item.kind;
+    row.dataset.dayKey = key;
     const catSelectHtml = item.kind === 'income'
       ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
       : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
@@ -2309,6 +2320,7 @@ async function showRealDay(el, d){
     const row = document.createElement('div');
     row.className = 'tx-row';
     row.dataset.txId = tx.id;
+    row.dataset.dayKey = key;
     if(tx.category_id && investCatIds.has(tx.category_id)){
       const investCats = myCategoriesCache.filter(c => c.linked_asset_id);
       const options = investCats.map(c => {
@@ -2346,6 +2358,7 @@ function addInvestTx(){
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
   row.className = 'invest-row-card';
+  row.dataset.dayKey = dateKey(selectedDayDate);
   row.innerHTML = `
     <div class="invest-row-top">
       <span class="tx-dot expense"></span>
@@ -2402,7 +2415,7 @@ async function saveInvestTxNew(btn){
   const amountInput = area.querySelector('.tx-input');
   const amount = rawMoney(amountInput);
   if(!amount || !selectedDayDate) return;
-  const key = dateKey(selectedDayDate);
+  const key = row.dataset.dayKey || dateKey(selectedDayDate);
   btn.disabled = true; btn.textContent = '저장 중...';
 
   let categoryId = assetSelect.value;
@@ -2446,7 +2459,7 @@ async function saveInvestTx(input){
   const catId = row.querySelector('.tx-invest-cat').value;
   if(!catId || !selectedDayDate) return;
   const amount = rawMoney(input);
-  const key = dateKey(selectedDayDate);
+  const key = row.dataset.dayKey || dateKey(selectedDayDate);
   const payload = { user_id: currentUser.id, category_id: catId, amount, kind:'expense', tx_date:key, is_auto_fixed:false };
   if(row.dataset.txId){
     const { error } = await sb.from('transactions').update(payload).eq('id', row.dataset.txId);
@@ -2469,7 +2482,7 @@ async function deleteInvestTx(btn){
   if(id){
     const { error } = await sb.from('transactions').delete().eq('id', id);
     if(error){ console.error('invest tx delete failed', error); return; }
-    const key = dateKey(selectedDayDate);
+    const key = row.dataset.dayKey || dateKey(selectedDayDate);
     if(weekTxCache[key]) weekTxCache[key] = weekTxCache[key].filter(t=>t.id!==id);
   }
   row.remove();
@@ -2481,7 +2494,7 @@ async function saveFixedTx(input){
   const amount = rawMoney(input);
   const categoryId = row.dataset.categoryId;
   const kind = row.dataset.kind;
-  const key = dateKey(selectedDayDate);
+  const key = row.dataset.dayKey || dateKey(selectedDayDate);
   if(row.dataset.txId){
     const { error } = await sb.from('transactions').update({ amount }).eq('id', row.dataset.txId);
     if(error){ console.error('fixed tx update failed', error); return; }
@@ -2508,7 +2521,7 @@ async function saveManualTx(el){
   const name = nameInput.value.trim();
   const amount = rawMoney(amtInput);
   const kind = row.querySelector('.tx-dot').classList.contains('income') ? 'income' : 'expense';
-  const key = dateKey(selectedDayDate);
+  const key = row.dataset.dayKey || dateKey(selectedDayDate);
   const payload = {
     user_id: currentUser.id, category_id: null, category_snapshot: category,
     name, amount, kind, tx_date: key, is_auto_fixed: false,
@@ -2532,7 +2545,7 @@ async function deleteManualTx(btn){
   if(id){
     const { error } = await sb.from('transactions').delete().eq('id', id);
     if(error){ console.error('tx delete failed', error); return; }
-    const key = dateKey(selectedDayDate);
+    const key = row.dataset.dayKey || dateKey(selectedDayDate);
     if(weekTxCache[key]) weekTxCache[key] = weekTxCache[key].filter(t=>t.id!==id);
   }
   row.remove();
@@ -2544,7 +2557,7 @@ async function logMissionCompletion(missionType){
   const { error } = await sb.from('mission_logs').upsert({
     user_id: currentUser.id,
     mission_type: missionType,
-    log_date: new Date().toISOString().slice(0,10),
+    log_date: dateKey(new Date()),
   }, { onConflict: 'user_id,mission_type,log_date' });
   if(error) console.error('mission log failed', error);
 }
@@ -2592,7 +2605,7 @@ function updateCount(){
 }
 async function loadTodayMissionStatus(){
   if(!currentUser) return;
-  const today = new Date().toISOString().slice(0,10);
+  const today = dateKey(new Date());
   const { data, error } = await sb.from('mission_logs')
     .select('mission_type')
     .eq('user_id', currentUser.id)
@@ -2698,7 +2711,8 @@ async function loadMonthlyInvestActual(){
   if(!currentUser) return;
   if(myCategoriesCache.length === 0) await loadMyCategories();
   const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth();
+  const displayDate = new Date(now.getFullYear(), now.getMonth()-1, 1); // 가장 최근에 끝난 달
+  const year = displayDate.getFullYear(), month = displayDate.getMonth();
   const monthStartKey = dateKey(new Date(year, month, 1));
   const monthEndKey = dateKey(new Date(year, month+1, 0));
   const daysInMonth = new Date(year, month+1, 0).getDate();
@@ -2728,7 +2742,7 @@ async function loadMonthlyInvestActual(){
   const input = document.getElementById('monthlyInvest');
   const hint = document.getElementById('monthlyInvestHint');
   if(input) input.value = sum;
-  if(hint) hint.textContent = `이번 달 투자예산(안 건드린 것 포함) 기준으로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
+  if(hint) hint.textContent = `${month+1}월(가장 최근 완료된 달) 투자예산(안 건드린 것 포함) 기준으로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
 }
 async function computeMonthActuals(year, month){
@@ -2781,9 +2795,10 @@ async function loadSurvivalIndex(){
   const monthlyAssetIncome = netWorth * 0.04 / 12;
 
   const now = new Date();
-  const thisMonth = await computeMonthActuals(now.getFullYear(), now.getMonth());
-  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const lastMonth = await computeMonthActuals(lastMonthDate.getFullYear(), lastMonthDate.getMonth());
+  const displayDate = new Date(now.getFullYear(), now.getMonth()-1, 1); // 가장 최근에 끝난 달
+  const compareDate = new Date(now.getFullYear(), now.getMonth()-2, 1); // 그 전 달 (비교용)
+  const thisMonth = await computeMonthActuals(displayDate.getFullYear(), displayDate.getMonth());
+  const lastMonth = await computeMonthActuals(compareDate.getFullYear(), compareDate.getMonth());
 
   function calcRate(m){
     const survivalIncome = m.nonLaborIncome + monthlyAssetIncome;
@@ -2800,7 +2815,7 @@ async function loadSurvivalIndex(){
   if(numEl) numEl.innerHTML = rateRounded + '<span>%</span>';
   if(barEl) barEl.style.width = rateRounded + '%';
   if(footEl){
-    footEl.textContent = `${now.getMonth()+1}월 정산 기준`;
+    footEl.textContent = `${displayDate.getMonth()+1}월 정산 기준`;
   }
   if(detailEl){
     if(thisMonth.livingExpense === 0){
@@ -2812,7 +2827,7 @@ async function loadSurvivalIndex(){
         else if(diff < 0) compareLine = `<br>📉 지난달보다 ${Math.abs(diff)}%p 내려갔어요.`;
         else compareLine = `<br>지난달과 동일해요.`;
       }
-      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 금융소득으로 ${rateRounded}% 감당할 수 있어요.<br>이번 달 생활비 ${thisMonth.livingExpense.toLocaleString()}원 · 금융수입 ${thisMonth.nonLaborIncome.toLocaleString()}원 기준 (투자 제외)${compareLine}`;
+      detailEl.innerHTML = `지금 노동을 그만둬도, 계획한 삶의 규모를 자산과 금융소득으로 ${rateRounded}% 감당할 수 있어요.<br>${displayDate.getMonth()+1}월 생활비 ${thisMonth.livingExpense.toLocaleString()}원 · 금융수입 ${thisMonth.nonLaborIncome.toLocaleString()}원 기준 (투자 제외)${compareLine}`;
     }
   }
 }
@@ -4138,13 +4153,14 @@ async function doLogin(){
 }
 
 let currentProfile = null;
-const SEASON_START = '2026-07-01'; // 시즌3 (7~9월) 시작일
 async function loadMyStats(){
   if(!currentUser) return;
+  const { data: setting } = await sb.from('season_settings').select('season_start').eq('program','routinebu').maybeSingle();
+  const seasonStart = setting ? setting.season_start : '2026-07-01';
   const { data, error } = await sb.from('mission_logs')
     .select('log_date')
     .eq('user_id', currentUser.id)
-    .gte('log_date', SEASON_START)
+    .gte('log_date', seasonStart)
     .order('log_date', { ascending: false });
   if(error){ console.error('stats load failed', error); return; }
   const count = data ? data.length : 0;
@@ -4156,8 +4172,8 @@ async function loadMyStats(){
   const dates = new Set((data||[]).map(r => r.log_date));
   let streak = 0;
   let cur = new Date();
-  if(!dates.has(cur.toISOString().slice(0,10))) cur.setDate(cur.getDate() - 1);
-  while(dates.has(cur.toISOString().slice(0,10))){
+  if(!dates.has(dateKey(cur))) cur.setDate(cur.getDate() - 1);
+  while(dates.has(dateKey(cur))){
     streak++;
     cur.setDate(cur.getDate() - 1);
   }
@@ -4560,7 +4576,33 @@ async function loadSeasonSettings(){
     const id = s.program === 'routinebu' ? 'seasonSurveyToggle' : 'bonbuSeasonSurveyToggle';
     const el = document.getElementById(id);
     if(el) el.checked = s.enabled;
+    if(s.program === 'routinebu'){
+      const startDisplay = document.getElementById('seasonStartDisplay');
+      const labelDisplay = document.getElementById('seasonLabelDisplay');
+      const startInput = document.getElementById('seasonStartInput');
+      const labelInput = document.getElementById('seasonLabelInput');
+      if(startDisplay) startDisplay.textContent = s.season_start;
+      if(labelDisplay) labelDisplay.textContent = s.season_label;
+      if(startInput) startInput.value = s.season_start;
+      if(labelInput) labelInput.value = s.season_label;
+    }
   });
+}
+async function resetSeasonStart(program){
+  const startInput = document.getElementById('seasonStartInput');
+  const labelInput = document.getElementById('seasonLabelInput');
+  const newStart = startInput.value;
+  const newLabel = labelInput.value.trim();
+  if(!newStart || !newLabel){ alert('시작일과 시즌 라벨을 모두 입력해주세요.'); return; }
+  const confirmed = confirm(`"${newLabel}" 시즌을 ${newStart}부터 새로 시작할까요?\n모든 멤버의 연속참여·완료기록이 이 날짜 기준으로 다시 카운트돼요.`);
+  if(!confirmed) return;
+  const { error } = await sb.from('season_settings').update({ season_start: newStart, season_label: newLabel }).eq('program', program);
+  if(error){ alert('저장 실패: ' + error.message); return; }
+  const t = document.getElementById('toast');
+  t.textContent = `${newLabel} 시즌이 ${newStart}부터 시작돼요.`;
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2500);
+  loadSeasonSettings();
 }
 async function checkAndShowSeasonSurvey(program, bannerId){
   if(!currentUser) return;
@@ -5363,7 +5405,11 @@ function renderWeekGrid(weekStart){
     const fixedActual = dueExpenseItems.reduce((s,item)=> s + actualAmountForItem(item, key, tx), 0);
     const manualActual = tx.filter(t=>t.kind==='expense' && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
     const expenseSum = fixedActual + manualActual;
-    const dueBudget = dueExpenseItems.reduce((s,x)=>s+x.amount,0);
+
+    const dueIncomeItems = due.filter(x=>x.kind==='income');
+    const fixedIncomeActual = dueIncomeItems.reduce((s,item)=> s + actualAmountForItem(item, key, tx), 0);
+    const manualIncomeActual = tx.filter(t=>t.kind==='income' && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
+    const incomeSum = fixedIncomeActual + manualIncomeActual;
 
     const cell = document.createElement('div');
     cell.className = 'g-cell';
@@ -5371,7 +5417,10 @@ function renderWeekGrid(weekStart){
     if(key === todayKey) cell.classList.add('today-cell');
 
     let inner = `${d.getDate()}`;
-    if(tx.length === 0 && due.length === 0){
+    if(key > todayKey){
+      cell.classList.add('empty');
+      inner += '<small>-</small>';
+    } else if(tx.length === 0 && due.length === 0){
       cell.classList.add('empty');
       inner += '<small>-</small>';
     } else if(expenseSum === 0 && tx.length > 0){
@@ -5381,7 +5430,7 @@ function renderWeekGrid(weekStart){
       cell.classList.add('empty');
       inner += '<small>-</small>';
     } else {
-      const diff = dueBudget - expenseSum;
+      const diff = incomeSum - expenseSum;
       cell.classList.add(diff >= 0 ? 'ok' : 'over');
       const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
       inner += `<small>${diff>=0?'+':'-'}${diffText}</small>`;
@@ -5399,6 +5448,7 @@ function refreshWeekGridDisplay(){
 function refreshLedgerSummary(){
   const start = getThisWeekMonday();
   start.setDate(start.getDate() + weekOffset*7);
+  const todayKeyForSummary = dateKey(new Date());
   let budget = 0, actual = 0;
   for(let i=0;i<7;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
@@ -5406,6 +5456,7 @@ function refreshLedgerSummary(){
     const due = getDueItemsForDate(d);
     const dueExpenseItems = due.filter(x=>x.kind==='expense');
     budget += dueExpenseItems.reduce((s,x)=>s+x.amount,0);
+    if(key > todayKeyForSummary) continue; // 미래 날짜는 실제 지출에서 제외
     const tx = weekTxCache[key] || [];
     const fixedActual = dueExpenseItems.reduce((s,item)=> s + actualAmountForItem(item, key, tx), 0);
     const manualActual = tx.filter(t=>t.kind==='expense' && !t.is_auto_fixed).reduce((s,t)=>s+Number(t.amount),0);
@@ -5504,12 +5555,24 @@ async function renderMonthGrid(){
   for(let day=1; day<=daysInMonth; day++){
     const dObj = new Date(year, month, day);
     const key = dateKey(dObj);
+    const todayKeyForGrid = dateKey(new Date());
+    const cell = document.createElement('div');
+    if(key > todayKeyForGrid){
+      cell.className = 'm-cell empty';
+      cell.innerHTML = `${day}<small>-</small>`;
+      cell.onclick = () => {
+        document.querySelectorAll('.m-cell').forEach(c=>c.classList.remove('selected'));
+        cell.classList.add('selected');
+        showRealDay(cell, dObj);
+      };
+      grid.appendChild(cell);
+      continue;
+    }
     const tx = monthTx[key] || [];
     const due = getDueItemsForDate(dObj);
     const expenseSum = tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+Number(t.amount),0);
-    const dueBudget = due.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0);
+    const incomeSum = tx.filter(t=>t.kind==='income').reduce((s,t)=>s+Number(t.amount),0);
 
-    const cell = document.createElement('div');
     let state, label;
     if(tx.length === 0 && due.length === 0){
       state = 'empty'; label = '-';
@@ -5518,7 +5581,7 @@ async function renderMonthGrid(){
     } else if(expenseSum === 0 && due.length === 0){
       state = 'empty'; label = '-';
     } else {
-      const diff = dueBudget - expenseSum;
+      const diff = incomeSum - expenseSum;
       state = diff >= 0 ? 'ok' : 'over';
       const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
       label = (diff>=0?'+':'-') + diffText;
@@ -5576,6 +5639,15 @@ function navMonth(dir){
       <input type="checkbox" id="seasonSurveyToggle" onchange="toggleSeasonSurvey(this)">
       <span class="slider"></span>
     </label>
+  </div>
+
+  <div class="admin-card" style="margin-top:10px;">
+    <p class="ac-line" style="margin-bottom:6px;"><b>시즌 시작일 (연속참여·완료기록 카운트 기준)</b></p>
+    <p class="field-hint" style="margin-bottom:8px;">현재: <span id="seasonStartDisplay">-</span> · 라벨: <span id="seasonLabelDisplay">-</span></p>
+    <input type="date" id="seasonStartInput" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+    <input type="text" id="seasonLabelInput" placeholder="시즌 라벨 (예: 2026-S4)" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+    <button class="add-row" style="color:var(--red);" onclick="resetSeasonStart('routinebu')">🔄 새 시즌 시작 (초기화)</button>
+    <p class="field-hint" style="margin-top:6px;">누르면 그 날짜부터 모든 멤버의 연속참여·완료기록이 새로 카운트돼요.</p>
   </div>
 
   <div class="section-head" style="margin-top:22px;"><h2>가입 승인 대기 · 루틴부</h2><span id="approvalCount">불러오는 중</span></div>
