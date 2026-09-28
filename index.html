@@ -2070,7 +2070,7 @@ function addTx(type){
   row.dataset.tempId = 'tmp'+Date.now()+Math.random();
   row.dataset.dayKey = dateKey(selectedDayDate);
   const cats = type==='expense' ? catOptions('') : incomeOptions('');
-  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
+  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
   list.appendChild(row);
 }
 async function renderWeekSettle(){
@@ -2318,7 +2318,8 @@ function incomeOptions(selected){
 function catOptions(selected){
   const names = [...new Set(activeCategories().filter(c=>c.kind==='expense' && !c.linked_asset_id).map(c=>c.category))];
   if(names.length === 0) return `<option value="">카테고리 없음</option>`;
-  return names.map(n => `<option${n===selected?' selected':''}>${n}</option>`).join('');
+  if(selected && !names.includes(selected)) names.unshift(selected);
+  return names.map(n => `<option${n===selected?' selected':''}>${escHtml(n)}</option>`).join('');
 }
 
 /* ── 가계부: 실제 카테고리/거래 데이터 ── */
@@ -2425,7 +2426,8 @@ async function showRealDay(el, d){
   list.innerHTML = '';
 
   due.forEach(item => {
-    const existing = dayTx.find(tx => tx.category_id === item.category_id && tx.is_auto_fixed);
+    const existing = dayTx.filter(tx => tx.category_id === item.category_id && tx.is_auto_fixed)
+      .sort((a,b) => String(b.created_at||'').localeCompare(String(a.created_at||'')))[0];
     const amt = existing ? existing.amount : item.amount;
     const row = document.createElement('div');
     row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (existing && Number(existing.amount) === 0 ? ' skipped' : '');
@@ -2434,9 +2436,14 @@ async function showRealDay(el, d){
     row.dataset.autoFixed = '1';
     row.dataset.kind = item.kind;
     row.dataset.dayKey = key;
+    const itemCat = myCategoriesCache.find(c => c.id === item.category_id);
+    const investLabel = itemCat && itemCat.linked_asset_id
+      ? ({ '비유동자산':'비유동투자', '고정투자자산':'고정투자', '변동자산':'변동투자' }[itemCat.category] || '투자') : null;
     const catSelectHtml = item.kind === 'income'
       ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
-      : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
+      : investLabel
+        ? `<select class="tx-cat" disabled><option selected>📈 ${investLabel} (자산 연동)</option></select>`
+        : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
     row.innerHTML = `
       <div class="tx-fixed-top">
         <span class="tx-dot ${item.kind}"></span><span class="tx-fixed-badge${item.kind==='income'?' income':''}">고정</span>
@@ -2445,7 +2452,7 @@ async function showRealDay(el, d){
       <div class="tx-fixed-bottom">
         <span class="tx-fixed-name">${item.name}</span>
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
-        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
+        <input class="tx-input" type="text" inputmode="numeric" value="${Number(amt).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('fx_${key}_${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
         <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
       </div>`;
     list.appendChild(row);
@@ -2595,7 +2602,8 @@ async function saveInvestTxNew(btn){
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 3000);
 }
-async function saveInvestTx(input){
+async function saveInvestTxNow(input){
+  if((input.value || '').trim() === '') return;
   const row = input.closest('.tx-row');
   const catId = row.querySelector('.tx-invest-cat').value;
   if(!catId || !selectedDayDate) return;
@@ -2619,6 +2627,7 @@ async function saveInvestTx(input){
 }
 async function deleteInvestTx(btn){
   const row = btn.closest('.tx-row');
+  await (row._saveChain || Promise.resolve()); // 저장 중이면 끝난 뒤 삭제
   const id = row.dataset.txId;
   if(id){
     const { error } = await sb.from('transactions').delete().eq('id', id);
@@ -2630,7 +2639,18 @@ async function deleteInvestTx(btn){
   refreshWeekGridDisplay();
   refreshLedgerSummary();
 }
-async function saveFixedTx(input){
+function chainRowSave(el, fn){
+  const row = el.closest('.tx-row') || el;
+  const next = (row._saveChain || Promise.resolve()).then(() => fn(el)).catch(e => console.error('save failed', e));
+  row._saveChain = next;
+  return next;
+}
+function saveFixedTx(input){ return chainRowSave(input, saveFixedTxNow); }
+function saveManualTx(el){ return chainRowSave(el, saveManualTxNow); }
+function saveInvestTx(input){ return chainRowSave(input, saveInvestTxNow); }
+async function saveFixedTxNow(input){
+  if(!input.isConnected && !input.closest('.tx-row')) return;
+  if((input.value || '').trim() === '') return; // 지우고 다시 쓰는 중에는 0으로 저장하지 않음 (0은 직접 '0' 입력 또는 ✕)
   const row = input.closest('.tx-row');
   const amount = rawMoney(input);
   const categoryId = row.dataset.categoryId;
@@ -2654,13 +2674,14 @@ async function saveFixedTx(input){
   refreshWeekGridDisplay();
   refreshLedgerSummary();
 }
-async function saveManualTx(el){
+async function saveManualTxNow(el){
   const row = el.closest('.tx-row');
   const catSelect = row.querySelector('.tx-cat');
   const nameInput = row.querySelector('.tx-name');
   const amtInput = row.querySelector('.tx-input');
   const category = catSelect.value;
   const name = nameInput.value.trim();
+  if((amtInput.value || '').trim() === '') return;
   const amount = rawMoney(amtInput);
   const kind = row.querySelector('.tx-dot').classList.contains('income') ? 'income' : 'expense';
   const key = row.dataset.dayKey || dateKey(selectedDayDate);
@@ -2683,6 +2704,7 @@ async function saveManualTx(el){
 }
 async function deleteManualTx(btn){
   const row = btn.closest('.tx-row');
+  await (row._saveChain || Promise.resolve()); // 저장 중이면 끝난 뒤 삭제
   const id = row.dataset.txId;
   if(id){
     const { error } = await sb.from('transactions').delete().eq('id', id);
@@ -3344,7 +3366,7 @@ async function renderMorningBudget(){
     field.dataset.categoryId = item.category_id; field.dataset.name = item.name; field.dataset.category = item.category; field.dataset.due = item.amount;
     if(removed.has(item.category_id)){ field.dataset.removed = '1'; field.style.display = 'none'; } else shown++;
     field.innerHTML = `
-      <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${escHtml(item.name)}</span> <span class="am-plan">· ${escHtml(item.category)} · 월예산 ${Number(item.amount).toLocaleString()}원</span></label>
+      <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${escHtml(item.name)}</span> <span class="am-plan">· ${escHtml(({'비유동자산':'📈 비유동투자','고정투자자산':'📈 고정투자','변동자산':'📈 변동투자'})[item.category] || item.category)} · 월예산 ${Number(item.amount).toLocaleString()}원</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
         <input type="number" value="${prev ? prev.amt : item.amount}" id="morningAmt${i}" data-type="${item.kind}" oninput="queueMorningSave()" style="flex:1;">
         <button class="row-del" title="오늘은 없음" onclick="removeMorningFixed(this)">✕</button>
