@@ -2355,8 +2355,13 @@ let weekTxCache = {}; // { 'YYYY-MM-DD': [tx, ...] }
 function dayLabelForDate(d){
   const day = d.getDate();
   const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-  return (day === lastDay) ? ['말일', String(day)] : [String(day)];
+  if(day !== lastDay) return [String(day)];
+  // 말일에는 '말일' + 그 달에 없는 날짜(예: 2월의 29·30·31일, 30일 달의 31일)도 함께 처리
+  const labels = ['말일'];
+  for(let n = day; n <= 31; n++) labels.push(String(n));
+  return labels;
 }
+function normDayLabel(v){ const t = String(v ?? '').trim(); return /^\d+$/.test(t) ? String(Number(t)) : t; } // '01' → '1'
 async function loadMyCategories(){
   if(!currentUser) return;
   const { data, error } = await sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id);
@@ -2371,11 +2376,11 @@ function getDueItemsForDate(d){
     if(!catActiveOn(c, dKey)) return; // 그 날짜에 유효했던 카테고리만
     if(c.category_splits && c.category_splits.length > 0){
       c.category_splits.forEach(s => {
-        if(labels.includes(s.day_label)){
+        if(labels.includes(normDayLabel(s.day_label))){
           items.push({ category_id:c.id, category:c.category, name:c.name, kind:c.kind, income_tag:c.income_tag, amount:Number(s.amount)||0 });
         }
       });
-    } else if(c.payment_day && labels.includes(c.payment_day)){
+    } else if(c.payment_day && labels.includes(normDayLabel(c.payment_day))){
       items.push({ category_id:c.id, category:c.category, name:c.name, kind:c.kind, income_tag:c.income_tag, amount:Number(c.monthly_budget)||0 });
     }
   });
@@ -2692,6 +2697,9 @@ async function saveManualTxNow(el){
   if(row.dataset.txId){
     const { error } = await sb.from('transactions').update(payload).eq('id', row.dataset.txId);
     if(error){ console.error('manual tx update failed', error); showToastMsg('⚠️ 저장 실패 — 다시 입력해주세요', 3000); return; }
+    // 화면용 기록도 함께 갱신 (안 하면 날짜를 넘겼다 오면 예전 금액이 보임)
+    const cached = weekTxCache[key]?.find(t => t.id === row.dataset.txId);
+    if(cached) Object.assign(cached, payload);
   } else {
     const { data, error } = await sb.from('transactions').insert(payload).select().single();
     if(error){ console.error('manual tx insert failed', error); showToastMsg('⚠️ 저장 실패 — 다시 입력해주세요', 3000); return; }
