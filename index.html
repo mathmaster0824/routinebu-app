@@ -647,19 +647,19 @@
   }
 
   /* 문의하기 채팅 */
-  .chat-thread{padding:16px 20px 90px;display:flex;flex-direction:column;gap:10px;}
+  .chat-thread{padding:6px 20px 90px;display:flex;flex-direction:column;gap:10px;}
   .chat-bubble{max-width:78%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.5;}
   .chat-bubble p{margin:0;}
   .chat-bubble.mine{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:4px;}
   .chat-bubble.theirs{align-self:flex-start;background:var(--surface);border:0.5px solid var(--line);border-bottom-left-radius:4px;}
   .chat-context{font-size:10.5px;opacity:.75;margin:0 0 4px !important;}
   .chat-input-row{
-    position:fixed;bottom:0;left:0;right:0;max-width:420px;margin:0 auto;
-    display:flex;gap:8px;padding:10px 16px;background:var(--bg);border-top:0.5px solid var(--line);
+    position:sticky;top:0;z-index:5;
+    display:flex;gap:8px;align-items:flex-end;padding:6px 20px 12px;background:var(--bg);border-bottom:0.5px solid var(--line);
   }
-  .chat-input-row input{
-    flex:1;padding:10px 14px;border-radius:20px;border:0.5px solid var(--line);
-    background:var(--surface);color:var(--ink);font-family:inherit;font-size:13.5px;
+  .chat-input-row textarea{
+    flex:1;min-width:0;padding:10px 14px;border-radius:14px;border:0.5px solid var(--line);resize:vertical;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:14px;line-height:1.4;
   }
   .chat-input-row button{
     flex:none;padding:10px 18px;border-radius:20px;border:none;background:var(--brand);
@@ -1091,7 +1091,7 @@
         <p class="ob-level-desc">+ 투자계획안</p>
       </div>
       <p class="ob-hint">※ "집중모드"는 레벨과 상관없이, 운영자가 나중에 별도로 지정해드려요. 지금은 고를 수 없어요.</p>
-      <button class="save-btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="showOnboard(2)">다음</button>
+      <button class="save-btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="if(!selectedLevel){ alert('도전할 레벨을 먼저 골라주세요'); return; } showOnboard(2)">다음</button>
     </div>
 
     <div id="onboardStep2" style="display:none;">
@@ -1172,7 +1172,7 @@
 
       <p class="ob-hint" style="margin-top:14px;">여기서는 이름·분류만 가볍게 적어두고, 정확한 금액·만기일 등은 홈 화면의 "자산" 탭에서 천천히 채우셔도 돼요.</p>
 
-      <button class="save-btn" id="task2Btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="saveTask2()">다음 과제로 →</button>
+      <button class="save-btn" id="task2Btn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="saveTask2()">모든 과제 완료, 시작하기 🎉</button>
       <p class="field-hint" id="task2Msg" style="text-align:center;margin-top:8px;"></p>
     </div>
 
@@ -1205,7 +1205,7 @@
       <div class="date" id="homeDateText">9월 16일 수요일</div>
     </div>
     <div style="display:flex;gap:8px;">
-      <div class="bell" onclick="openSub('bonbu')" style="font-size:15px;">📚</div>
+      <div class="bell" id="bonbuBell" onclick="openSub('bonbu')" style="font-size:15px;">📚</div>
       <div class="bell" id="adminTopIcon" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}" style="font-size:15px;display:none;">🛠️</div>
       <div class="bell" onclick="openSub('notices')">🔔<span class="dot"></span></div>
     </div>
@@ -1408,11 +1408,11 @@
 <!-- 문의하기 서브화면 -->
 <div class="subscreen" id="sub-inquiry">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('inquiry')">←</button><h1 class="sub-title">문의하기</h1></div>
-  <div class="chat-thread" id="chatThread">
-  </div>
   <div class="chat-input-row">
-    <input type="text" id="chatInput" placeholder="운영자에게 메시지 보내기">
-    <button onclick="sendChat()">전송</button>
+    <textarea id="chatInput" rows="2" placeholder="궁금한 점을 적어주세요 (운영자에게 바로 전달돼요)"></textarea>
+    <button onclick="sendChat()">보내기</button>
+  </div>
+  <div class="chat-thread" id="chatThread">
   </div>
 </div>
 
@@ -1958,6 +1958,10 @@ function addCustomRow(prefill){
 }
 let topZ = 20;
 function openSub(id){
+  if(id === 'bonbu' && !window.__viewAs){
+    const bell = document.getElementById('bonbuBell');
+    if(bell && bell.style.display === 'none'){ showToastMsg('본부성 참여 멤버만 들어갈 수 있어요. 운영자에게 문의해주세요', 2500); return; }
+  }
   const el = document.getElementById('sub-'+id);
   topZ++;
   el.style.zIndex = topZ;
@@ -2032,7 +2036,7 @@ function openSub(id){
     })();
   }
   if(id === 'bookdone'){
-    const book = bonbuBooksCache.find(b=>b.id===currentReadingBookId);
+    const book = bonbuBooksCache.find(b=>b.id===(completingBookId || currentReadingBookId));
     const intro = document.getElementById('bdIntro');
     if(intro) intro.innerHTML = `${book?'《'+book.title+'》를':'이 책을'} 완독하셨어요! 별점과 한 줄 총평은 <b>나만 볼 수 있어요.</b>`;
   }
@@ -3498,6 +3502,8 @@ function renderWeekStrip(){
 let bonbuBooksCache = [];
 let bonbuProgressCache = {}; // book_id -> progress row
 let currentReadingBookId = null;
+let completingBookId = null; // 완독 인증할 책 (읽는 중 카드의 ✓ 완독 버튼)
+function startBookDone(bookId){ completingBookId = bookId; openSub('bookdone'); }
 
 async function loadBestReviews(){
   const list = document.getElementById('bonbuBestList');
@@ -3541,58 +3547,44 @@ async function loadBonbuLibrary(){
   }
 
   const cur = nowTermInfo();
-  const readingCards = [];
-  const missedCards = [];
-
+  const readingBooks = [];
   bonbuBooksCache.forEach(book => {
     const prog = bonbuProgressCache[book.id];
     const isDone = prog && prog.status === 'done';
+    const tl = termLabel(book.year, termOfMonth(book.month_number));
+    const card = document.createElement('div');
     if(isDone){
+      // 읽은 책: 완독 인증을 한 책만
       const stars = '★'.repeat(prog.rating||0) + '☆'.repeat(5-(prog.rating||0));
-      const card = document.createElement('div');
       card.className = 'book-card';
-      card.innerHTML = `<div class="book-cover">📗</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${termLabel(book.year, termOfMonth(book.month_number))} · ${stars}${prog.review?' · "'+escHtml(prog.review)+'"':''}</p></div>`;
+      card.innerHTML = `<div class="book-cover">📗</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${tl} · ${book.month_number}월 · ${stars}${prog.review?' · "'+escHtml(prog.review)+'"':''}</p></div>`;
       doneList.appendChild(card);
-    } else {
-      const bTerm = termOfMonth(book.month_number);
-      const sameTerm = Number(book.year) === cur.year && bTerm === cur.term;
-      const tl = termLabel(book.year, bTerm);
-      const card = document.createElement('div');
-      if(bookKey(book) <= cur.key && sameTerm){
-        // 이번 기수에서 이번 달까지의 책 중 완독 안 한 책 → 읽는 중
-        if(!currentReadingBookId) currentReadingBookId = book.id; // 완독처리 대상은 가장 빠른 미완료 책
-        card.className = 'book-card current';
-        card.innerHTML = `<div class="book-cover">📖</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${tl} · ${book.month_number}월 책${book.subtitle?' · '+escHtml(book.subtitle):''}</p></div>`;
-        readingCards.push(card);
-      } else if(bookKey(book) < cur.key){
-        // 지난 기수에서 완독 못 한 책 → 읽은 책 탭 아래 '지난 기수'로
-        card.className = 'book-card muted';
-        card.innerHTML = `<div class="book-cover">📕</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${tl} · ${book.month_number}월 · 완독 기록 없음</p></div>`;
-        missedCards.push(card);
-      } else {
-        card.className = 'book-card muted';
-        card.innerHTML = `<div class="book-cover">📘</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${tl} · ${book.month_number}월${book.subtitle?' · '+escHtml(book.subtitle):''}</p></div>`;
-        nextList.appendChild(card);
-      }
+    } else if(bookKey(book) <= cur.key){
+      // 읽는 중: 이번 달 책 + 달이 지났어도 완독 인증 전인 책 (완독할 때까지 남아 있음)
+      readingBooks.push(book);
+    } else if(Number(book.year) === cur.year){
+      // 읽을 책: 올해 남은 달의 책 (내년 책은 해가 바뀌면 보임)
+      card.className = 'book-card muted';
+      card.innerHTML = `<div class="book-cover">📘</div><div class="book-info"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${tl} · ${book.month_number}월${book.subtitle?' · '+escHtml(book.subtitle):''}</p></div>`;
+      nextList.appendChild(card);
     }
   });
-  readingCards.forEach(c => readingList.appendChild(c));
-  if(missedCards.length){
-    const h = document.createElement('p'); h.className = 'field-hint'; h.style.margin = '12px 0 4px'; h.textContent = '지난 기수 · 완독 기록 없는 책';
-    doneList.appendChild(h); missedCards.forEach(c => doneList.appendChild(c));
-  }
-
-  if(currentReadingBookId){
-    const btn = document.createElement('button');
-    btn.className = 'add-row';
-    btn.textContent = '✓ 완독하기';
-    btn.onclick = () => openSub('bookdone');
-    readingList.appendChild(btn);
-  } else if(bonbuBooksCache.length > 0){
-    readingList.innerHTML += '<p class="ac-sub" style="text-align:center;padding:10px 0;">현재 읽는 중인 책이 없어요.</p>';
+  // 오늘의 독서 인증 대상: 이번 달 책(완독 전) → 없으면 가장 오래된 미완독 책
+  const thisMonthBook = readingBooks.find(b => bookKey(b) === cur.key);
+  currentReadingBookId = thisMonthBook ? thisMonthBook.id : (readingBooks[0] ? readingBooks[0].id : null);
+  // 이번 달 책을 맨 위에, 지난 달 미완독 책은 그 아래
+  readingBooks.sort((a,b) => (bookKey(b) === cur.key) - (bookKey(a) === cur.key) || bookKey(a) - bookKey(b)).forEach(book => {
+    const isThisMonth = bookKey(book) === cur.key;
+    const card = document.createElement('div');
+    card.className = 'book-card current';
+    card.innerHTML = `<div class="book-cover">📖</div><div class="book-info" style="flex:1;"><p class="book-title">${escHtml(book.title)}</p><p class="book-sub">${termLabel(book.year, termOfMonth(book.month_number))} · ${book.month_number}월 책${isThisMonth ? ' · 이번 달' : ' · 완독 전'}</p></div><button class="add-row-sm" style="flex:none;" onclick="startBookDone('${book.id}')">✓ 완독</button>`;
+    readingList.appendChild(card);
+  });
+  if(!readingBooks.length && bonbuBooksCache.length > 0){
+    readingList.innerHTML += '<p class="ac-sub" style="text-align:center;padding:10px 0;">지금 읽는 중인 책이 없어요.</p>';
   }
   if(!doneList.querySelector('.book-card')) doneList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 완독한 책이 없어요.</p>';
-  if(nextList.innerHTML === '') nextList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">읽을 예정인 책이 없어요.</p>';
+  if(nextList.innerHTML === '') nextList.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">올해 남은 책이 없어요.</p>';
 
   const bookLabel = document.getElementById('bonbuCertBookLabel');
   if(bookLabel){
@@ -4524,7 +4516,7 @@ async function saveCategories(){
     btn.disabled = false; btn.textContent = '저장';
   }
 }
-let selectedLevel = '중급';
+let selectedLevel = null;
 let currentUser = null; // { id, email }
 function selectLevel(card, level){
   document.querySelectorAll('.ob-level-card').forEach(c=>c.classList.remove('selected'));
@@ -4551,7 +4543,7 @@ async function doSignup(){
   btn.disabled = true; btn.textContent = '가입 처리 중...';
   const { data, error } = await sb.auth.signUp({
     email, password: pw,
-    options: { data: { name, programs } }
+    options: { data: { name, programs }, emailRedirectTo: location.origin + location.pathname } // 인증 메일 링크가 앱으로 돌아오게
   });
   btn.disabled = false; btn.textContent = '가입 신청';
   if(error){ msg.textContent = error.message; return; }
@@ -4612,6 +4604,8 @@ function seasonParticipationPct(daySet, start, end){
   return days > 0 ? Math.round(active / days * 100) : 0;
 }
 function displayUserProfile(profile){
+  const bell = document.getElementById('bonbuBell');
+  if(bell) bell.style.display = (profile && ((profile.programs||[]).includes('bonbuseong') || profile.is_admin)) ? '' : 'none';
   if(!profile) return;
   currentProfile = profile;
   const name = profile.name || '회원';
@@ -4679,8 +4673,8 @@ async function routeAfterAuth(){
     setDemoMode(hasBonbu ? 'bonbu' : 'routine');
     return;
   }
-  if(profile.onboarding_step < 3){
-    showOnboard(profile.onboarding_step + 2); // 0→2(과제1), 1→3(과제2), 2→4(과제3)
+  if(profile.onboarding_step < 2){
+    showOnboard(profile.onboarding_step === 0 ? 1 : 3); // 0→레벨 선택→과제1, 1→과제2
     return;
   }
   try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
@@ -4711,8 +4705,8 @@ async function checkApprovalStatus(){
     const hasBonbu = (profile.programs || []).includes('bonbuseong');
     if(!hasRoutine){
       setDemoMode(hasBonbu ? 'bonbu' : 'routine');
-    } else if(profile.onboarding_step < 3){
-      showOnboard(profile.onboarding_step + 2);
+    } else if(profile.onboarding_step < 2){
+      showOnboard(profile.onboarding_step === 0 ? 1 : 3);
     } else {
       try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
       setDemoMode('routine');
@@ -4767,7 +4761,7 @@ async function saveTask1(){
     if(catErr) throw catErr;
 
     const { error: profErr } = await sb.from('profiles').update({
-      level: selectedLevel,
+      level: selectedLevel || '중급',
       ledger_period_type: periodType,
       onboarding_step: 1,
     }).eq('id', currentUser.id);
@@ -4798,13 +4792,13 @@ async function saveTask2(){
       const { error } = await sb.from('assets').insert(payload);
       if(error) throw error;
     }
-    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 2 }).eq('id', currentUser.id);
+    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3 }).eq('id', currentUser.id);
     if(profErr) throw profErr;
-    showOnboard(4); // 과제3: 투자계획
+    await routeAfterAuth(); // 과제 2개 완료 → 홈 (투자계획은 홈의 '투자계획' 탭에서)
   } catch(e){
     msg.textContent = '저장 중 문제가 생겼어요: ' + e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '다음 과제로 →';
+    btn.disabled = false; btn.textContent = '모든 과제 완료, 시작하기 🎉';
   }
 }
 
@@ -4903,11 +4897,10 @@ async function loadMyInquiries(){
   if(!thread || !currentUser) return;
   const { data, error } = await sb.from('inquiries').select('*').eq('user_id', currentUser.id).order('created_at');
   if(error){ thread.innerHTML = `<p class="ac-sub">불러오기 실패: ${escHtml(error.message)}</p>`; return; }
-  if(!data || !data.length){ thread.innerHTML = '<p class="ac-sub" style="text-align:center;padding:20px 0;">궁금한 점을 남기면 운영자가 여기서 답해드려요.</p>'; return; }
-  thread.innerHTML = data.map(q => `
+  if(!data || !data.length){ thread.innerHTML = '<p class="ac-sub" style="text-align:center;padding:20px 0;">위 칸에 궁금한 점을 쓰고 보내기를 누르세요.<br>운영자 답변은 여기에 표시돼요.</p>'; return; }
+  thread.innerHTML = data.slice().reverse().map(q => `
     <div class="chat-bubble mine"><p class="chat-context">📍 ${escHtml(q.context||'')}</p><p>${escHtml(q.content)}</p></div>
     ${q.admin_reply ? `<div class="chat-bubble theirs"><p>${escHtml(q.admin_reply)}</p></div>` : ''}`).join('');
-  thread.scrollTop = thread.scrollHeight;
 }
 async function loadAdminInquiries(){
   const box = document.getElementById('adminInquiryList'); if(!box) return;
@@ -5273,12 +5266,13 @@ function setBdStar(n){
   });
 }
 async function submitBookDone(){
-  if(!currentUser || !currentReadingBookId) return;
+  const doneBookId = completingBookId || currentReadingBookId;
+  if(!currentUser || !doneBookId) return;
   const btn = document.querySelector('#sub-bookdone .save-btn');
   btn.disabled = true; btn.textContent = '저장 중...';
   const review = document.getElementById('bdReview').value.trim();
   const { error } = await sb.from('bonbu_book_progress').upsert({
-    user_id: currentUser.id, book_id: currentReadingBookId, status: 'done',
+    user_id: currentUser.id, book_id: doneBookId, status: 'done',
     rating: bdStarCount || null, review: review || null, completed_at: new Date().toISOString(),
   }, { onConflict: 'user_id,book_id' });
   if(error){ console.error('book done save failed', error); btn.disabled=false; btn.textContent='완독 등록'; return; }
@@ -5287,6 +5281,7 @@ async function submitBookDone(){
   bdStarCount = 0;
   document.getElementById('bdReview').value = '';
   document.querySelectorAll('#bdStars span').forEach(s=>s.classList.remove('on'));
+  completingBookId = null;
   closeSub('bookdone');
   await loadBonbuLibrary();
   switchLib(document.querySelectorAll('.lib-tab')[1], 'done');
