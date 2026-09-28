@@ -813,6 +813,11 @@
   .login-sub{text-align:center;font-size:12px;color:var(--ink-faint);margin:6px 20px 24px;line-height:1.6;}
   .login-link{text-align:center;font-size:12.5px;color:var(--brand);margin:14px 20px 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
   .login-link.muted{color:var(--ink-faint);text-decoration:none;}
+  .login-privacy{margin:18px 20px 0;padding:12px 14px;border-radius:12px;background:var(--surface);border:0.5px solid var(--line);text-align:left;}
+  .login-privacy .lp-title{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--ink);}
+  .login-privacy ul{margin:0;padding-left:18px;}
+  .login-privacy li{font-size:12px;line-height:1.55;color:var(--ink-soft,var(--ink));margin:3px 0;}
+  .login-privacy b{font-weight:600;}
   .ob-progress{font-size:12.5px;font-weight:600;color:var(--gold);margin:0 20px 4px;}
   .ob-hint{font-size:11.5px;color:var(--ink-faint);margin:0 20px 16px;}
   .ob-level-card{
@@ -1054,6 +1059,14 @@
       <p class="login-link" onclick="showOnboard('signup')">처음이신가요? 회원가입</p>
       <p class="login-link" onclick="requestPasswordReset()">비밀번호를 잊으셨나요?</p>
       <p class="field-hint" id="loginErrorMsg" style="color:var(--red);text-align:center;margin-top:10px;"></p>
+      <div class="login-privacy" role="note">
+        <p class="lp-title">🔒 개인정보 보호 안내</p>
+        <ul>
+          <li>창을 닫거나 <b>30분 동안 사용하지 않으면 자동으로 로그아웃</b>돼요. 쓰던 내용은 먼저 저장돼요.</li>
+          <li>가족과 함께 쓰는 기기라면, 브라우저의 <b>"비밀번호를 저장하시겠습니까?"</b> 창에서 <b>저장 안 함</b>을 눌러주세요.</li>
+          <li>다 쓰신 뒤에는 <b>내정보 → 로그아웃</b>을 눌러주세요.</li>
+        </ul>
+      </div>
     </div>
 
     <div id="onboardSignup" style="display:none;">
