@@ -1906,7 +1906,7 @@
     document.body.appendChild(box);
   } else {
     sb = window.supabase.createClient(SB_URL, SB_KEY, {
-      auth: { storage: window.localStorage, persistSession: true } // 앱을 닫아도 로그인 유지
+      auth: { storage: window.sessionStorage } // 개인정보 보호: 창·앱을 닫으면 로그아웃
     });
     // 운영자가 멤버 화면을 '조회'할 때는 어떤 저장/삭제도 되지 않도록 막음
     window.__sbFrom = sb.from.bind(sb);
@@ -4757,6 +4757,7 @@ async function doLogin(){
   btn.disabled = false; btn.textContent = '로그인';
   if(error){ msg.textContent = '이메일 또는 비밀번호가 맞지 않아요.'; return; }
   currentUser = data.user;
+  markActive();
   await routeAfterAuth();
 }
 
@@ -5023,9 +5024,35 @@ async function saveTask3(){
 }
 
 /* ── 페이지 로드시 기존 로그인 세션 확인 ── */
+/* ── 개인정보 보호: 30분 동안 사용하지 않으면 자동 로그아웃 ── */
+const IDLE_LIMIT_MS = 30 * 60 * 1000;
+function markActive(){ try{ sessionStorage.setItem('rb_last_active', String(Date.now())); }catch(e){} }
+function idleExpired(){
+  let last = 0; try{ last = Number(sessionStorage.getItem('rb_last_active') || 0); }catch(e){}
+  return last > 0 && Date.now() - last > IDLE_LIMIT_MS;
+}
+async function autoLogout(reason){
+  // 쓰던 내용은 먼저 저장
+  try{ await Promise.allSettled([saveMorningBudget(), saveEveningSettle(false), saveMealState(), saveMonthReflection()]); }catch(e){}
+  try{ await sb.auth.signOut(); }catch(e){}
+  if(window.__viewAs){ window.__viewAs = null; const bar = document.getElementById('viewAsBar'); if(bar) bar.style.display = 'none'; }
+  currentUser = null;
+  try{ resetUserCaches(); }catch(e){}
+  try{ sessionStorage.removeItem('rb_last_active'); }catch(e){}
+  setDemoMode('login');
+  const msg = document.getElementById('loginErrorMsg');
+  if(msg) msg.textContent = reason || '30분 동안 사용하지 않아 자동으로 로그아웃됐어요. 다시 로그인해주세요.';
+}
+async function checkIdle(){ if(currentUser && idleExpired()) await autoLogout(); }
+['click','keydown','touchstart','input','scroll'].forEach(ev => document.addEventListener(ev, markActive, { passive:true, capture:true }));
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkIdle(); });
+setInterval(checkIdle, 60 * 1000);
+
 async function checkExistingSession(){
   const { data } = await sb.auth.getSession();
+  if(data.session && idleExpired()){ await autoLogout(); return; }
   if(data.session){
+    markActive();
     currentUser = data.session.user;
     await routeAfterAuth();
   }
