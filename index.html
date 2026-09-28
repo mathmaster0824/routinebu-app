@@ -347,6 +347,11 @@
   }
   .tx-row.fixed{background:var(--gold-soft);border-radius:9px;padding:8px 10px;margin:0 0 6px;display:block;}
   .tx-row.fixed.skipped{background:var(--surface-2);opacity:.55;}
+  .tx-row.fixed.moved-out{background:var(--surface-2);opacity:.7;}
+  .tx-row.fixed.moved-out .tx-fixed-name{text-decoration:line-through;}
+  .tx-row.fixed.moved-in{border:1px dashed var(--gold);}
+  .tx-moved-note{font-size:12px;color:var(--gold);font-weight:600;margin-left:auto;white-space:nowrap;}
+  .move-btn{flex:none;border:0.5px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit;}
   .tx-row.fixed.skipped .tx-fixed-name{text-decoration:line-through;}
   .tx-fixed-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
   .tx-fixed-badge{
@@ -2255,7 +2260,7 @@ async function renderMonthSettle(){
     dayTx.filter(t => !t.is_auto_fixed).forEach(t => {
       const cat = catMap[t.category_id];
       const label = (t.kind !== 'income' && isInvestCat(cat, t.category_snapshot)) ? '투자'
-        : cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
+        : cat ? (t.moved_from ? cat.category : (cat.name || cat.category)) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
       if(t.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount); incomeTotal += Number(t.amount); }
       else { expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount); expenseTotal += Number(t.amount); }
     });
@@ -2435,7 +2440,10 @@ async function showRealDay(el, d){
       .sort((a,b) => String(b.created_at||'').localeCompare(String(a.created_at||'')))[0];
     const amt = existing ? existing.amount : item.amount;
     const row = document.createElement('div');
-    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (existing && Number(existing.amount) === 0 ? ' skipped' : '');
+    const movedOut = existing && existing.moved_to;
+    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (movedOut ? ' moved-out' : (existing && Number(existing.amount) === 0 ? ' skipped' : ''));
+    row.dataset.budget = item.amount;
+    if(movedOut) row.dataset.movedTo = existing.moved_to;
     row.dataset.txId = existing ? existing.id : '';
     row.dataset.categoryId = item.category_id;
     row.dataset.autoFixed = '1';
@@ -2457,8 +2465,11 @@ async function showRealDay(el, d){
       <div class="tx-fixed-bottom">
         <span class="tx-fixed-name">${item.name}</span>
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
-        <input class="tx-input" type="text" inputmode="numeric" value="${Number(amt).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('fx_${key}_${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
-        <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
+        ${movedOut
+          ? `<span class="tx-moved-note">→ ${mdLabel(existing.moved_to)}로 옮김</span><button class="move-btn" onclick="undoMoveFixed(this)">되돌리기</button>`
+          : `<input class="tx-input" type="text" inputmode="numeric" value="${Number(amt).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('fx_${key}_${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
+        <button class="move-btn" title="다른 날로 옮기기" onclick="moveFixedStart(this)">📅</button>
+        <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>`}
       </div>`;
     list.appendChild(row);
   });
@@ -2472,6 +2483,28 @@ async function showRealDay(el, d){
     row.className = 'tx-row';
     row.dataset.txId = tx.id;
     row.dataset.dayKey = key;
+    if(tx.moved_from){
+      const mc = myCategoriesCache.find(c => c.id === tx.category_id);
+      row.className = 'tx-row fixed moved-in' + (tx.kind==='income' ? ' income-fixed' : '');
+      row.dataset.categoryId = tx.category_id || '';
+      row.dataset.movedFrom = tx.moved_from;
+      row.dataset.kind = tx.kind;
+      const invest = mc && mc.linked_asset_id;
+      row.innerHTML = `
+        <div class="tx-fixed-top">
+          <span class="tx-dot ${tx.kind}"></span><span class="tx-fixed-badge${tx.kind==='income'?' income':''}">고정</span>
+          <span class="tx-moved-note">← ${mdLabel(tx.moved_from)}에서 옮겨옴${invest ? ' · 📈 투자' : ''}</span>
+        </div>
+        <div class="tx-fixed-bottom">
+          <span class="tx-fixed-name">${escHtml(mc ? mc.name : (tx.category_label || tx.category_snapshot || ''))}</span>
+          <span class="tx-fixed-budget">${mc ? '예산 ' + Number(mc.monthly_budget||0).toLocaleString() + '원' : ''}</span>
+          <input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('mv_${tx.id}', ()=>saveMovedAmount(this))" onchange="saveMovedAmount(this)">
+          <button class="move-btn" title="다른 날로 옮기기" onclick="moveMovedStart(this)">📅</button>
+          <button class="row-del" title="이번엔 없었어요" onclick="skipMovedTx(this)">✕</button>
+        </div>`;
+      list.appendChild(row);
+      return;
+    }
     if(tx.category_id && investCatIds.has(tx.category_id)){
       const investCats = myCategoriesCache.filter(c => c.linked_asset_id && (c.id === tx.category_id || catActiveOn(c, key)));
       const options = investCats.map(c => {
@@ -2497,6 +2530,119 @@ async function showRealDay(el, d){
     emptyNote.textContent = '이 날은 아직 기록이 없어요. 아래 버튼으로 추가해보세요.';
     list.appendChild(emptyNote);
   }
+}
+/* ── 고정 항목을 다른 날로 옮기기 (원래 날은 0원·옮김 표시, 옮긴 날에 기록) ── */
+function mdLabel(k){ const p = String(k).split('-'); return `${Number(p[1])}/${Number(p[2])}`; }
+function nextDayKey(k){ const d = new Date(k + 'T00:00:00'); d.setDate(d.getDate() + 1); return dateKey(d); }
+function pickDateThen(btn, defaultKey, cb){
+  const inp = document.createElement('input');
+  inp.type = 'date'; inp.value = defaultKey;
+  inp.style.cssText = 'position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;';
+  btn.after(inp);
+  let done = false;
+  inp.addEventListener('change', () => { if(done) return; done = true; const v = inp.value; inp.remove(); if(v) cb(v); });
+  try{ inp.showPicker(); }
+  catch(e){ inp.style.cssText = 'margin-top:6px;padding:6px;border-radius:8px;border:0.5px solid var(--line);'; inp.focus(); }
+}
+async function reloadAfterMove(keys){
+  keys.forEach(k => delete weekTxCache[k]);
+  try{
+    const st = getThisWeekMonday(); st.setDate(st.getDate() + weekOffset*7);
+    await loadWeekTransactions(st); refreshWeekGridDisplay(); refreshLedgerSummary();
+  }catch(e){}
+  const sel = document.querySelector('.g-cell.selected, .m-cell.selected');
+  if(selectedDayDate) showRealDay(sel, selectedDayDate);
+}
+async function findOriginOverride(catId, fromKey){
+  const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id)
+    .eq('category_id', catId).eq('tx_date', fromKey).eq('is_auto_fixed', true).order('created_at', { ascending:false }).limit(1);
+  return data && data[0];
+}
+function moveFixedStart(btn){
+  const row = btn.closest('.tx-row');
+  pickDateThen(btn, nextDayKey(row.dataset.dayKey), to => moveFixed(row, to));
+}
+async function moveFixed(row, to){
+  const from = row.dataset.dayKey;
+  if(!to || to === from) return;
+  await (row._saveChain || Promise.resolve());
+  const catId = row.dataset.categoryId, kind = row.dataset.kind;
+  const inp = row.querySelector('.tx-input');
+  const amount = inp && inp.value.trim() !== '' ? rawMoney(inp) : (Number(row.dataset.budget) || 0);
+  // 1) 옮긴 날에 기록
+  const { data: moved, error: e1 } = await sb.from('transactions').insert({
+    user_id: currentUser.id, category_id: catId, amount, kind, tx_date: to, is_auto_fixed: false, moved_from: from, name: '',
+    ...catSnapFields(catId),
+  }).select().single();
+  if(e1){ showToastMsg('⚠️ 옮기지 못했어요 — 다시 시도해주세요', 3000); return; }
+  // 2) 원래 날은 0원 + 옮김 표시
+  let e2;
+  if(row.dataset.txId){
+    ({ error: e2 } = await sb.from('transactions').update({ amount: 0, moved_to: to }).eq('id', row.dataset.txId));
+  } else {
+    ({ error: e2 } = await sb.from('transactions').insert({
+      user_id: currentUser.id, category_id: catId, amount: 0, kind, tx_date: from, is_auto_fixed: true, moved_to: to, ...catSnapFields(catId),
+    }));
+  }
+  if(e2){ await sb.from('transactions').delete().eq('id', moved.id); showToastMsg('⚠️ 옮기지 못했어요 — 다시 시도해주세요', 3000); return; }
+  showToastMsg(`${mdLabel(to)}로 옮겼어요`);
+  await reloadAfterMove([from, to]);
+}
+async function undoMoveFixed(btn){
+  const row = btn.closest('.tx-row');
+  const from = row.dataset.dayKey, to = row.dataset.movedTo, catId = row.dataset.categoryId;
+  const { data: movedRows } = await sb.from('transactions').select('*').eq('user_id', currentUser.id)
+    .eq('category_id', catId).eq('tx_date', to).eq('moved_from', from).limit(1);
+  const moved = movedRows && movedRows[0];
+  const amount = moved ? Number(moved.amount) : (Number(row.dataset.budget) || 0);
+  if(moved){ const { error } = await sb.from('transactions').delete().eq('id', moved.id); if(error){ showToastMsg('⚠️ 되돌리지 못했어요', 3000); return; } }
+  if(row.dataset.txId) await sb.from('transactions').update({ amount, moved_to: null }).eq('id', row.dataset.txId);
+  showToastMsg(`${mdLabel(from)}로 되돌렸어요`);
+  await reloadAfterMove([from, to]);
+}
+async function saveMovedAmountNow(input){
+  if((input.value || '').trim() === '') return;
+  const row = input.closest('.tx-row');
+  const amount = rawMoney(input);
+  const { error } = await sb.from('transactions').update({ amount }).eq('id', row.dataset.txId);
+  if(error){ showToastMsg('⚠️ 저장 실패 — 다시 입력해주세요', 3000); return; }
+  const cached = weekTxCache[row.dataset.dayKey]?.find(t => t.id === row.dataset.txId);
+  if(cached) cached.amount = amount;
+  refreshWeekGridDisplay(); refreshLedgerSummary();
+}
+function saveMovedAmount(input){ return chainRowSave(input, saveMovedAmountNow); }
+function moveMovedStart(btn){
+  const row = btn.closest('.tx-row');
+  pickDateThen(btn, nextDayKey(row.dataset.dayKey), to => moveMovedTx(row, to));
+}
+async function moveMovedTx(row, to){
+  const cur = row.dataset.dayKey, from = row.dataset.movedFrom, catId = row.dataset.categoryId;
+  if(!to || to === cur) return;
+  await (row._saveChain || Promise.resolve());
+  const origin = await findOriginOverride(catId, from);
+  if(to === from){
+    // 원래 날로 다시 → 옮기기 취소
+    const amt = rawMoney(row.querySelector('.tx-input'));
+    await sb.from('transactions').delete().eq('id', row.dataset.txId);
+    if(origin) await sb.from('transactions').update({ amount: amt, moved_to: null }).eq('id', origin.id);
+    showToastMsg(`${mdLabel(from)}로 되돌렸어요`);
+  } else {
+    const { error } = await sb.from('transactions').update({ tx_date: to }).eq('id', row.dataset.txId);
+    if(error){ showToastMsg('⚠️ 옮기지 못했어요', 3000); return; }
+    if(origin) await sb.from('transactions').update({ moved_to: to }).eq('id', origin.id);
+    showToastMsg(`${mdLabel(to)}로 옮겼어요`);
+  }
+  await reloadAfterMove([cur, to, from]);
+}
+async function skipMovedTx(btn){
+  const row = btn.closest('.tx-row');
+  await (row._saveChain || Promise.resolve());
+  const from = row.dataset.movedFrom, catId = row.dataset.categoryId;
+  const origin = await findOriginOverride(catId, from);
+  await sb.from('transactions').delete().eq('id', row.dataset.txId);
+  if(origin) await sb.from('transactions').update({ amount: 0, moved_to: null }).eq('id', origin.id); // 원래 날은 '없었음'으로
+  showToastMsg('이번엔 없었던 걸로 기록했어요');
+  await reloadAfterMove([row.dataset.dayKey, from]);
 }
 async function skipFixedTx(btn){
   const row = btn.closest('.tx-row');
@@ -3327,7 +3473,7 @@ function captureMorningBudget(){
   document.querySelectorAll('#budgetTodayList .field').forEach(field => {
     const numInput = field.querySelector('input[type="number"]');
     const base = { category_id: field.dataset.categoryId || null, name: field.dataset.name, category: field.dataset.category,
-      type: numInput.dataset.type || 'expense', due: Number(field.dataset.due)||0, custom:false };
+      type: numInput.dataset.type || 'expense', due: Number(field.dataset.due)||0, custom:false, movedTxId: field.dataset.movedTxId || null };
     if(field.dataset.removed === '1'){ removed.push(base.category_id); return; }
     items.push({ ...base, amt: Number(numInput.value) || 0 });
   });
@@ -3345,6 +3491,18 @@ async function saveMorningBudget(){
   const data = captureMorningBudget();
   return await recSet('budget:' + document.getElementById('budgetTodayList').dataset.loadedFor, data);
 }
+async function getDayPlan(d){
+  const key = dateKey(d);
+  const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).eq('tx_date', key);
+  const tx = data || [];
+  const movedOut = new Set(tx.filter(t => t.is_auto_fixed && t.moved_to).map(t => t.category_id));
+  const items = getDueItemsForDate(d).filter(it => !movedOut.has(it.category_id));
+  tx.filter(t => t.moved_from).forEach(t => {
+    const c = myCategoriesCache.find(x => x.id === t.category_id); if(!c) return;
+    items.push({ category_id: c.id, category: c.category, name: `${c.name} (${mdLabel(t.moved_from)}에서)`, kind: t.kind, income_tag: c.income_tag, amount: Number(t.amount), movedTxId: t.id });
+  });
+  return items;
+}
 function removeMorningFixed(btn){
   const field = btn.closest('.field');
   field.dataset.removed = '1'; field.style.display = 'none';
@@ -3361,7 +3519,7 @@ async function renderMorningBudget(){
   if(myCategoriesCache.length === 0) await loadMyCategories();
   const key = todayKeyNow();
   const saved = await recGet('budget:' + key);
-  const items = getDueItemsForDate(now);
+  const items = await getDayPlan(now);
   const removed = new Set((saved && saved.removed) || []);
   list.innerHTML = '';
   list.dataset.loadedFor = key;
@@ -3372,6 +3530,7 @@ async function renderMorningBudget(){
     const field = document.createElement('div');
     field.className = 'field';
     field.dataset.categoryId = item.category_id; field.dataset.name = item.name; field.dataset.category = item.category; field.dataset.due = item.amount;
+    if(item.movedTxId) field.dataset.movedTxId = item.movedTxId;
     if(removed.has(item.category_id)){ field.dataset.removed = '1'; field.style.display = 'none'; } else shown++;
     field.innerHTML = `
       <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${escHtml(item.name)}</span> <span class="am-plan">· ${escHtml(({'비유동자산':'📈 비유동투자','고정투자자산':'📈 고정투자','변동자산':'📈 변동투자'})[item.category] || item.category)} · 월예산 ${Number(item.amount).toLocaleString()}원</span></label>
@@ -3401,7 +3560,7 @@ async function renderEveningSettle(){
   if(saved && saved.items){
     eveningItems = saved.items;
   } else {
-    const plan = budget ? budget.items : getDueItemsForDate(new Date()).map(it => ({ custom:false, category_id: it.category_id, name: it.name, category: it.category, amt: it.amount, due: it.amount, type: it.kind }));
+    const plan = budget ? budget.items : (await getDayPlan(new Date())).map(it => ({ custom:false, category_id: it.category_id, name: it.name, category: it.category, amt: it.amount, due: it.amount, type: it.kind, movedTxId: it.movedTxId || null }));
     eveningItems = plan.map(p => ({ ...p, plan: p.amt, actual: p.amt }));
   }
   drawEveningList();
@@ -3461,9 +3620,14 @@ async function syncEveningToLedger(){
   const { data: existing, error } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).eq('tx_date', key);
   if(error){ console.error('evening sync load failed', error); return false; }
   for(const it of eveningItems){
-    if(!it.custom && it.category_id){
+    if(!it.custom && it.movedTxId){
+      // 다른 날에서 옮겨온 고정 항목 → 그 기록의 금액을 고침
       const amt = it.removed ? 0 : (Number(it.actual)||0);
-      const ex = (existing||[]).find(t => t.category_id === it.category_id && t.is_auto_fixed);
+      const { error: e } = await sb.from('transactions').update({ amount: amt }).eq('id', it.movedTxId);
+      if(e) return false;
+    } else if(!it.custom && it.category_id){
+      const amt = it.removed ? 0 : (Number(it.actual)||0);
+      const ex = (existing||[]).find(t => t.category_id === it.category_id && t.is_auto_fixed && !t.moved_to);
       if(ex){
         if(Number(ex.amount) !== amt){ const { error: e } = await sb.from('transactions').update({ amount: amt }).eq('id', ex.id); if(e) return false; }
       } else if(amt !== Number(it.due ?? it.plan)){
