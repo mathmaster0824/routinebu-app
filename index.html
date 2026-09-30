@@ -1885,7 +1885,7 @@
   </div>
 
   <div class="section-head" style="margin-top:18px;"><h2>이달의 진도표</h2></div>
-  <div class="progress-img">
+  <div class="progress-img" id="progressChartArea">
     <div class="pi-placeholder">📅 진도표 이미지<br><span>운영자가 업로드</span></div>
   </div>
 
@@ -2014,7 +2014,7 @@ function openSub(id){
     try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
     try{ checkAndShowSeasonSurvey('bonbuseong','bonbuSeasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
     (async () => {
-      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); }
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); await loadProgressChart(); }
       catch(e){ console.error('bonbu library load failed', e); }
     })();
   }
@@ -3311,6 +3311,17 @@ async function showBookRecord(bookId, title, prog){
     return `<div class="memo-card"><p class="memo-date">${dateStr}${l.is_best?' 🌟':''}</p><p class="memo-text">${l.note}</p></div>`;
   }).join('');
 }
+async function loadProgressChart(){
+  const area = document.getElementById('progressChartArea');
+  if(!area) return;
+  const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+  const { data, error } = await sb.from('bonbu_progress_charts').select('image_url').eq('month_key', monthKey).maybeSingle();
+  if(error || !data){
+    area.innerHTML = '<div class="pi-placeholder">📅 진도표 이미지<br><span>운영자가 업로드</span></div>';
+    return;
+  }
+  area.innerHTML = `<img src="${data.image_url}" style="width:100%;border-radius:14px;display:block;">`;
+}
 async function loadBonbuLibrary(){
   if(!currentUser) return;
   const [{ data: books, error: bErr }, { data: progress, error: pErr }] = await Promise.all([
@@ -3480,7 +3491,7 @@ function setDemoMode(mode){
     try{ loadBonbuNotice(); }catch(e){ console.error('bonbu notice load failed', e); }
     try{ checkAndShowSeasonSurvey('bonbuseong','bonbuSeasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
     (async () => {
-      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); }
+      try{ await loadBonbuLibrary(); await loadTodayCert(); await renderStamps(); await loadBestReviews(); await loadProgressChart(); }
       catch(e){ console.error('bonbu library load failed', e); }
     })();
   } else if(mode === 'admin'){
@@ -5139,6 +5150,36 @@ async function addNewCategoryName(type){
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
 }
+function currentMonthKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+async function loadAdminProgressChart(){
+  const card = document.getElementById('adminProgressChartCard');
+  if(!card) return;
+  const monthKey = currentMonthKey();
+  const { data } = await sb.from('bonbu_progress_charts').select('image_url').eq('month_key', monthKey).maybeSingle();
+  card.innerHTML = `
+    ${data ? `<img src="${data.image_url}" style="width:100%;border-radius:12px;margin-bottom:10px;">` : `<p class="field-hint" style="margin-bottom:10px;">${monthKey} 진도표가 아직 없어요.</p>`}
+    <input type="file" accept="image/*" id="progressChartInput" style="display:none;" onchange="uploadProgressChart(this)">
+    <button class="add-row" onclick="document.getElementById('progressChartInput').click()">📅 ${monthKey} 진도표 ${data?'교체':'업로드'}</button>
+  `;
+}
+async function uploadProgressChart(input){
+  const file = input.files[0];
+  if(!file || !currentUser) return;
+  const monthKey = currentMonthKey();
+  const ext = file.name.split('.').pop();
+  const path = `${monthKey}.${ext}`;
+  const { error: upErr } = await sb.storage.from('bonbu-progress-charts').upload(path, file, { upsert: true });
+  if(upErr){ alert('업로드 실패: ' + upErr.message); return; }
+  const { data: urlData } = sb.storage.from('bonbu-progress-charts').getPublicUrl(path);
+  const { error } = await sb.from('bonbu_progress_charts').upsert({
+    month_key: monthKey, image_url: urlData.publicUrl, uploaded_by: currentUser.id, uploaded_at: new Date().toISOString(),
+  }, { onConflict: 'month_key' });
+  if(error){ alert('저장 실패: ' + error.message); return; }
+  loadAdminProgressChart();
+}
 async function loadAdminBookList(){
   const wrap = document.getElementById('adminBookList');
   if(!wrap) return;
@@ -5373,6 +5414,7 @@ function switchProg(btn, prog){
     try{ loadBonbuMemberList(); }catch(e){ console.error('bonbu member list load failed', e); }
     try{ loadApprovalList('bonbuseong','bonbuApprovalCard', null); }catch(e){ console.error('bonbu approval load failed', e); }
     try{ loadAdminBookList(); }catch(e){ console.error('admin book list load failed', e); }
+    try{ loadAdminProgressChart(); }catch(e){ console.error('admin progress chart load failed', e); }
     try{ bonbuLogMonthOffset = 0; renderBonbuLogCalendar(); }catch(e){ console.error('bonbu log calendar load failed', e); }
   }
 }
@@ -5909,6 +5951,11 @@ function navMonth(dir){
     <p class="field-hint">그 달이 되면 모든 멤버의 서재에 자동으로 "읽는 중"으로 떠요.</p>
   </div>
   <button class="add-row" onclick="addBonbuBook()">＋ 책 추가</button>
+
+  <div class="section-head" style="margin-top:22px;"><h2>이달의 진도표 이미지</h2></div>
+  <div class="admin-card" id="adminProgressChartCard">
+    <p class="ac-sub">불러오는 중...</p>
+  </div>
 
   <div class="section-head" style="margin-top:22px;">
     <h2>오늘의 독서인증 현황</h2>
