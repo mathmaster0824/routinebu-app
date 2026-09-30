@@ -3288,8 +3288,14 @@ async function showBookRecord(bookId, title, prog){
   const listEl = document.getElementById('bookRecordLogList');
   if(titleEl) titleEl.textContent = title;
   if(ratingCard){
-    const stars = '★'.repeat(prog.rating||0) + '☆'.repeat(5-(prog.rating||0));
-    ratingCard.innerHTML = `<p style="font-size:20px;color:var(--gold);margin-bottom:6px;">${stars}</p><p class="ac-line">${prog.review || '(총평 없음)'}</p>`;
+    if(prog){
+      const stars = '★'.repeat(prog.rating||0) + '☆'.repeat(5-(prog.rating||0));
+      ratingCard.style.display = '';
+      ratingCard.innerHTML = `<p style="font-size:20px;color:var(--gold);margin-bottom:6px;">${stars}</p><p class="ac-line">${prog.review || '(총평 없음)'}</p>`;
+    } else {
+      ratingCard.style.display = 'none';
+      ratingCard.innerHTML = '';
+    }
   }
   openSub('bookrecord');
   if(listEl) listEl.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">불러오는 중...</p>';
@@ -3345,6 +3351,8 @@ async function loadBonbuLibrary(){
       if(!currentReadingBookId) currentReadingBookId = book.id; // 완독처리 대상은 가장 빠른 미완료 책
       const card = document.createElement('div');
       card.className = 'book-card current';
+      card.style.cursor = 'pointer';
+      card.onclick = () => showBookRecord(book.id, book.title, null);
       card.innerHTML = `<div class="book-cover">📖</div><div class="book-info"><p class="book-title">${book.title}</p><p class="book-sub">${book.month_number}월 책${book.subtitle?' · '+book.subtitle:''}</p></div>`;
       readingCards.push(card);
     } else {
