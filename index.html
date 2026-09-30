@@ -1031,6 +1031,16 @@
   .cat-header-row span:nth-child(1){flex:0.55;text-align:center;}
   .cat-header-row span:nth-child(2){flex:1.2;}
   .cat-header-row span:nth-child(3){flex:1;text-align:right;padding-right:4px;}
+  .img-lightbox{
+    position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99999;
+    display:none;align-items:center;justify-content:center;padding:24px;
+  }
+  .img-lightbox.open{display:flex;}
+  .img-lightbox img{max-width:100%;max-height:100%;border-radius:8px;}
+  .img-lightbox-close{
+    position:absolute;top:24px;right:24px;width:40px;height:40px;border-radius:50%;
+    background:rgba(255,255,255,0.15);color:#fff;border:none;font-size:20px;cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -1874,6 +1884,11 @@
 </div>
 
 <div class="toast" id="toast">저장됐어요</div>
+
+<div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
+  <button class="img-lightbox-close" onclick="closeImgLightbox()">✕</button>
+  <img id="imgLightboxImg" src="" onclick="event.stopPropagation()">
+</div>
 
 <!-- 본부성 서브화면 -->
 <div class="subscreen" id="sub-bonbu">
@@ -3311,6 +3326,13 @@ async function showBookRecord(bookId, title, prog){
     return `<div class="memo-card"><p class="memo-date">${dateStr}${l.is_best?' 🌟':''}</p><p class="memo-text">${l.note}</p></div>`;
   }).join('');
 }
+function openImgLightbox(url){
+  document.getElementById('imgLightboxImg').src = url;
+  document.getElementById('imgLightbox').classList.add('open');
+}
+function closeImgLightbox(){
+  document.getElementById('imgLightbox').classList.remove('open');
+}
 async function loadProgressChart(){
   const area = document.getElementById('progressChartArea');
   if(!area) return;
@@ -3320,7 +3342,7 @@ async function loadProgressChart(){
     area.innerHTML = '<div class="pi-placeholder">📅 진도표 이미지<br><span>운영자가 업로드</span></div>';
     return;
   }
-  area.innerHTML = `<img src="${data.image_url}" style="width:100%;border-radius:14px;display:block;">`;
+  area.innerHTML = `<img src="${data.image_url}" style="width:100%;border-radius:14px;display:block;cursor:zoom-in;" onclick="openImgLightbox('${data.image_url}')">`;
 }
 async function loadBonbuLibrary(){
   if(!currentUser) return;
@@ -3502,6 +3524,8 @@ function setDemoMode(mode){
     try{ loadFocusMissionAdmin(); }catch(e){ console.error('focus mission admin load failed', e); }
     try{ loadDiscountList(); }catch(e){ console.error('discount list load failed', e); }
     try{ loadSeasonSettings(); }catch(e){ console.error('season settings load failed', e); }
+    try{ loadRoutineAdminStats(); }catch(e){ console.error('routine admin stats load failed', e); }
+    try{ loadBonbuAdminStats(); }catch(e){ console.error('bonbu admin stats load failed', e); }
   }
 }
 function requestPasswordReset(){
@@ -4171,6 +4195,10 @@ function selectLevel(card, level){
   document.querySelectorAll('.ob-level-card').forEach(c=>c.classList.remove('selected'));
   card.classList.add('selected');
   selectedLevel = level;
+  if(currentUser){
+    sb.from('profiles').update({ level }).eq('id', currentUser.id)
+      .then(({error}) => { if(error) console.error('level save failed', error); });
+  }
 }
 
 /* ── 실제 Supabase 인증 ── */
@@ -4312,7 +4340,7 @@ async function routeAfterAuth(){
     return;
   }
   if(profile.onboarding_step < 3){
-    showOnboard(profile.onboarding_step + 2); // 0→2(과제1), 1→3(과제2), 2→4(과제3)
+    showOnboard(profile.onboarding_step === 0 ? 1 : 3); // 0→1(레벨선택), 1→3(과제2)
     return;
   }
   try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
@@ -4344,7 +4372,7 @@ async function checkApprovalStatus(){
     if(!hasRoutine){
       setDemoMode(hasBonbu ? 'bonbu' : 'routine');
     } else if(profile.onboarding_step < 3){
-      showOnboard(profile.onboarding_step + 2);
+      showOnboard(profile.onboarding_step === 0 ? 1 : 3);
     } else {
       try{ applyLevelVisibility(profile); }catch(e){ console.error('level visibility failed', e); }
       setDemoMode('routine');
@@ -4430,7 +4458,7 @@ async function saveTask2(){
       const { error } = await sb.from('assets').insert(payload);
       if(error) throw error;
     }
-    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3 }).eq('id', currentUser.id);
+    const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3, level: selectedLevel }).eq('id', currentUser.id);
     if(profErr) throw profErr;
     try{ applyLevelVisibility({ level: selectedLevel, is_focus_mode: false }); }catch(e){ console.error('level visibility failed', e); }
     setDemoMode('routine');
@@ -5412,11 +5440,40 @@ function switchProg(btn, prog){
   document.getElementById('bonbuProgBody').style.display = isRoutine ? 'none' : 'block';
   if(!isRoutine){
     try{ loadBonbuMemberList(); }catch(e){ console.error('bonbu member list load failed', e); }
-    try{ loadApprovalList('bonbuseong','bonbuApprovalCard', null); }catch(e){ console.error('bonbu approval load failed', e); }
+    try{ loadApprovalList('bonbuseong','bonbuApprovalCard', 'bonbuApprovalCount'); }catch(e){ console.error('bonbu approval load failed', e); }
     try{ loadAdminBookList(); }catch(e){ console.error('admin book list load failed', e); }
     try{ loadAdminProgressChart(); }catch(e){ console.error('admin progress chart load failed', e); }
     try{ bonbuLogMonthOffset = 0; renderBonbuLogCalendar(); }catch(e){ console.error('bonbu log calendar load failed', e); }
+    try{ loadBonbuAdminStats(); }catch(e){ console.error('bonbu admin stats load failed', e); }
+  } else {
+    try{ loadRoutineAdminStats(); }catch(e){ console.error('routine admin stats load failed', e); }
   }
+}
+async function loadRoutineAdminStats(){
+  const { data: members } = await sb.from('profiles').select('id').eq('approval_status','approved').contains('programs', ['routinebu']);
+  const total = (members||[]).length;
+  const todayKey = dateKey(new Date());
+  const { data: logs } = await sb.from('mission_logs').select('user_id').eq('log_date', todayKey);
+  const submittedIds = new Set((logs||[]).map(l=>l.user_id));
+  let submitted = 0;
+  (members||[]).forEach(m => { if(submittedIds.has(m.id)) submitted++; });
+  const rate = total>0 ? Math.round(submitted/total*100) : 0;
+  document.getElementById('statRoutineTotal').textContent = total+'명';
+  document.getElementById('statRoutineRate').textContent = rate+'%';
+  document.getElementById('statRoutineMissing').textContent = (total-submitted)+'명';
+}
+async function loadBonbuAdminStats(){
+  const { data: members } = await sb.from('profiles').select('id').eq('approval_status','approved').contains('programs', ['bonbuseong']);
+  const total = (members||[]).length;
+  const todayKey = dateKey(new Date());
+  const { data: logs } = await sb.from('bonbu_reading_logs').select('user_id').eq('log_date', todayKey);
+  const submittedIds = new Set((logs||[]).map(l=>l.user_id));
+  let submitted = 0;
+  (members||[]).forEach(m => { if(submittedIds.has(m.id)) submitted++; });
+  const rate = total>0 ? Math.round(submitted/total*100) : 0;
+  document.getElementById('statBonbuTotal').textContent = total+'명';
+  document.getElementById('statBonbuRate').textContent = rate+'%';
+  document.getElementById('statBonbuMissing').textContent = (total-submitted)+'명';
 }
 let bonbuLogMonthOffset = 0;
 function navBonbuLogMonth(dir){
@@ -5836,9 +5893,9 @@ function navMonth(dir){
 
   <div id="routineAdminBody">
   <div class="admin-stats">
-    <div class="stat-card"><div class="v">9명</div><div class="l">전체 인원</div></div>
-    <div class="stat-card"><div class="v">78%</div><div class="l">오늘 제출률</div></div>
-    <div class="stat-card"><div class="v">2명</div><div class="l">미제출</div></div>
+    <div class="stat-card"><div class="v" id="statRoutineTotal">-</div><div class="l">전체 인원</div></div>
+    <div class="stat-card"><div class="v" id="statRoutineRate">-</div><div class="l">오늘 제출률</div></div>
+    <div class="stat-card"><div class="v" id="statRoutineMissing">-</div><div class="l">미제출</div></div>
   </div>
 
   <div class="toggle-row" style="margin-top:16px;">
@@ -5869,9 +5926,9 @@ function navMonth(dir){
 
   <div id="bonbuAdminBody" style="display:none;">
   <div class="admin-stats">
-    <div class="stat-card"><div class="v">5명</div><div class="l">전체 인원</div></div>
-    <div class="stat-card"><div class="v">80%</div><div class="l">오늘 독서인증 제출률</div></div>
-    <div class="stat-card"><div class="v">1명</div><div class="l">미제출</div></div>
+    <div class="stat-card"><div class="v" id="statBonbuTotal">-</div><div class="l">전체 인원</div></div>
+    <div class="stat-card"><div class="v" id="statBonbuRate">-</div><div class="l">오늘 독서인증 제출률</div></div>
+    <div class="stat-card"><div class="v" id="statBonbuMissing">-</div><div class="l">미제출</div></div>
   </div>
 
   <div class="toggle-row" style="margin-top:16px;">
@@ -5885,7 +5942,7 @@ function navMonth(dir){
     </label>
   </div>
 
-  <div class="section-head" style="margin-top:22px;"><h2>가입 승인 대기 · 본부성</h2><span>0건</span></div>
+  <div class="section-head" style="margin-top:22px;"><h2>가입 승인 대기 · 본부성</h2><span id="bonbuApprovalCount">불러오는 중</span></div>
   <div class="admin-card" id="bonbuApprovalCard">
     <p class="ac-sub" style="text-align:center;padding:6px 0;">대기 중인 신청이 없어요</p>
   </div>
