@@ -1041,6 +1041,9 @@
     position:absolute;top:24px;right:24px;width:40px;height:40px;border-radius:50%;
     background:rgba(255,255,255,0.15);color:#fff;border:none;font-size:20px;cursor:pointer;
   }
+  .mission.locked, .nav-item.locked{opacity:0.45;position:relative;}
+  .mission.locked::after{content:'🔒';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:16px;}
+  .nav-item.locked .nav-icon::after{content:'🔒';position:absolute;font-size:10px;margin-left:-6px;}
 </style>
 </head>
 <body>
@@ -1239,7 +1242,7 @@
     </div>
   </div>
 
-  <div class="section-head"><h2>오늘의 미션</h2><span id="missionCount">3개 중 0개 완료</span></div>
+  <div class="section-head"><h2>오늘의 미션</h2><span id="missionCount"></span></div>
   <div class="mission-list">
     <div class="mission" data-target="idx" onclick="openSub('idx')">
       <div class="check"></div>
@@ -2633,9 +2636,10 @@ function rawMoney(el){
   return Number((el.value || '').replace(/[^\d]/g, '')) || 0;
 }
 function updateCount(){
-  const total = document.querySelectorAll('.mission').length;
-  const done = document.querySelectorAll('.mission.done').length;
-  document.getElementById('missionCount').textContent = total+'개 중 '+done+'개 완료';
+  const total = document.querySelectorAll('.mission:not(.locked)').length;
+  const done = document.querySelectorAll('.mission:not(.locked).done').length;
+  const countEl = document.getElementById('missionCount');
+  if(countEl) countEl.textContent = total > 0 ? (total+'개 중 '+done+'개 완료') : '';
 }
 async function loadTodayMissionStatus(){
   if(!currentUser) return;
@@ -4942,6 +4946,12 @@ async function loadFocusModeList(){
   }
   card.innerHTML = data.map(m => `<p class="ac-line"><b>${m.name || m.email}</b> · 진행중</p>`).join('');
 }
+function showLevelLockMsg(label){
+  const t = document.getElementById('toast');
+  t.textContent = `${label}부터 이용할 수 있어요`;
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
+}
 function applyLevelVisibility(profile){
   const level = profile.level;
   const isFocus = !!profile.is_focus_mode;
@@ -4950,21 +4960,48 @@ function applyLevelVisibility(profile){
   const showInvest = level === '고급';
 
   const idxMission = document.querySelector('.mission[data-target="idx"]');
-  if(idxMission) idxMission.style.display = showIdx ? '' : 'none';
+  if(idxMission){
+    idxMission.classList.toggle('locked', !showIdx);
+    idxMission.onclick = showIdx ? () => openSub('idx') : () => showLevelLockMsg('중급');
+  }
   const budgetMission = document.querySelector('.mission[data-target="budget"]');
-  if(budgetMission) budgetMission.style.display = isFocus ? '' : 'none';
+  if(budgetMission){
+    budgetMission.classList.toggle('locked', !isFocus);
+    budgetMission.onclick = isFocus ? () => openSub('budget') : () => showLevelLockMsg('집중모드');
+  }
   const settleMission = document.querySelector('.mission[data-target="settle"]');
-  if(settleMission) settleMission.style.display = isFocus ? '' : 'none';
+  if(settleMission){
+    settleMission.classList.toggle('locked', !isFocus);
+    settleMission.onclick = isFocus ? () => openSub('settle') : () => showLevelLockMsg('집중모드');
+  }
 
   const focusSection = document.getElementById('focusOnlySection');
   if(focusSection) focusSection.style.display = isFocus ? '' : 'none';
 
   const navIdx = document.getElementById('navIdx');
-  if(navIdx) navIdx.style.display = showIdx ? '' : 'none';
+  if(navIdx){
+    navIdx.classList.toggle('locked', !showIdx);
+    navIdx.onclick = showIdx ? () => openSub('idx') : () => showLevelLockMsg('중급');
+  }
   const navAsset = document.getElementById('navAsset');
-  if(navAsset) navAsset.style.display = showAsset ? '' : 'none';
+  if(navAsset){
+    navAsset.classList.toggle('locked', !showAsset);
+    navAsset.onclick = showAsset ? () => openSub('roadmap') : () => showLevelLockMsg('중급');
+  }
   const navInvest = document.getElementById('navInvest');
-  if(navInvest) navInvest.style.display = showInvest ? '' : 'none';
+  if(navInvest){
+    navInvest.classList.toggle('locked', !showInvest);
+    navInvest.onclick = showInvest ? () => openSub('invest') : () => showLevelLockMsg('고급');
+  }
+
+  const survivalCard = document.getElementById('survivalDetail');
+  const survivalNum = document.getElementById('survivalNum');
+  const survivalBar = document.getElementById('survivalBar');
+  if(survivalCard && !showAsset){
+    survivalCard.innerHTML = '🔒 중급부터 확인할 수 있어요.';
+    if(survivalNum) survivalNum.innerHTML = '-';
+    if(survivalBar) survivalBar.style.width = '0%';
+  }
 
   try{ updateCount(); }catch(e){}
 }
