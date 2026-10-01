@@ -3281,11 +3281,17 @@ async function renderMorningBudget(){
   });
 }
 
-function renderEveningSettle(){
+async function renderEveningSettle(){
   // 아침예산을 아직 저장 안 했으면, 지금 화면에 있는 값을 그대로 캡처해서 사용
   if(todaysMorningBudget === null) captureMorningBudget();
 
-  const items = todaysMorningBudget || [];
+  let items = todaysMorningBudget || [];
+  if(items.length === 0 && currentUser){
+    // 이번 세션에 아침예산 화면을 안 열어봤을 수 있으니, DB에서 직접 오늘 결제예정 항목을 가져옴
+    if(myCategoriesCache.length === 0) await loadMyCategories();
+    const due = getDueItemsForDate(new Date());
+    items = due.map(d => ({ name: d.name, amt: d.amount, type: d.kind, categoryId: d.category_id, category: d.category }));
+  }
   const list = document.getElementById('settleTodayList');
   const emptyNote = document.getElementById('settleEmptyNote');
   if(!list) return;
