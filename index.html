@@ -1196,7 +1196,7 @@
       <div class="field"><label>목표명</label><input id="obGoalName" type="text" placeholder="예: 배당주 모으기"></div>
       <div class="field">
         <label>단위</label>
-        <select id="obGoalUnit"><option value="주">주 (수량)</option><option value="원">원 (금액)</option><option value="%">% (비율)</option><option value="개">개 (개수)</option></select>
+        <select id="obGoalUnit"><option value="주">주 (수량)</option><option value="원">원 (금액)</option><option value="$">$ (달러)</option><option value="%">% (비율)</option><option value="개">개 (개수)</option></select>
       </div>
       <div class="field"><label>목표치</label><input id="obGoalTarget" type="number" placeholder="예: 100"></div>
       <button class="add-row" onclick="addObGoalPreview()">＋ 목표 추가하기</button>
@@ -1472,9 +1472,9 @@
     <div class="field"><label>목표명</label><input id="gfName" type="text" placeholder="예: 퇴직연금 추가납입"></div>
     <div class="field">
       <label>단위</label>
-      <select id="gfUnit"><option value="주">주 (수량)</option><option value="원">원 (금액)</option><option value="%">% (비율)</option><option value="개">개 (개수)</option></select>
+      <select id="gfUnit"><option value="주">주 (수량)</option><option value="원">원 (금액)</option><option value="$">$ (달러)</option><option value="%">% (비율)</option><option value="개">개 (개수)</option></select>
     </div>
-    <div class="field"><label>목표치</label><input id="gfTarget" type="number" placeholder="예: 100"></div>
+    <div class="field"><label>목표치</label><input id="gfTarget" type="text" inputmode="numeric" placeholder="예: 100" oninput="formatMoneyInput(this)"></div>
     <p class="field-error" id="gfError"></p>
     <button class="save-btn" style="margin:10px 20px 0;width:calc(100% - 40px);" onclick="addGoal()">목표 추가</button>
   </div>
@@ -1783,17 +1783,9 @@
     <div class="field"><label>달러환율</label><input id="idxUsd" type="number" placeholder="예: 1362"></div>
     <div class="field"><label>금</label><input id="idxGold" type="number" placeholder="예: 2680000"></div>
     <div class="field">
-      <label>나만의 지표 (이름은 자유롭게 바꿀 수 있어요)</label>
-      <div class="custom-field">
-        <input class="custom-label" id="idxCustom1Name" type="text" value="비트코인" placeholder="지표 이름">
-        <input id="idxCustom1Value" type="number" placeholder="값 입력">
-      </div>
-    </div>
-    <div class="field">
-      <div class="custom-field">
-        <input class="custom-label" id="idxCustom2Name" type="text" value="내 보유종목" placeholder="지표 이름">
-        <input id="idxCustom2Value" type="number" placeholder="값 입력">
-      </div>
+      <label>나만의 지표 (자유롭게 추가·삭제할 수 있어요)</label>
+      <div id="idxCustomList"></div>
+      <button class="add-row" style="margin-top:6px;" onclick="addCustomIndexRow('', '')">＋ 지표 추가</button>
     </div>
   </div>
   <button class="save-btn" onclick="saveIndexCheck()">완료</button>
@@ -1805,7 +1797,7 @@
     <button class="idx-chip" onclick="switchIdx(this,'kospi')">코스피</button>
     <button class="idx-chip" onclick="switchIdx(this,'usd')">환율</button>
     <button class="idx-chip" onclick="switchIdx(this,'gold')">금</button>
-    <button class="idx-chip" onclick="switchIdx(this,'custom1')" id="idxChipCustom1">비트코인</button>
+    <span id="idxCustomChipsArea"></span>
   </div>
 
   <div class="idx-period-row">
@@ -1922,7 +1914,7 @@
   <div class="section-head" id="bonbuSectionCert"><h2>오늘의 독서 인증</h2><span id="bonbuCertBookLabel">-</span></div>
   <div class="cert-box">
     <textarea id="bonbuCertInput" placeholder="오늘 읽은 부분에 대한 한 줄 생각을 남겨보세요"></textarea>
-    <button class="save-btn" onclick="submitCert()">인증하기</button>
+    <button class="save-btn" id="bonbuCertBtn" onclick="submitCert()">인증하기</button>
   </div>
 
   <div class="section-head"><h2>🌟 베스트 후기</h2></div>
@@ -1991,7 +1983,9 @@ function openSub(id){
     try{ renderMorningBudget(); }catch(e){ console.error('morning budget render failed', e); }
   }
   if(id === 'mealplan'){
-    try{ refreshMealPlanIfNewWeek(); renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
+    refreshMealPlanIfNewWeek().then(() => {
+      try{ renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
+    }).catch(e => console.error('mealplan refresh failed', e));
   }
   if(id === 'categories'){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
@@ -3055,7 +3049,7 @@ function makeGoalCardEl(goal){
     <div class="goal-top"><span class="goal-name" id="goalName_${goal.id}">${goal.name}</span><span class="goal-pct">${pct}%</span></div>
     <div class="goal-bar"><i style="width:${pct}%"></i></div>
     <div class="goal-foot">
-      <span class="goal-cur-text">${goal.current} / ${goal.target}${goal.unit}</span>
+      <span class="goal-cur-text">${Number(goal.current).toLocaleString()} / ${Number(goal.target).toLocaleString()}${goal.unit}</span>
       <span style="display:flex;gap:6px;">
         <button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button>
         <button class="goal-edit" onclick="toggleGoalMeta(this)">✏️</button>
@@ -3063,7 +3057,7 @@ function makeGoalCardEl(goal){
       </span>
     </div>
     <div class="goal-edit-row">
-      <input type="number" class="goal-cur-input" value="${goal.current}">
+      <input type="text" inputmode="numeric" class="goal-cur-input" value="${Number(goal.current).toLocaleString()}" oninput="formatMoneyInput(this)">
       <button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button>
     </div>
     <div class="goal-meta-row" style="display:none;margin-top:8px;">
@@ -3073,11 +3067,12 @@ function makeGoalCardEl(goal){
         <select class="goal-meta-unit">
           <option value="주" ${goal.unit==='주'?'selected':''}>주 (수량)</option>
           <option value="원" ${goal.unit==='원'?'selected':''}>원 (금액)</option>
+          <option value="$" ${goal.unit==='$'?'selected':''}>$ (달러)</option>
           <option value="%" ${goal.unit==='%'?'selected':''}>% (비율)</option>
           <option value="개" ${goal.unit==='개'?'selected':''}>개 (개수)</option>
         </select>
       </div>
-      <div class="field"><label>목표치</label><input class="goal-meta-target" type="number" value="${goal.target}"></div>
+      <div class="field"><label>목표치</label><input class="goal-meta-target" type="text" inputmode="numeric" value="${Number(goal.target).toLocaleString()}" oninput="formatMoneyInput(this)"></div>
       <button class="goal-save-btn" onclick="saveGoalMeta(this)">저장</button>
     </div>
   `;
@@ -3099,7 +3094,7 @@ async function addGoal(){
   const targetEl = document.getElementById('gfTarget');
   const unit = document.getElementById('gfUnit').value;
   const name = nameEl.value.trim();
-  const target = Number(targetEl.value);
+  const target = rawMoney(targetEl);
   const errEl = document.getElementById('gfError');
   if(!name || !target){
     errEl.textContent = '목표명과 목표치를 입력해주세요';
@@ -3127,7 +3122,7 @@ async function saveGoalCur(btn){
   const id = card.dataset.id;
   const target = Number(card.dataset.target);
   const unit = card.dataset.unit;
-  const curNum = Number(card.querySelector('.goal-cur-input').value) || 0;
+  const curNum = rawMoney(card.querySelector('.goal-cur-input'));
   const { error } = await sb.from('investment_goals').update({ current: curNum }).eq('id', id);
   if(error){ console.error('goal current save failed', error); return; }
   const pct = target ? Math.min(Math.round(curNum/target*100), 100) : 0;
@@ -3141,13 +3136,13 @@ async function saveGoalMeta(btn){
   const id = card.dataset.id;
   const name = card.querySelector('.goal-meta-name').value.trim();
   const unit = card.querySelector('.goal-meta-unit').value;
-  const target = Number(card.querySelector('.goal-meta-target').value) || 0;
+  const target = rawMoney(card.querySelector('.goal-meta-target'));
   if(!name || !target) return;
   const { error } = await sb.from('investment_goals').update({ name, unit, target }).eq('id', id);
   if(error){ console.error('goal meta save failed', error); return; }
   card.dataset.target = target;
   card.dataset.unit = unit;
-  const current = Number(card.querySelector('.goal-cur-input').value) || 0;
+  const current = rawMoney(card.querySelector('.goal-cur-input'));
   const pct = target ? Math.min(Math.round(current/target*100), 100) : 0;
   card.querySelector('#goalName_'+id).textContent = name;
   card.querySelector('.goal-pct').textContent = pct + '%';
@@ -3536,6 +3531,8 @@ async function loadTodayCert(){
   const { data } = await sb.from('bonbu_reading_logs').select('note').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
   const input = document.getElementById('bonbuCertInput');
   if(input) input.value = data ? data.note : '';
+  const btn = document.getElementById('bonbuCertBtn');
+  if(btn) btn.textContent = data ? '수정·저장하기' : '인증하기';
 }
 async function submitCert(){
   if(!currentUser) return;
@@ -3550,6 +3547,8 @@ async function submitCert(){
     t.textContent = '인증 실패: ' + error.message;
   } else {
     t.textContent = '오늘의 독서가 인증됐어요 · 스탬프 획득!';
+    const btn = document.getElementById('bonbuCertBtn');
+    if(btn) btn.textContent = '수정·저장하기';
     try{ loadBestReviews(); }catch(e){}
     await renderStamps();
   }
@@ -3625,6 +3624,10 @@ function setDemoMode(mode){
     try{ loadRoutineNotice(); }catch(e){ console.error('notice load failed', e); }
     try{ checkAndShowSeasonSurvey('routinebu','seasonSurveyBanner'); }catch(e){ console.error('season survey check failed', e); }
     try{ loadSurvivalIndex(); }catch(e){ console.error('survival index load failed', e); }
+    (async () => {
+      try{ await refreshMealPlanIfNewWeek(); renderHomeMealChecklist(); }
+      catch(e){ console.error('meal plan load failed', e); }
+    })();
   } else if(mode === 'bonbu'){
     bonbu.style.position = 'static';
     bonbu.style.transform = 'none';
@@ -3786,27 +3789,38 @@ function addGroceryRow(){
 }
 
 /* ── 주간 식단: 작성(식단페이지) ↔ 체크(홈) 연동 ── */
-function buildWeekMealPlan(){
+async function buildWeekMealPlan(){
   const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 월=0 ... 일=6
   const monday = new Date(today);
   monday.setDate(today.getDate() - dow);
   const dayLabels = ['월','화','수','목','금','토','일'];
+  const mondayKey = dateKey(monday);
+  const dateKeys = dayLabels.map((_, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    return dateKey(d);
+  });
+  let rowMap = {};
+  if(currentUser){
+    const { data } = await sb.from('meal_plans').select('*').eq('user_id', currentUser.id).in('plan_date', dateKeys);
+    (data||[]).forEach(r => rowMap[r.plan_date] = r);
+  }
   return dayLabels.map((day, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return { day, date: (d.getMonth()+1) + '/' + d.getDate(), text: '', done: false, mondayKey: dateKey(monday) };
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const dk = dateKeys[i];
+    const existing = rowMap[dk];
+    return { day, date: (d.getMonth()+1) + '/' + d.getDate(), dateKey: dk, text: existing ? existing.text : '', done: existing ? existing.done : false, mondayKey };
   });
 }
-let weekMealPlan = buildWeekMealPlan();
-function refreshMealPlanIfNewWeek(){
+let weekMealPlan = [];
+async function refreshMealPlanIfNewWeek(){
   const d = new Date();
   const dow = (d.getDay() + 6) % 7;
   const monday = new Date(d);
   monday.setDate(d.getDate() - dow);
   const currentMondayKey = dateKey(monday);
   if(!weekMealPlan.length || weekMealPlan[0].mondayKey !== currentMondayKey){
-    weekMealPlan = buildWeekMealPlan();
+    weekMealPlan = await buildWeekMealPlan();
   }
 }
 function renderMealPlanGrid(){
@@ -3822,6 +3836,12 @@ function renderMealPlanGrid(){
 }
 function updateMealText(i, val){
   weekMealPlan[i].text = val;
+  if(!currentUser) return;
+  debouncedCall('mealplan-'+weekMealPlan[i].dateKey, async () => {
+    await sb.from('meal_plans').upsert({
+      user_id: currentUser.id, plan_date: weekMealPlan[i].dateKey, text: weekMealPlan[i].text, done: weekMealPlan[i].done,
+    }, { onConflict: 'user_id,plan_date' });
+  }, 600);
 }
 function renderHomeMealChecklist(){
   const list = document.getElementById('homeMealChecklist');
@@ -3841,9 +3861,13 @@ function renderHomeMealChecklist(){
     list.appendChild(card);
   });
 }
-function toggleMealDone(i, checked){
+async function toggleMealDone(i, checked){
   weekMealPlan[i].done = checked;
   renderHomeMealChecklist();
+  if(!currentUser) return;
+  await sb.from('meal_plans').upsert({
+    user_id: currentUser.id, plan_date: weekMealPlan[i].dateKey, text: weekMealPlan[i].text, done: checked,
+  }, { onConflict: 'user_id,plan_date' });
 }
 
 /* ── 실제 장보기 구매내역 ── */
@@ -4853,25 +4877,43 @@ function switchIdxPeriod(btn, period){
   curPeriod = period;
   renderIdxChart();
 }
+let customIndexHistoryCache = {};
 async function loadIndexHistory(){
   if(!currentUser) return;
   const since = new Date(); since.setDate(since.getDate() - 30);
-  const { data, error } = await sb.from('index_checks').select('*')
-    .eq('user_id', currentUser.id).gte('log_date', dateKey(since)).order('log_date', { ascending: true });
+  const sinceKey = dateKey(since);
+  const [{ data, error }, { data: customData }] = await Promise.all([
+    sb.from('index_checks').select('*').eq('user_id', currentUser.id).gte('log_date', sinceKey).order('log_date', { ascending: true }),
+    sb.from('custom_index_entries').select('*').eq('user_id', currentUser.id).gte('log_date', sinceKey).order('log_date', { ascending: true }),
+  ]);
   if(error){ console.error('index history load failed', error); return; }
   idxHistoryCache = data || [];
-  const custom1Chip = document.getElementById('idxChipCustom1');
-  if(custom1Chip && idxHistoryCache.length > 0){
-    custom1Chip.textContent = idxHistoryCache[idxHistoryCache.length-1].custom1_name || '비트코인';
+  customIndexHistoryCache = {};
+  (customData||[]).forEach(c => {
+    if(!customIndexHistoryCache[c.name]) customIndexHistoryCache[c.name] = [];
+    customIndexHistoryCache[c.name].push({ log_date: c.log_date, value: c.value });
+  });
+  const chipArea = document.getElementById('idxCustomChipsArea');
+  if(chipArea){
+    chipArea.innerHTML = Object.keys(customIndexHistoryCache).map(n =>
+      `<button class="idx-chip" onclick="switchIdx(this,'custom:${n}')">${n}</button>`
+    ).join('');
   }
 }
 function renderIdxChart(){
   const canvas = document.getElementById('idxChart');
   const note = document.getElementById('idxChartNote');
   if(!canvas) return;
-  const recent = idxHistoryCache.slice(-curPeriod);
-  const field = curIdx === 'sp500' ? 'sp500' : curIdx === 'kospi' ? 'kospi' : curIdx === 'usd' ? 'usd' : curIdx === 'gold' ? 'gold' : 'custom1_value';
-  const points = recent.filter(r => r[field] !== null && r[field] !== undefined).map(r => ({ x: r.log_date, y: Number(r[field]) }));
+  let points;
+  if(curIdx.startsWith('custom:')){
+    const name = curIdx.slice(7);
+    const hist = (customIndexHistoryCache[name] || []).slice(-curPeriod);
+    points = hist.filter(r => r.value !== null && r.value !== undefined).map(r => ({ x: r.log_date, y: Number(r.value) }));
+  } else {
+    const recent = idxHistoryCache.slice(-curPeriod);
+    const field = curIdx;
+    points = recent.filter(r => r[field] !== null && r[field] !== undefined).map(r => ({ x: r.log_date, y: Number(r[field]) }));
+  }
   if(idxChart) idxChart.destroy();
   if(points.length === 0){
     note.textContent = '아직 기록이 없어요. 오늘 기록을 남겨보세요.';
@@ -4896,22 +4938,46 @@ function renderIdxChart(){
     }
   });
 }
+function addCustomIndexRow(name, value){
+  const list = document.getElementById('idxCustomList');
+  const row = document.createElement('div');
+  row.className = 'custom-field';
+  row.style.marginBottom = '8px';
+  row.innerHTML = `
+    <input class="custom-label" type="text" value="${name||''}" placeholder="지표 이름 (예: 비트코인)">
+    <input type="text" inputmode="numeric" value="${value!=null?Number(value).toLocaleString():''}" placeholder="값 입력" oninput="formatMoneyInput(this)">
+    <button class="row-del" onclick="this.closest('.custom-field').remove()">✕</button>
+  `;
+  list.appendChild(row);
+}
 async function saveIndexCheck(){
   if(!currentUser) return;
+  const todayKey = dateKey(new Date());
   const payload = {
     user_id: currentUser.id,
-    log_date: dateKey(new Date()),
+    log_date: todayKey,
     sp500: document.getElementById('idxSp500').value ? Number(document.getElementById('idxSp500').value) : null,
     kospi: document.getElementById('idxKospi').value ? Number(document.getElementById('idxKospi').value) : null,
     usd: document.getElementById('idxUsd').value ? Number(document.getElementById('idxUsd').value) : null,
     gold: document.getElementById('idxGold').value ? Number(document.getElementById('idxGold').value) : null,
-    custom1_name: document.getElementById('idxCustom1Name').value.trim() || '비트코인',
-    custom1_value: document.getElementById('idxCustom1Value').value ? Number(document.getElementById('idxCustom1Value').value) : null,
-    custom2_name: document.getElementById('idxCustom2Name').value.trim() || '내 보유종목',
-    custom2_value: document.getElementById('idxCustom2Value').value ? Number(document.getElementById('idxCustom2Value').value) : null,
   };
   const { error } = await sb.from('index_checks').upsert(payload, { onConflict: 'user_id,log_date' });
   if(error){ console.error('index save failed', error); return; }
+
+  // 커스텀 지표: 오늘 것 지우고 지금 화면에 있는 걸로 다시 저장
+  await sb.from('custom_index_entries').delete().eq('user_id', currentUser.id).eq('log_date', todayKey);
+  const customRows = [...document.querySelectorAll('#idxCustomList .custom-field')];
+  const customPayload = customRows.map((row, i) => {
+    const name = row.querySelector('.custom-label').value.trim();
+    const valInput = row.querySelectorAll('input')[1];
+    const value = valInput.value ? rawMoney(valInput) : null;
+    if(!name) return null;
+    return { user_id: currentUser.id, log_date: todayKey, name, value, sort_order: i };
+  }).filter(Boolean);
+  if(customPayload.length > 0){
+    await sb.from('custom_index_entries').insert(customPayload);
+  }
+
   await logMissionCompletion('idx'); loadMyStats();
   await loadIndexHistory();
   renderIdxChart();
@@ -4933,17 +4999,32 @@ async function saveIndexMemo(){
 }
 async function loadTodayIndexCheck(){
   if(!currentUser) return;
-  const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', dateKey(new Date())).maybeSingle();
-  if(!data) return;
-  if(data.sp500!=null) document.getElementById('idxSp500').value = data.sp500;
-  if(data.kospi!=null) document.getElementById('idxKospi').value = data.kospi;
-  if(data.usd!=null) document.getElementById('idxUsd').value = data.usd;
-  if(data.gold!=null) document.getElementById('idxGold').value = data.gold;
-  if(data.custom1_name) document.getElementById('idxCustom1Name').value = data.custom1_name;
-  if(data.custom1_value!=null) document.getElementById('idxCustom1Value').value = data.custom1_value;
-  if(data.custom2_name) document.getElementById('idxCustom2Name').value = data.custom2_name;
-  if(data.custom2_value!=null) document.getElementById('idxCustom2Value').value = data.custom2_value;
-  if(data.memo) document.getElementById('idxMemo').value = data.memo;
+  const todayKey = dateKey(new Date());
+  const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).maybeSingle();
+  if(data){
+    if(data.sp500!=null) document.getElementById('idxSp500').value = data.sp500;
+    if(data.kospi!=null) document.getElementById('idxKospi').value = data.kospi;
+    if(data.usd!=null) document.getElementById('idxUsd').value = data.usd;
+    if(data.gold!=null) document.getElementById('idxGold').value = data.gold;
+    if(data.memo) document.getElementById('idxMemo').value = data.memo;
+  }
+
+  const list = document.getElementById('idxCustomList');
+  if(list) list.innerHTML = '';
+  let { data: todayCustoms } = await sb.from('custom_index_entries').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).order('sort_order');
+  if(!todayCustoms || todayCustoms.length === 0){
+    // 오늘 아직 안 적었으면, 가장 최근에 추적하던 지표 "이름"만 가져와서 틀을 잡아줌
+    const { data: lastDay } = await sb.from('custom_index_entries').select('log_date').eq('user_id', currentUser.id).order('log_date', { ascending: false }).limit(1).maybeSingle();
+    if(lastDay){
+      const { data: lastCustoms } = await sb.from('custom_index_entries').select('name').eq('user_id', currentUser.id).eq('log_date', lastDay.log_date).order('sort_order');
+      todayCustoms = (lastCustoms||[]).map(c => ({ name: c.name, value: null }));
+    }
+  }
+  if(todayCustoms && todayCustoms.length > 0){
+    todayCustoms.forEach(c => addCustomIndexRow(c.name, c.value));
+  } else {
+    addCustomIndexRow('비트코인', null);
+  }
 }
 async function loadIdxMemoList(){
   if(!currentUser) return;
