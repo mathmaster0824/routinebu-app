@@ -1778,6 +1778,7 @@
 
   <div class="section-head" style="margin:14px 0 8px;padding:0 20px;"><h2>오늘 기록</h2></div>
   <div class="sub-body" style="padding-top:0;padding-bottom:0;">
+    <p class="field-hint" id="idxPrefillNote" style="margin:8px 20px;display:none;">💡 아직 오늘 기록 전이라, 가장 최근 값이 미리 채워져 있어요. 오늘 값으로 고쳐서 저장해주세요.</p>
     <div class="field"><label>S&P500</label><input id="idxSp500" type="number" placeholder="예: 6480"></div>
     <div class="field"><label>코스피</label><input id="idxKospi" type="number" placeholder="예: 3210"></div>
     <div class="field"><label>달러환율</label><input id="idxUsd" type="number" placeholder="예: 1362"></div>
@@ -5001,23 +5002,32 @@ async function loadTodayIndexCheck(){
   if(!currentUser) return;
   const todayKey = dateKey(new Date());
   const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).maybeSingle();
-  if(data){
-    if(data.sp500!=null) document.getElementById('idxSp500').value = data.sp500;
-    if(data.kospi!=null) document.getElementById('idxKospi').value = data.kospi;
-    if(data.usd!=null) document.getElementById('idxUsd').value = data.usd;
-    if(data.gold!=null) document.getElementById('idxGold').value = data.gold;
-    if(data.memo) document.getElementById('idxMemo').value = data.memo;
+
+  let base = data;
+  if(!data){
+    // 오늘 기록이 없으면, 가장 최근 기록을 기본값으로 미리 채워줌 (참고용, 그대로 두거나 고쳐서 저장)
+    const { data: last } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).order('log_date', { ascending: false }).limit(1).maybeSingle();
+    base = last;
+  }
+  const noteEl = document.getElementById('idxPrefillNote');
+  if(base){
+    if(base.sp500!=null) document.getElementById('idxSp500').value = base.sp500;
+    if(base.kospi!=null) document.getElementById('idxKospi').value = base.kospi;
+    if(base.usd!=null) document.getElementById('idxUsd').value = base.usd;
+    if(base.gold!=null) document.getElementById('idxGold').value = base.gold;
+    if(data && data.memo) document.getElementById('idxMemo').value = data.memo;
+    if(noteEl) noteEl.style.display = data ? 'none' : 'block';
   }
 
   const list = document.getElementById('idxCustomList');
   if(list) list.innerHTML = '';
   let { data: todayCustoms } = await sb.from('custom_index_entries').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).order('sort_order');
   if(!todayCustoms || todayCustoms.length === 0){
-    // 오늘 아직 안 적었으면, 가장 최근에 추적하던 지표 "이름"만 가져와서 틀을 잡아줌
+    // 오늘 아직 안 적었으면, 가장 최근 기록을 이름+값 그대로 기본값으로 채워줌
     const { data: lastDay } = await sb.from('custom_index_entries').select('log_date').eq('user_id', currentUser.id).order('log_date', { ascending: false }).limit(1).maybeSingle();
     if(lastDay){
-      const { data: lastCustoms } = await sb.from('custom_index_entries').select('name').eq('user_id', currentUser.id).eq('log_date', lastDay.log_date).order('sort_order');
-      todayCustoms = (lastCustoms||[]).map(c => ({ name: c.name, value: null }));
+      const { data: lastCustoms } = await sb.from('custom_index_entries').select('name, value').eq('user_id', currentUser.id).eq('log_date', lastDay.log_date).order('sort_order');
+      todayCustoms = lastCustoms || [];
     }
   }
   if(todayCustoms && todayCustoms.length > 0){
