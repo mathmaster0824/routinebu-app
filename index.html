@@ -3216,8 +3216,28 @@ function captureMorningBudget(){
   todaysMorningBudget = items;
 }
 
-async function moveFixedItemDate(categoryId, category, kind, amount){
-  const input = prompt(`"${category}" 항목을 몇 일로 옮길까요? (1~31 숫자만 입력)`);
+async function skipTodayFixedItem(btnEl, categoryId){
+  if(!confirm('오늘은 이 항목이 안 나가는(안 들어오는) 걸로 처리할까요?')) return;
+  const field = btnEl.closest('.field');
+  const todayKey = dateKey(new Date());
+  const { data: existing } = await sb.from('transactions').select('id')
+    .eq('category_id', categoryId).eq('tx_date', todayKey).eq('is_auto_fixed', true).maybeSingle();
+  if(existing){
+    await sb.from('transactions').update({ amount: 0 }).eq('id', existing.id);
+  } else {
+    const kindEl = field.querySelector('input[type="number"]');
+    const kind = kindEl ? kindEl.dataset.type : 'expense';
+    await sb.from('transactions').insert({
+      user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
+    });
+  }
+  field.remove();
+}
+async function moveFixedItemDate(btnEl, categoryId, category, kind){
+  const field = btnEl.closest('.field');
+  const amtInput = field.querySelector('input[type="number"]');
+  const amount = Number(amtInput.value) || 0;
+  const input = prompt(`"${category}" 항목(${amount.toLocaleString()}원)을 몇 일로 옮길까요? (1~31 숫자만 입력)`);
   if(!input) return;
   const day = parseInt(input);
   if(!day || day < 1 || day > 31){ alert('1~31 사이 숫자를 입력해주세요'); return; }
@@ -3226,7 +3246,7 @@ async function moveFixedItemDate(categoryId, category, kind, amount){
   const targetKey = dateKey(targetDate);
   const todayKey = dateKey(now);
 
-  // 오늘자 고정항목은 0원으로 스킵 처리
+  // 오늘자 고정항목은 0원으로 스킵 처리 (오늘은 실제로 안 나간 걸로)
   const { data: existing } = await sb.from('transactions').select('id')
     .eq('category_id', categoryId).eq('tx_date', todayKey).eq('is_auto_fixed', true).maybeSingle();
   if(existing){
@@ -3236,19 +3256,18 @@ async function moveFixedItemDate(categoryId, category, kind, amount){
       user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
     });
   }
-  // 옮긴 날짜에 실제 거래 기록
+  // 옮긴 날짜에 실제 거래 기록 (지금 화면에 보이던 금액 그대로)
   const { error } = await sb.from('transactions').insert({
     user_id: currentUser.id, category_id: categoryId, category_snapshot: category, kind, amount, tx_date: targetKey, is_auto_fixed: false,
   });
   if(error){ alert('옮기기 실패: ' + error.message); return; }
 
   const t = document.getElementById('toast');
-  t.textContent = `"${category}"를 ${day}일로 옮겼어요.`;
+  t.textContent = `"${category}"(${amount.toLocaleString()}원)를 ${day}일로 옮겼어요.`;
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
 
-  try{ renderMorningBudget(); }catch(e){}
-  try{ renderEveningSettle(); }catch(e){}
+  field.remove(); // 오늘 목록에서 바로 제거
 }
 async function renderMorningBudget(){
   if(currentUser && myCategoriesCache.length === 0) await loadMyCategories();
@@ -3272,9 +3291,12 @@ async function renderMorningBudget(){
     field.className = 'field';
     field.innerHTML = `
       <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· ${item.category}</span></label>
-      <input type="number" value="${item.amount}" id="morningAmt${i}" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${item.category}">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" value="${item.amount}" id="morningAmt${i}" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${item.category}" style="flex:1;">
+        <button class="row-del" onclick="skipTodayFixedItem(this,'${item.category_id}')">✕</button>
+      </div>
       <p class="field-hint">오늘 ${item.kind==='income'?'입금':'결제'} 예정 금액이에요. 실제로 다르면 미리 고쳐두세요.
-        <span class="demo-link" style="margin-left:6px;" onclick="moveFixedItemDate('${item.category_id}','${item.category}','${item.kind}',${item.amount})">📅 날짜 옮기기</span>
+        <span class="demo-link" style="margin-left:6px;" onclick="moveFixedItemDate(this,'${item.category_id}','${item.category}','${item.kind}')">📅 날짜 옮기기</span>
       </p>
     `;
     list.appendChild(field);
@@ -3306,9 +3328,12 @@ async function renderEveningSettle(){
     field.className = 'field';
     field.innerHTML = `
       <label><span class="tx-dot ${item.type||'expense'}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· 아침 계획 ${item.amt.toLocaleString()}원</span></label>
-      <input class="am-actual" type="number" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt}" oninput="calcDiff(this)">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="am-actual" type="number" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt}" oninput="calcDiff(this)" style="flex:1;">
+        ${item.categoryId ? `<button class="row-del" onclick="skipTodayFixedItem(this,'${item.categoryId}')">✕</button>` : ''}
+      </div>
       <p class="am-diff" data-for="diff"></p>
-      ${item.categoryId ? `<p class="field-hint"><span class="demo-link" onclick="moveFixedItemDate('${item.categoryId}','${item.category}','${item.type||'expense'}',${item.amt})">📅 날짜 옮기기 (오늘 안 나간 거면)</span></p>` : ''}
+      ${item.categoryId ? `<p class="field-hint"><span class="demo-link" onclick="moveFixedItemDate(this,'${item.categoryId}','${item.category}','${item.type||'expense'}')">📅 날짜 옮기기 (오늘 안 나간 거면)</span></p>` : ''}
     `;
     list.appendChild(field);
   });
