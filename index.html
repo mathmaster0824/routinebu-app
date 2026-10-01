@@ -1987,6 +1987,9 @@ function openSub(id){
   if(id === 'settle'){
     try{ renderEveningSettle(); }catch(e){ console.error('evening render failed', e); }
   }
+  if(id === 'budget'){
+    try{ renderMorningBudget(); }catch(e){ console.error('morning budget render failed', e); }
+  }
   if(id === 'mealplan'){
     try{ renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
   }
