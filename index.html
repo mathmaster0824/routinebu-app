@@ -720,7 +720,7 @@
     border:0.5px solid var(--line);border-radius:12px;
   }
   .memo-date{font-size:11px;color:var(--ink-faint);margin:0 0 5px;}
-  .memo-text{font-size:13.5px;line-height:1.6;margin:0;}
+  .memo-text{font-size:13.5px;line-height:1.6;margin:0;white-space:pre-line;}
 
   /* 지수 화면 */
   .idx-chip-row{display:flex;gap:6px;overflow-x:auto;padding:14px 20px 0;}
@@ -1526,7 +1526,7 @@
         <option value="15">15% · 투자공부를 병행하며 시스템이 갖춰졌다</option>
       </select>
     </div>
-    <div class="field"><label>이번 달 투자금액</label><input id="monthlyInvest" type="number" value="0" oninput="recomputeRoadmap()"><p class="field-hint" id="monthlyInvestHint" style="margin-top:4px;"></p></div>
+    <div class="field"><label>이번 달 투자금액</label><input id="monthlyInvest" type="text" inputmode="numeric" value="0" oninput="formatMoneyInput(this);recomputeRoadmap()"><p class="field-hint" id="monthlyInvestHint" style="margin-top:4px;"></p></div>
   </div>
 
   <p class="field-hint" style="margin:10px 20px 0;">💡 이 로드맵은 정확한 예측이 아니라, <b>지금 페이스를 유지한다면 대략 이런 방향으로 간다</b>는 걸 보여주는 동기부여용 참고치예요. 물가상승·세금 등은 반영되지 않아요.</p>
@@ -1879,7 +1879,7 @@
 
     <div class="field" style="margin-top:14px;">
       <label>이번 주 장보기 예산</label>
-      <input type="number" id="groceryBudget" value="70000" oninput="recalcGroceryActual()">
+      <input type="text" inputmode="numeric" id="groceryBudget" value="70,000" oninput="formatMoneyInput(this);recalcGroceryActual()">
     </div>
 
     <div class="meal-divider"></div>
@@ -1971,7 +1971,7 @@ function addCustomRow(){
       ${catOptions('')}
     </select>
     <input class="tx-name-inline" type="text" placeholder="거래명(선택)">
-    <input class="amt" type="number" placeholder="금액">
+    <input class="amt" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this)">
     <button class="row-del" onclick="this.parentElement.remove()">✕</button>
   `;
   wrap.appendChild(row);
@@ -1991,7 +1991,7 @@ function openSub(id){
     try{ renderMorningBudget(); }catch(e){ console.error('morning budget render failed', e); }
   }
   if(id === 'mealplan'){
-    try{ renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
+    try{ refreshMealPlanIfNewWeek(); renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
   }
   if(id === 'categories'){
     try{ loadCategories(); }catch(e){ console.error('categories load failed', e); }
@@ -2639,8 +2639,9 @@ function saveMission(id){
 function refreshTodayLedgerCell(){
   if(!todaysEveningActual) return;
   const total = todaysEveningActual.reduce((s,i)=>s+i.amt, 0);
+  const todayDayNum = new Date().getDate();
   document.querySelectorAll('.g-cell').forEach(cell=>{
-    if(cell.textContent.trim().startsWith(String(TODAY_DAY))){
+    if(cell.textContent.trim().startsWith(String(todayDayNum))){
       const small = cell.querySelector('small');
       if(small) small.textContent = '-' + Math.round(total/1000) + '천';
     }
@@ -2798,7 +2799,7 @@ async function loadMonthlyInvestActual(){
 
   const input = document.getElementById('monthlyInvest');
   const hint = document.getElementById('monthlyInvestHint');
-  if(input) input.value = sum;
+  if(input) input.value = sum.toLocaleString();
   if(hint) hint.textContent = `${month+1}월(가장 최근 완료된 달) 투자예산(안 건드린 것 포함) 기준으로 자동 채워졌어요 (직접 고쳐서 시뮬레이션할 수 있어요)`;
   recomputeRoadmap();
 }
@@ -2980,7 +2981,7 @@ function recomputeRoadmap(){
 
   const age0 = Number(document.getElementById('ageInput').value) || 30;
   const rate = Number(document.getElementById('rateInput').value) / 100;
-  const monthly = Number(document.getElementById('monthlyInvest').value) || 0;
+  const monthly = rawMoney(document.getElementById('monthlyInvest'));
   const startYear = 2026;
 
   let asset = total;
@@ -3163,7 +3164,7 @@ async function deleteGoal(btn){
 }
 function calcDiff(input){
   const plan = Number(input.dataset.plan) || 0;
-  const actual = Number(input.value) || 0;
+  const actual = rawMoney(input);
   const diffEl = input.parentElement.querySelector('.am-diff');
   if(input.value === ''){ diffEl.textContent = ''; return; }
   const diff = plan - actual;
@@ -3187,7 +3188,7 @@ function captureEveningActual(){
     const name = field.querySelector('.item-nm').textContent.trim();
     const amtInput = field.querySelector('.am-actual');
     const type = amtInput.dataset.type || 'expense';
-    const amt = Number(amtInput.value) || 0;
+    const amt = rawMoney(amtInput);
     if(amt > 0) items.push({ name, amt, type });
   });
   todaysEveningActual = items;
@@ -3197,9 +3198,10 @@ function captureMorningBudget(){
   const items = [];
   document.querySelectorAll('#budgetTodayList .field').forEach(field => {
     const name = field.querySelector('.item-nm').textContent.trim();
-    const numInput = field.querySelector('input[type="number"]');
+    const numInput = field.querySelector('input[data-cat-id]');
+    if(!numInput) return;
     const type = numInput.dataset.type || 'expense';
-    const amt = Number(numInput.value) || 0;
+    const amt = rawMoney(numInput);
     const categoryId = numInput.dataset.catId || null;
     const category = numInput.dataset.cat || null;
     items.push({ name, amt, type, categoryId, category });
@@ -3208,7 +3210,7 @@ function captureMorningBudget(){
     const sel = row.querySelector('.name');
     const cat = sel.value;
     const memo = row.querySelector('.tx-name-inline').value.trim();
-    const amt = Number(row.querySelector('.amt').value) || 0;
+    const amt = rawMoney(row.querySelector('.amt'));
     if(cat && amt){
       items.push({ name: memo ? `${cat} · ${memo}` : cat, amt, type:'expense' });
     }
@@ -3225,7 +3227,7 @@ async function skipTodayFixedItem(btnEl, categoryId){
   if(existing){
     await sb.from('transactions').update({ amount: 0 }).eq('id', existing.id);
   } else {
-    const kindEl = field.querySelector('input[type="number"]');
+    const kindEl = field.querySelector('input[inputmode="numeric"]');
     const kind = kindEl ? kindEl.dataset.type : 'expense';
     await sb.from('transactions').insert({
       user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
@@ -3235,8 +3237,8 @@ async function skipTodayFixedItem(btnEl, categoryId){
 }
 async function moveFixedItemDate(btnEl, categoryId, category, kind){
   const field = btnEl.closest('.field');
-  const amtInput = field.querySelector('input[type="number"]');
-  const amount = Number(amtInput.value) || 0;
+  const amtInput = field.querySelector('input[inputmode="numeric"]');
+  const amount = rawMoney(amtInput);
   const input = prompt(`"${category}" 항목(${amount.toLocaleString()}원)을 몇 일로 옮길까요? (1~31 숫자만 입력)`);
   if(!input) return;
   const day = parseInt(input);
@@ -3292,7 +3294,7 @@ async function renderMorningBudget(){
     field.innerHTML = `
       <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· ${item.category}</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input type="number" value="${item.amount}" id="morningAmt${i}" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${item.category}" style="flex:1;">
+        <input type="text" inputmode="numeric" value="${item.amount.toLocaleString()}" id="morningAmt${i}" oninput="formatMoneyInput(this)" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${item.category}" style="flex:1;">
         <button class="row-del" onclick="skipTodayFixedItem(this,'${item.category_id}')">✕</button>
       </div>
       <p class="field-hint">오늘 ${item.kind==='income'?'입금':'결제'} 예정 금액이에요. 실제로 다르면 미리 고쳐두세요.
@@ -3329,7 +3331,7 @@ async function renderEveningSettle(){
     field.innerHTML = `
       <label><span class="tx-dot ${item.type||'expense'}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· 아침 계획 ${item.amt.toLocaleString()}원</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input class="am-actual" type="number" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt}" oninput="calcDiff(this)" style="flex:1;">
+        <input class="am-actual" type="text" inputmode="numeric" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt.toLocaleString()}" oninput="formatMoneyInput(this);calcDiff(this)" style="flex:1;">
         ${item.categoryId ? `<button class="row-del" onclick="skipTodayFixedItem(this,'${item.categoryId}')">✕</button>` : ''}
       </div>
       <p class="am-diff" data-for="diff"></p>
@@ -3379,7 +3381,7 @@ async function loadBestReviews(){
   const list = document.getElementById('bonbuBestList');
   if(!list || !currentUser) return;
   const [{ data: logs, error }, { data: names }] = await Promise.all([
-    sb.from('bonbu_reading_logs').select('user_id, note, log_date').eq('is_best', true).order('log_date', { ascending: false }).limit(20),
+    sb.from('bonbu_reading_logs').select('user_id, note, log_date').eq('is_best', true).order('log_date', { ascending: false }).limit(1),
     sb.from('bonbu_public_names').select('id, name'),
   ]);
   if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
@@ -3784,7 +3786,7 @@ function addGroceryRow(){
 }
 
 /* ── 주간 식단: 작성(식단페이지) ↔ 체크(홈) 연동 ── */
-let weekMealPlan = (function(){
+function buildWeekMealPlan(){
   const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 월=0 ... 일=6
   const monday = new Date(today);
@@ -3793,9 +3795,20 @@ let weekMealPlan = (function(){
   return dayLabels.map((day, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return { day, date: (d.getMonth()+1) + '/' + d.getDate(), text: '', done: false };
+    return { day, date: (d.getMonth()+1) + '/' + d.getDate(), text: '', done: false, mondayKey: dateKey(monday) };
   });
-})();
+}
+let weekMealPlan = buildWeekMealPlan();
+function refreshMealPlanIfNewWeek(){
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - dow);
+  const currentMondayKey = dateKey(monday);
+  if(!weekMealPlan.length || weekMealPlan[0].mondayKey !== currentMondayKey){
+    weekMealPlan = buildWeekMealPlan();
+  }
+}
 function renderMealPlanGrid(){
   const grid = document.getElementById('mealPlanGrid');
   if(!grid) return;
@@ -3814,7 +3827,7 @@ function renderHomeMealChecklist(){
   const list = document.getElementById('homeMealChecklist');
   if(!list) return;
   list.innerHTML = '';
-  const todayLabel = TODAY_DAY + '';
+  const todayLabel = new Date().getDate() + '';
   weekMealPlan.forEach((m, i) => {
     const isToday = m.date.split('/')[1] === todayLabel;
     const hasPlan = m.text.trim() !== '';
@@ -3838,7 +3851,7 @@ function addGroceryActualRow(name, qty){
   const wrap = document.getElementById('groceryActualList');
   const row = document.createElement('div');
   row.className = 'grocery-actual-row';
-  row.innerHTML = `<input class="ga-name" type="text" placeholder="산 것" value="${name||''}"><input class="ga-qty" type="number" placeholder="1" min="1" value="${qty||''}"><input class="ga-amt" type="number" placeholder="금액" oninput="recalcGroceryActual()"><button class="row-del" onclick="this.closest('.grocery-actual-row').remove();recalcGroceryActual()">✕</button>`;
+  row.innerHTML = `<input class="ga-name" type="text" placeholder="산 것" value="${name||''}"><input class="ga-qty" type="number" placeholder="1" min="1" value="${qty||''}"><input class="ga-amt" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);recalcGroceryActual()"><button class="row-del" onclick="this.closest('.grocery-actual-row').remove();recalcGroceryActual()">✕</button>`;
   wrap.appendChild(row);
   return row;
 }
@@ -3856,9 +3869,9 @@ function syncGroceryListToActual(){
 }
 function recalcGroceryActual(){
   let total = 0;
-  document.querySelectorAll('#groceryActualList .ga-amt').forEach(i => total += Number(i.value)||0);
+  document.querySelectorAll('#groceryActualList .ga-amt').forEach(i => total += rawMoney(i));
   document.getElementById('groceryActualTotal').textContent = total.toLocaleString() + '원';
-  const budget = Number(document.getElementById('groceryBudget').value) || 0;
+  const budget = rawMoney(document.getElementById('groceryBudget'));
   const cmp = document.getElementById('groceryBudgetCompare');
   if(budget === 0){ cmp.textContent = ''; return; }
   const diff = budget - total;
@@ -4072,16 +4085,16 @@ function addCatSplitRow(btn){
   const detail = btn.closest('.cat-split-detail');
   const row = document.createElement('div');
   row.className = 'cat-split-row';
-  row.innerHTML = `<input type="text" placeholder="일"><input type="number" placeholder="금액" oninput="recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button>`;
+  row.innerHTML = `<input type="text" placeholder="일"><input type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button>`;
   detail.insertBefore(row, btn);
 }
 function recalcCatSplit(el){
   const detail = el.closest('.cat-split-detail');
   const card = detail.closest('.cat-card');
   let sum = 0;
-  detail.querySelectorAll('.cat-split-row input[type="number"]').forEach(i => sum += Number(i.value) || 0);
+  detail.querySelectorAll('.cat-split-row input[inputmode="numeric"]').forEach(i => sum += rawMoney(i));
   const amtInput = card.querySelector('.cat-budget');
-  amtInput.value = sum;
+  amtInput.value = sum.toLocaleString();
 }
 function toggleCatCustomMonth(sel){
   document.getElementById('catCustomMonth').style.display = sel.value === 'custom' ? 'block' : 'none';
@@ -4103,7 +4116,7 @@ function makeCatCardEl(cat){
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
-      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="number" value="${s.amount}" oninput="recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
+      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
       <button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button>
     </div>
   `;
@@ -4135,7 +4148,7 @@ function makeAssetLinkRowEl(assetType, cat, myAssets){
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
-      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="number" value="${s.amount}" oninput="recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
+      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
       <button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button>
     </div>
   `;
@@ -4216,7 +4229,7 @@ async function saveCategories(){
       const nameInput = card.querySelector('.cat-name-input').value.trim();
       const splitRows = [...card.querySelectorAll('.cat-split-row')].map(r => {
         const inputs = r.querySelectorAll('input');
-        return { day_label: inputs[0].value.trim(), amount: Number(inputs[1].value)||0 };
+        return { day_label: inputs[0].value.trim(), amount: rawMoney(inputs[1]) };
       }).filter(s => s.day_label);
       const budget = rawMoney(card.querySelector('.cat-budget'));
       return {
@@ -4236,7 +4249,7 @@ async function saveCategories(){
         const linked_asset_id = select.value;
         const splitRows = [...row.querySelectorAll('.cat-split-row')].map(r => {
           const inputs = r.querySelectorAll('input');
-          return { day_label: inputs[0].value.trim(), amount: Number(inputs[1].value)||0 };
+          return { day_label: inputs[0].value.trim(), amount: rawMoney(inputs[1]) };
         }).filter(s => s.day_label);
         const budget = rawMoney(row.querySelector('.cat-budget'));
         const assetName = select.options[select.selectedIndex]?.textContent || assetType;
@@ -5705,10 +5718,21 @@ function showBonbuLogDay(key, logs){
   area.innerHTML = `<p class="field-hint" style="margin:10px 20px 6px;">${key} 인증 (${logs.length}건)</p>` +
     logs.map(l => `
       <div class="admin-card" style="margin-bottom:8px;">
-        <p class="ac-line"><b>${l.profile_name || l.user_id.slice(0,8)}</b>${l.is_best ? ' 🌟' : ''}</p>
-        <p class="ac-sub" style="margin-top:4px;">${l.note || '(내용 없음)'}</p>
+        <p class="ac-line"><b>${l.profile_name || l.user_id.slice(0,8)}</b>${l.is_best ? ' 🌟 베스트' : ''}</p>
+        <p class="ac-sub" style="margin-top:4px;white-space:pre-line;">${l.note || '(내용 없음)'}</p>
+        <button class="md-link" style="width:100%;margin-top:8px;${l.is_best?'background:var(--gold);color:#2b220a;':''}" onclick="toggleBestReviewFromCalendar('${l.id}','${key}')">${l.is_best ? '🌟 베스트 해제하기' : '🌟 베스트로 선정하기'}</button>
       </div>
     `).join('');
+}
+async function toggleBestReviewFromCalendar(logId, key){
+  await toggleBestReview(logId);
+  const { data: members } = await sb.from('profiles').select('id, name, email')
+    .eq('approval_status','approved').contains('programs', ['bonbuseong']);
+  const nameMap = {};
+  (members||[]).forEach(m => nameMap[m.id] = m.name || m.email);
+  const { data: logs } = await sb.from('bonbu_reading_logs').select('*').eq('log_date', key);
+  (logs||[]).forEach(l => { l.profile_name = nameMap[l.user_id] || '(탈퇴회원)'; });
+  showBonbuLogDay(key, logs || []);
 }
 async function loadBonbuMemberList(){
   const list = document.getElementById('bonbuMemberList');
@@ -5744,7 +5768,7 @@ async function loadBonbuMemberList(){
         <div class="md-row"><span>가입일</span><b>${new Date(m.created_at).toLocaleDateString('ko-KR')}</b></div>
         ${log ? `
           <p class="field-hint" style="margin:10px 0 4px;">오늘의 인증</p>
-          <p class="ac-line" style="background:var(--surface-2);padding:8px 10px;border-radius:9px;">${log.note}</p>
+          <p class="ac-line" style="background:var(--surface-2);padding:8px 10px;border-radius:9px;white-space:pre-line;">${log.note}</p>
           <button class="md-link" style="width:100%;margin-top:8px;${log.is_best?'background:var(--gold);color:#2b220a;':''}" onclick="toggleBestReview('${log.id}', this)">${log.is_best ? '🌟 베스트로 선정됨 (해제하기)' : '🌟 베스트로 선정하기'}</button>
         ` : '<p class="field-hint" style="margin-top:10px;">오늘 아직 인증을 안 했어요.</p>'}
         <div class="field" style="margin-top:14px;">
@@ -5762,9 +5786,14 @@ async function loadBonbuMemberList(){
 }
 async function toggleBestReview(logId, btn){
   const { data: cur } = await sb.from('bonbu_reading_logs').select('is_best').eq('id', logId).single();
+  if(!cur.is_best){
+    // 새로 뽑는 거면, 기존에 뽑혀있던 건 먼저 다 해제 (한 번에 하나만)
+    await sb.from('bonbu_reading_logs').update({ is_best: false }).eq('is_best', true);
+  }
   const { error } = await sb.from('bonbu_reading_logs').update({ is_best: !cur.is_best }).eq('id', logId);
   if(error){ console.error('toggle best failed', error); return; }
   loadBonbuMemberList();
+  try{ renderBonbuLogCalendar(); }catch(e){}
 }
 function toggleUnsubmittedBonbu(checkbox){
   document.querySelectorAll('#bonbuMemberList .member-row-wrap').forEach(wrap=>{
