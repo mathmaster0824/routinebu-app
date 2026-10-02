@@ -348,6 +348,7 @@
   .tx-row.fixed{background:var(--gold-soft);border-radius:9px;padding:8px 10px;margin:0 0 6px;display:block;}
   .tx-row.fixed.skipped{background:var(--surface-2);opacity:.55;}
   .tx-row.fixed.skipped .tx-fixed-name{text-decoration:line-through;}
+  .tx-row.fixed.confirmed .tx-fixed-name{text-decoration:line-through;}
   .tx-fixed-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
   .tx-fixed-badge{
     flex:none;font-size:9.5px;font-weight:700;background:var(--gold);color:#3a2f0d;
@@ -505,6 +506,9 @@
   }
 
   .am-plan{font-weight:400;color:var(--ink-faint);}
+  .am-plan.over{text-decoration:line-through;color:var(--red);}
+  .am-plan.under{text-decoration:line-through;color:var(--green);}
+  .am-plan.plain{text-decoration:line-through;color:var(--ink-faint);}
   .am-diff{font-size:12px;margin:5px 0 0;min-height:15px;}
   .am-diff.under{color:var(--green);}
   .am-diff.over{color:var(--red);}
@@ -2344,7 +2348,9 @@ async function showRealDay(el, d){
     const existing = dayTx.find(tx => tx.category_id === item.category_id && tx.is_auto_fixed);
     const amt = existing ? existing.amount : item.amount;
     const row = document.createElement('div');
-    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (existing && Number(existing.amount) === 0 ? ' skipped' : '');
+    const isSkipped = existing && Number(existing.amount) === 0;
+    const isConfirmed = existing && !isSkipped;
+    row.className = 'tx-row fixed' + (item.kind==='income' ? ' income-fixed' : '') + (isSkipped ? ' skipped' : '') + (isConfirmed ? ' confirmed' : '');
     row.dataset.txId = existing ? existing.id : '';
     row.dataset.categoryId = item.category_id;
     row.dataset.autoFixed = '1';
@@ -3165,15 +3171,34 @@ async function deleteGoal(btn){
 function calcDiff(input){
   const plan = Number(input.dataset.plan) || 0;
   const actual = rawMoney(input);
-  const diffEl = input.parentElement.querySelector('.am-diff');
-  if(input.value === ''){ diffEl.textContent = ''; return; }
-  const diff = plan - actual;
-  if(diff >= 0){
-    diffEl.textContent = '계획보다 ' + diff.toLocaleString() + '원 아꼈어요';
-    diffEl.className = 'am-diff under';
+  const isIncome = input.dataset.type === 'income';
+  const field = input.closest('.field');
+  const diffEl = field.querySelector('.am-diff');
+  const planEl = field.querySelector('.am-plan');
+  if(input.value === '' || actual === plan){
+    diffEl.textContent = '';
+    if(planEl) planEl.className = 'am-plan';
+    return;
+  }
+  if(isIncome){
+    if(actual > plan){
+      diffEl.textContent = '계획보다 ' + (actual-plan).toLocaleString() + '원 더 들어왔어요';
+      diffEl.className = 'am-diff under';
+      if(planEl) planEl.className = 'am-plan under';
+    } else {
+      diffEl.textContent = '';
+      if(planEl) planEl.className = 'am-plan plain';
+    }
   } else {
-    diffEl.textContent = '계획보다 ' + Math.abs(diff).toLocaleString() + '원 더 썼어요';
-    diffEl.className = 'am-diff over';
+    if(actual > plan){
+      diffEl.textContent = '계획보다 ' + (actual-plan).toLocaleString() + '원 더 썼어요';
+      diffEl.className = 'am-diff over';
+      if(planEl) planEl.className = 'am-plan over';
+    } else {
+      diffEl.textContent = '계획보다 ' + (plan-actual).toLocaleString() + '원 아꼈어요 ❤️';
+      diffEl.className = 'am-diff under';
+      if(planEl) planEl.className = 'am-plan under';
+    }
   }
 }
 
@@ -3325,11 +3350,12 @@ async function renderEveningSettle(){
     return;
   }
   emptyNote.style.display = 'none';
-  items.forEach(item => {
+
+  const renderRow = item => {
     const field = document.createElement('div');
     field.className = 'field';
     field.innerHTML = `
-      <label><span class="tx-dot ${item.type||'expense'}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· 아침 계획 ${item.amt.toLocaleString()}원</span></label>
+      <label><span class="item-nm">${item.name}</span> <span class="am-plan">· 아침 계획 ${item.amt.toLocaleString()}원</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
         <input class="am-actual" type="text" inputmode="numeric" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt.toLocaleString()}" oninput="formatMoneyInput(this);calcDiff(this)" style="flex:1;">
         ${item.categoryId ? `<button class="row-del" onclick="skipTodayFixedItem(this,'${item.categoryId}')">✕</button>` : ''}
@@ -3338,7 +3364,25 @@ async function renderEveningSettle(){
       ${item.categoryId ? `<p class="field-hint"><span class="demo-link" onclick="moveFixedItemDate(this,'${item.categoryId}','${item.category}','${item.type||'expense'}')">📅 날짜 옮기기 (오늘 안 나간 거면)</span></p>` : ''}
     `;
     list.appendChild(field);
-  });
+  };
+
+  const incomeItems = items.filter(i => (i.type||'expense') === 'income');
+  const expenseItems = items.filter(i => (i.type||'expense') === 'expense');
+  if(incomeItems.length > 0){
+    const h = document.createElement('p');
+    h.className = 'group-label income';
+    h.textContent = '수입';
+    list.appendChild(h);
+    incomeItems.forEach(renderRow);
+  }
+  if(expenseItems.length > 0){
+    const h = document.createElement('p');
+    h.className = 'group-label expense';
+    h.style.marginTop = incomeItems.length > 0 ? '14px' : '0';
+    h.textContent = '지출';
+    list.appendChild(h);
+    expenseItems.forEach(renderRow);
+  }
 }
 
 /* ── 이번 주 스트립: 오늘 날짜 기준 자동 계산 ── */
