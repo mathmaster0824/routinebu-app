@@ -1765,9 +1765,9 @@
 
 <!-- 지수체크 메모 모아보기 서브화면 -->
 <div class="subscreen" id="sub-idxmemo">
-  <div class="sub-top"><button class="back-btn" onclick="closeSub('idxmemo')">←</button><h1 class="sub-title">메모 모아보기</h1></div>
+  <div class="sub-top"><button class="back-btn" onclick="closeSub('idxmemo')">←</button><h1 class="sub-title">지난 기록 모아보기</h1></div>
   <div class="sub-body">
-    <p class="se-intro">지수체크 때 남긴 생각들을 시간순으로 모아봤어요.</p>
+    <p class="se-intro">최근 30일이에요. 날짜를 누르면 그날 지수를 채우거나 고칠 수 있어요.</p>
     <div id="idxMemoList"><p class="ac-sub">불러오는 중...</p></div>
   </div>
 </div>
@@ -1776,7 +1776,7 @@
 <div class="subscreen" id="sub-idx">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('idx')">←</button><h1 class="sub-title">지수</h1></div>
 
-  <div class="section-head" style="margin:14px 0 8px;padding:0 20px;"><h2>오늘 기록</h2></div>
+  <div class="section-head" style="margin:14px 0 8px;padding:0 20px;"><h2 id="idxSectionTitle">오늘 기록</h2></div>
   <div class="sub-body" style="padding-top:0;padding-bottom:0;">
     <p class="field-hint" id="idxPrefillNote" style="margin:8px 20px;display:none;">💡 아직 오늘 기록 전이라, 가장 최근 값이 미리 채워져 있어요. 오늘 값으로 고쳐서 저장해주세요.</p>
     <div class="field"><label>S&P500</label><input id="idxSp500" type="number" placeholder="예: 6480"></div>
@@ -1814,7 +1814,7 @@
     <button class="save-btn" style="margin-top:0;" onclick="saveIndexMemo()">메모 저장</button>
   </div>
 
-  <p class="demo-link" onclick="openSub('idxmemo')">📝 지난 메모 모아보기 →</p>
+  <p class="demo-link" onclick="openSub('idxmemo')">📝 지난 기록 모아보기 →</p>
 </div>
 
 <!-- 아침예산 서브화면 -->
@@ -2067,6 +2067,9 @@ function closeSub(id){
   if(banner) banner.style.display = 'none';
   if(id === 'bonbu'){
     document.getElementById('routineNav').style.display = 'flex';
+  }
+  if(id === 'idx'){
+    editingIdxDate = null;
   }
 }
 const _saveTimers = {};
@@ -4954,9 +4957,10 @@ function addCustomIndexRow(name, value){
 async function saveIndexCheck(){
   if(!currentUser) return;
   const todayKey = dateKey(new Date());
+  const targetKey = editingIdxDate || todayKey;
   const payload = {
     user_id: currentUser.id,
-    log_date: todayKey,
+    log_date: targetKey,
     sp500: document.getElementById('idxSp500').value ? Number(document.getElementById('idxSp500').value) : null,
     kospi: document.getElementById('idxKospi').value ? Number(document.getElementById('idxKospi').value) : null,
     usd: document.getElementById('idxUsd').value ? Number(document.getElementById('idxUsd').value) : null,
@@ -4965,26 +4969,29 @@ async function saveIndexCheck(){
   const { error } = await sb.from('index_checks').upsert(payload, { onConflict: 'user_id,log_date' });
   if(error){ console.error('index save failed', error); return; }
 
-  // 커스텀 지표: 오늘 것 지우고 지금 화면에 있는 걸로 다시 저장
-  await sb.from('custom_index_entries').delete().eq('user_id', currentUser.id).eq('log_date', todayKey);
+  // 커스텀 지표: 그 날짜 것 지우고 지금 화면에 있는 걸로 다시 저장
+  await sb.from('custom_index_entries').delete().eq('user_id', currentUser.id).eq('log_date', targetKey);
   const customRows = [...document.querySelectorAll('#idxCustomList .custom-field')];
   const customPayload = customRows.map((row, i) => {
     const name = row.querySelector('.custom-label').value.trim();
     const valInput = row.querySelectorAll('input')[1];
     const value = valInput.value ? rawMoney(valInput) : null;
     if(!name) return null;
-    return { user_id: currentUser.id, log_date: todayKey, name, value, sort_order: i };
+    return { user_id: currentUser.id, log_date: targetKey, name, value, sort_order: i };
   }).filter(Boolean);
   if(customPayload.length > 0){
     await sb.from('custom_index_entries').insert(customPayload);
   }
 
-  await logMissionCompletion('idx'); loadMyStats();
+  if(targetKey === todayKey){
+    await logMissionCompletion('idx'); loadMyStats();
+    const card = document.querySelector('.mission[data-target="idx"]');
+    if(card) card.classList.add('done');
+    updateCount();
+  }
+  editingIdxDate = null;
   await loadIndexHistory();
   renderIdxChart();
-  const card = document.querySelector('.mission[data-target="idx"]');
-  if(card) card.classList.add('done');
-  updateCount();
   closeSub('idx');
   const t = document.getElementById('toast');
   t.classList.add('show');
@@ -4998,17 +5005,32 @@ async function saveIndexMemo(){
   }, { onConflict: 'user_id,log_date' });
   if(error) console.error('index memo save failed', error);
 }
+let editingIdxDate = null;
 async function loadTodayIndexCheck(){
   if(!currentUser) return;
   const todayKey = dateKey(new Date());
-  const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).maybeSingle();
+  const targetKey = editingIdxDate || todayKey;
+  const titleEl = document.getElementById('idxSectionTitle');
+  if(titleEl){
+    if(targetKey === todayKey) titleEl.textContent = '오늘 기록';
+    else {
+      const d = new Date(targetKey+'T00:00:00');
+      titleEl.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 기록 (지난 날짜 수정 중)`;
+    }
+  }
+  const { data } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).eq('log_date', targetKey).maybeSingle();
 
   let base = data;
-  if(!data){
+  if(!data && targetKey === todayKey){
     // 오늘 기록이 없으면, 가장 최근 기록을 기본값으로 미리 채워줌 (참고용, 그대로 두거나 고쳐서 저장)
     const { data: last } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).order('log_date', { ascending: false }).limit(1).maybeSingle();
     base = last;
   }
+  document.getElementById('idxSp500').value = '';
+  document.getElementById('idxKospi').value = '';
+  document.getElementById('idxUsd').value = '';
+  document.getElementById('idxGold').value = '';
+  document.getElementById('idxMemo').value = '';
   const noteEl = document.getElementById('idxPrefillNote');
   if(base){
     if(base.sp500!=null) document.getElementById('idxSp500').value = base.sp500;
@@ -5016,13 +5038,13 @@ async function loadTodayIndexCheck(){
     if(base.usd!=null) document.getElementById('idxUsd').value = base.usd;
     if(base.gold!=null) document.getElementById('idxGold').value = base.gold;
     if(data && data.memo) document.getElementById('idxMemo').value = data.memo;
-    if(noteEl) noteEl.style.display = data ? 'none' : 'block';
   }
+  if(noteEl) noteEl.style.display = (!data && targetKey === todayKey) ? 'block' : 'none';
 
   const list = document.getElementById('idxCustomList');
   if(list) list.innerHTML = '';
-  let { data: todayCustoms } = await sb.from('custom_index_entries').select('*').eq('user_id', currentUser.id).eq('log_date', todayKey).order('sort_order');
-  if(!todayCustoms || todayCustoms.length === 0){
+  let { data: todayCustoms } = await sb.from('custom_index_entries').select('*').eq('user_id', currentUser.id).eq('log_date', targetKey).order('sort_order');
+  if((!todayCustoms || todayCustoms.length === 0) && targetKey === todayKey){
     // 오늘 아직 안 적었으면, 가장 최근 기록을 이름+값 그대로 기본값으로 채워줌
     const { data: lastDay } = await sb.from('custom_index_entries').select('log_date').eq('user_id', currentUser.id).order('log_date', { ascending: false }).limit(1).maybeSingle();
     if(lastDay){
@@ -5039,26 +5061,35 @@ async function loadTodayIndexCheck(){
 async function loadIdxMemoList(){
   if(!currentUser) return;
   const list = document.getElementById('idxMemoList');
-  const { data, error } = await sb.from('index_checks').select('log_date, memo')
-    .eq('user_id', currentUser.id).not('memo','is',null).neq('memo','').order('log_date',{ascending:false});
+  const since = new Date(); since.setDate(since.getDate() - 29);
+  const sinceKey = dateKey(since);
+  const { data, error } = await sb.from('index_checks').select('*').eq('user_id', currentUser.id).gte('log_date', sinceKey).order('log_date', { ascending: false });
   if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
-  if(!data || data.length === 0){
-    list.innerHTML = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 남긴 메모가 없어요.</p>';
-    return;
-  }
+  const byDate = {};
+  (data||[]).forEach(r => byDate[r.log_date] = r);
+
   const dow = ['일','월','화','수','목','금','토'];
+  const todayKeyNow = dateKey(new Date());
   let curMonth = null;
   let html = '';
-  data.forEach(r => {
-    const d = new Date(r.log_date+'T00:00:00');
+  for(let i=0; i<30; i++){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const key = dateKey(d);
     const monthLabel = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
     if(monthLabel !== curMonth){
       html += `<p class="memo-month">${monthLabel}</p>`;
       curMonth = monthLabel;
     }
-    html += `<div class="memo-card"><p class="memo-date">${d.getMonth()+1}월 ${d.getDate()}일 ${dow[d.getDay()]}요일</p><p class="memo-text">${r.memo}</p></div>`;
-  });
+    const r = byDate[key];
+    const hasData = r && (r.sp500!=null || r.kospi!=null || r.usd!=null || r.gold!=null);
+    const statusText = hasData ? (r.memo ? r.memo : '(숫자는 기록됨, 메모 없음)') : '기록 없음 — 눌러서 채우기';
+    html += `<div class="memo-card" style="cursor:pointer;${hasData?'':'opacity:0.55;'}" onclick="editPastIdxDate('${key}')"><p class="memo-date">${d.getMonth()+1}월 ${d.getDate()}일 ${dow[d.getDay()]}요일${key===todayKeyNow?' · 오늘':''}</p><p class="memo-text">${statusText}</p></div>`;
+  }
   list.innerHTML = html;
+}
+function editPastIdxDate(dateKeyStr){
+  editingIdxDate = dateKeyStr;
+  openSub('idx');
 }
 let seasonOptChoice = null;
 function selectSeasonOpt(el, choice){
