@@ -1079,7 +1079,7 @@
         </div>
       </div>
       <div class="field"><label>이메일</label><input id="signupEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupPassword').focus();}"></div>
-      <div class="field"><label>비밀번호</label><input id="signupPassword" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupPasswordConfirm').focus();}"></div>
+      <div class="field"><label>비밀번호</label><input id="signupPassword" type="password" placeholder="비밀번호 (6자 이상)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('signupPasswordConfirm').focus();}"></div>
       <div class="field"><label>비밀번호 확인</label><input id="signupPasswordConfirm" type="password" placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter'){event.preventDefault();doSignup();}"></div>
       <button class="save-btn" id="signupBtn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="doSignup()">가입 신청</button>
       <p class="field-hint" id="signupErrorMsg" style="color:var(--red);text-align:center;margin-top:10px;"></p>
@@ -2082,14 +2082,29 @@ function debouncedCall(key, fn, delay){
   clearTimeout(_saveTimers[key]);
   _saveTimers[key] = setTimeout(fn, delay || 600);
 }
-function addTx(type){
+// 날짜를 안 누르고 추가 버튼을 누른 경우: 보이는 주의 오늘(없으면 첫날)을 자동 선택
+async function ensureSelectedDay(){
+  if(selectedDayDate instanceof Date && !isNaN(selectedDayDate)) return true;
+  const cells = [...document.querySelectorAll('#grid7 .g-cell')];
+  const todayKey = dateKey(new Date());
+  const cell = cells.find(c=>c.dataset.dateKey===todayKey) || cells[0];
+  if(cell && cell.dataset.dateKey){
+    const [y,m,d] = cell.dataset.dateKey.split('-').map(Number);
+    await showRealDay(cell, new Date(y, m-1, d));
+  } else {
+    await showRealDay(null, new Date());
+  }
+  return selectedDayDate instanceof Date;
+}
+async function addTx(type){
+  if(!(await ensureSelectedDay())) return;
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
   row.className = 'tx-row';
   row.dataset.tempId = 'tmp'+Date.now()+Math.random();
   row.dataset.dayKey = dateKey(selectedDayDate);
   const cats = type==='expense' ? catOptions('') : incomeOptions('');
-  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="this.closest('.tx-row').remove()">✕</button>`;
+  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
   list.appendChild(row);
 }
 async function renderWeekSettle(){
@@ -2415,7 +2430,8 @@ async function skipFixedTx(btn){
   await saveFixedTx(input);
   row.classList.add('skipped');
 }
-function addInvestTx(){
+async function addInvestTx(){
+  if(!(await ensureSelectedDay())) return;
   const list = document.getElementById('dayTxList');
   const row = document.createElement('div');
   row.className = 'invest-row-card';
@@ -2573,8 +2589,16 @@ async function saveFixedTx(input){
   refreshWeekGridDisplay();
   refreshLedgerSummary();
 }
-async function saveManualTx(el){
+function saveManualTx(el){
   const row = el.closest('.tx-row');
+  if(!row) return;
+  // 금액 debounce + 이름/카테고리 onchange가 거의 동시에 오면 insert가 두 번 나가던 문제 방지
+  row._saveChain = (row._saveChain || Promise.resolve())
+    .then(()=>_saveManualTxNow(row))
+    .catch(e=>console.error('manual tx save failed', e));
+  return row._saveChain;
+}
+async function _saveManualTxNow(row){
   const catSelect = row.querySelector('.tx-cat');
   const nameInput = row.querySelector('.tx-name');
   const amtInput = row.querySelector('.tx-input');
@@ -2602,6 +2626,7 @@ async function saveManualTx(el){
 }
 async function deleteManualTx(btn){
   const row = btn.closest('.tx-row');
+  if(row._saveChain) await row._saveChain; // 저장 중이던 행이면 저장 끝난 뒤 삭제
   const id = row.dataset.txId;
   if(id){
     const { error } = await sb.from('transactions').delete().eq('id', id);
@@ -4420,6 +4445,11 @@ async function doSignup(){
   if(!name){ msg.textContent = '이름을 입력해주세요.'; return; }
   if(programs.length === 0){ msg.textContent = '신청할 프로그램을 하나 이상 선택해주세요.'; return; }
   if(!email || !pw){ msg.textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent = '이메일 주소 형식을 확인해주세요.'; return; }
+  const domainFix = { 'hanmail.com':'hanmail.net', 'naver.net':'naver.com', 'daum.com':'daum.net', 'gmail.co':'gmail.com', 'naver.co':'naver.com' };
+  const dom = email.split('@')[1].toLowerCase();
+  if(domainFix[dom] && !confirm(`혹시 @${domainFix[dom]} 아닌가요?\n\n확인 = 지금 입력한 @${dom}로 그대로 가입\n취소 = 돌아가서 고치기`)) return;
+  if(pw.length < 6){ msg.textContent = '비밀번호는 6자 이상으로 만들어주세요.'; return; }
   if(pw !== pw2){ msg.textContent = '비밀번호가 서로 달라요.'; return; }
   const btn = document.getElementById('signupBtn');
   btn.disabled = true; btn.textContent = '가입 처리 중...';
@@ -4428,7 +4458,16 @@ async function doSignup(){
     options: { data: { name, programs } }
   });
   btn.disabled = false; btn.textContent = '가입 신청';
-  if(error){ msg.textContent = error.message; return; }
+  if(error){
+    const m = (error.message||'').toLowerCase();
+    msg.textContent =
+      m.includes('at least 6') ? '비밀번호는 6자 이상으로 만들어주세요.' :
+      m.includes('already registered') || m.includes('already been registered') ? '이미 가입된 이메일이에요. 로그인 화면에서 로그인해주세요.' :
+      m.includes('invalid') && m.includes('email') ? '이메일 주소를 다시 확인해주세요.' :
+      m.includes('rate limit') || m.includes('too many') ? '잠시 후 다시 시도해주세요. (요청이 너무 많아요)' :
+      '가입 중 문제가 생겼어요: ' + error.message;
+    return;
+  }
   currentUser = data.user;
   showOnboard('pending');
 }
@@ -6082,6 +6121,7 @@ function renderWeekGrid(weekStart){
       inner += `<small>${diff>=0?'+':'-'}${diffText}</small>`;
     }
     cell.innerHTML = inner;
+    cell.dataset.dateKey = key;
     cell.onclick = () => showRealDay(cell, d);
     grid.appendChild(cell);
   }
