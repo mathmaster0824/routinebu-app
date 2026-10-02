@@ -1768,6 +1768,7 @@
   <div class="sub-top"><button class="back-btn" onclick="closeSub('idxmemo')">←</button><h1 class="sub-title">지난 기록 모아보기</h1></div>
   <div class="sub-body">
     <p class="se-intro">최근 30일이에요. 날짜를 누르면 그날 지수를 채우거나 고칠 수 있어요.</p>
+    <label class="mini-toggle" style="margin:0 20px 10px;display:block;"><input type="checkbox" id="idxShowEmptyToggle" onchange="loadIdxMemoList()"> 기록 없는 날도 보기 (빠뜨린 날 채우기)</label>
     <div id="idxMemoList"><p class="ac-sub">불러오는 중...</p></div>
   </div>
 </div>
@@ -5070,20 +5071,28 @@ async function loadIdxMemoList(){
 
   const dow = ['일','월','화','수','목','금','토'];
   const todayKeyNow = dateKey(new Date());
+  const showEmptyToggle = document.getElementById('idxShowEmptyToggle');
+  const showEmpty = showEmptyToggle ? showEmptyToggle.checked : false;
   let curMonth = null;
   let html = '';
+  let shown = 0;
   for(let i=0; i<30; i++){
     const d = new Date(); d.setDate(d.getDate()-i);
     const key = dateKey(d);
+    const r = byDate[key];
+    const hasData = r && (r.sp500!=null || r.kospi!=null || r.usd!=null || r.gold!=null);
+    if(!hasData && !showEmpty) continue;
     const monthLabel = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
     if(monthLabel !== curMonth){
       html += `<p class="memo-month">${monthLabel}</p>`;
       curMonth = monthLabel;
     }
-    const r = byDate[key];
-    const hasData = r && (r.sp500!=null || r.kospi!=null || r.usd!=null || r.gold!=null);
     const statusText = hasData ? (r.memo ? r.memo : '(숫자는 기록됨, 메모 없음)') : '기록 없음 — 눌러서 채우기';
     html += `<div class="memo-card" style="cursor:pointer;${hasData?'':'opacity:0.55;'}" onclick="editPastIdxDate('${key}')"><p class="memo-date">${d.getMonth()+1}월 ${d.getDate()}일 ${dow[d.getDay()]}요일${key===todayKeyNow?' · 오늘':''}</p><p class="memo-text">${statusText}</p></div>`;
+    shown++;
+  }
+  if(shown === 0){
+    html = '<p class="ac-sub" style="text-align:center;padding:10px 0;">아직 기록이 없어요.</p>';
   }
   list.innerHTML = html;
 }
