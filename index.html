@@ -176,14 +176,22 @@
 
   /* 문의하기 플로팅 */
   .fab{
-    position:fixed;right:20px;bottom:96px;width:52px;height:52px;border-radius:50%;
+    position:fixed;right:12px;bottom:92px;width:42px;height:42px;opacity:.85;border-radius:50%;
     background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;
-    font-size:22px;border:none;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;
+    font-size:18px;border:none;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;
     max-width:420px;margin:0 auto;z-index:30;
   }
   @media(min-width:460px){
-    .fab{right:calc(50% - 210px + 20px);}
+    .fab{right:calc(50% - 210px + 12px);}
   }
+  .fab.has-reply::after{content:'';position:absolute;top:4px;right:4px;width:12px;height:12px;border-radius:50%;background:var(--red);border:2px solid var(--bg,#fff);}
+  .chat-note{text-align:center;color:var(--ink-faint);font-size:12.5px;padding:18px 24px;line-height:1.5;}
+  .inq-card{background:var(--surface);border:0.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+  .inq-card.unanswered{border-color:var(--red);}
+  .inq-meta{font-size:11px;color:var(--ink-faint);margin-bottom:4px;}
+  .inq-body{font-size:13.5px;white-space:pre-wrap;word-break:break-word;margin:0 0 8px;}
+  .inq-reply{font-size:13px;white-space:pre-wrap;word-break:break-word;background:var(--bg,#f6f3ea);border-radius:8px;padding:8px 10px;margin:0;}
+  .inq-card textarea{width:100%;min-height:60px;box-sizing:border-box;margin-bottom:6px;}
 
   .bottomnav{
     position:fixed;left:0;right:0;bottom:0;max-width:420px;margin:0 auto;
@@ -345,6 +353,21 @@
     width:76px;padding:7px 6px;border-radius:8px;border:0.5px solid var(--line);
     background:var(--surface);color:var(--ink);font-family:inherit;font-size:12.5px;text-align:right;
   }
+  .tx-row.manual{display:block;padding:8px 0 10px;border-bottom:0.5px solid var(--line);}
+  .tx-m-top,.tx-m-bottom{display:flex;align-items:center;gap:8px;}
+  .tx-m-top .tx-cat{max-width:44%;}
+  .tx-m-bottom{margin-top:6px;padding-left:16px;}
+  .tx-m-bottom .tx-input{flex:1;width:auto;min-width:0;}
+  .row-done{flex:none;height:30px;padding:0 12px;border-radius:15px;border:none;background:var(--brand);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .row-done:disabled{opacity:.6;}
+  .mission.day-hidden{display:none;}
+  .section-head h2 .mission-date{font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink-faint);margin-left:6px;white-space:nowrap;}
+  .tx-row.done-ok .row-done{background:var(--green-bg);color:var(--green);}
+  .tx-row.manual.editing{box-shadow:inset 3px 0 0 var(--gold);padding-left:8px;border-radius:6px;}
+  .tx-row.fixed.editing{box-shadow:inset 0 0 0 1.5px var(--gold);}
+  .tx-fixed-top .row-done{margin-left:6px;}
+  .draft-hint{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:var(--gold-soft);font-size:12px;line-height:1.45;color:var(--ink);}
+  .dup-hint{font-size:11px;color:var(--red);flex:none;}
   .tx-row.fixed{background:var(--gold-soft);border-radius:9px;padding:8px 10px;margin:0 0 6px;display:block;}
   .tx-row.fixed.skipped{background:var(--surface-2);opacity:.55;}
   .tx-row.fixed.skipped .tx-fixed-name{text-decoration:line-through;}
@@ -1219,7 +1242,7 @@
   <div class="topbar">
     <div>
       <div class="greet">안녕하세요, <b id="greetName">회원</b>님</div>
-      <div class="date" id="homeDateText">9월 16일 수요일</div>
+      <div class="date" id="homeDateText"></div>
     </div>
     <div style="display:flex;gap:8px;">
       <div class="bell" id="bonbuSwitchIcon" onclick="openSub('bonbu')" style="font-size:15px;display:none;">📚</div>
@@ -1246,13 +1269,29 @@
     </div>
   </div>
 
-  <div class="section-head"><h2>오늘의 미션</h2><span id="missionCount"></span></div>
+  <div class="section-head"><h2>오늘의 미션 <span class="mission-date" id="missionDateText"></span></h2><span id="missionCount"></span></div>
   <div class="mission-list">
     <div class="mission" data-target="idx" onclick="openSub('idx')">
       <div class="check"></div>
       <div class="m-body">
         <p class="m-title">지수체크</p>
         <p class="m-sub">S&P·코스피·환율·금 기록하기</p>
+      </div>
+      <span class="m-chev">›</span>
+    </div>
+    <div class="mission day-hidden" data-target="weeksettle" onclick="openMissionSettle('weeksettle')">
+      <div class="check"></div>
+      <div class="m-body">
+        <p class="m-title">주말정산</p>
+        <p class="m-sub">이번 주 수입·지출 돌아보고 제출하기</p>
+      </div>
+      <span class="m-chev">›</span>
+    </div>
+    <div class="mission day-hidden" data-target="monthsettle" onclick="openMissionSettle('monthsettle')">
+      <div class="check"></div>
+      <div class="m-body">
+        <p class="m-title">월말정산</p>
+        <p class="m-sub">이번 달 수입·지출 정리하고 성찰 남기기</p>
       </div>
       <span class="m-chev">›</span>
     </div>
@@ -1330,7 +1369,7 @@
       <div class="mi-row"><span>현재 레벨</span><b id="miLevel">-</b></div>
       <div class="mi-row"><span>이번 시즌 완료 기록</span><b id="miSeasonCount">-</b></div>
       <div class="mi-row"><span>다음 시즌 할인</span><b>-</b></div>
-      <div class="mi-row"><span>시즌 종료일</span><b>-</b></div>
+      <div class="mi-row"><span>시즌 종료일</span><b id="miSeasonEnd">-</b></div>
     </div>
 
     <div class="section-head" style="padding:0;margin:22px 0 8px;"><h2>설정</h2></div>
@@ -1450,17 +1489,9 @@
 <!-- 문의하기 서브화면 -->
 <div class="subscreen" id="sub-inquiry">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('inquiry')">←</button><h1 class="sub-title">문의하기</h1></div>
-  <div class="chat-thread" id="chatThread">
-    <div class="chat-bubble mine">
-      <p class="chat-context">📍 로드맵 화면에서</p>
-      <p>수익률 나중에 바꿀 수 있나요?</p>
-    </div>
-    <div class="chat-bubble theirs">
-      <p>네! 로드맵 설정에서 언제든 바꾸실 수 있어요 😊</p>
-    </div>
-  </div>
+  <div class="chat-thread" id="chatThread"><p class="chat-note">불러오는 중...</p></div>
   <div class="chat-input-row">
-    <input type="text" id="chatInput" placeholder="운영자에게 메시지 보내기">
+    <input type="text" id="chatInput" placeholder="운영자에게 메시지 보내기" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();sendChat();}">
     <button onclick="sendChat()">전송</button>
   </div>
 </div>
@@ -1478,7 +1509,7 @@
       <label>단위</label>
       <select id="gfUnit"><option value="주">주 (수량)</option><option value="원">원 (금액)</option><option value="$">$ (달러)</option><option value="%">% (비율)</option><option value="개">개 (개수)</option></select>
     </div>
-    <div class="field"><label>목표치</label><input id="gfTarget" type="text" inputmode="numeric" placeholder="예: 100" oninput="formatMoneyInput(this)"></div>
+    <div class="field"><label>목표치</label><input id="gfTarget" type="text" inputmode="decimal" placeholder="예: 100" oninput="formatDecimalInput(this)"></div>
     <p class="field-error" id="gfError"></p>
     <button class="save-btn" style="margin:10px 20px 0;width:calc(100% - 40px);" onclick="addGoal()">목표 추가</button>
   </div>
@@ -1491,7 +1522,7 @@
 
   <div class="week-nav">
     <button class="wn-arrow" onclick="navMonth(-1)">‹</button>
-    <span class="wn-label" id="monthNavLabel">2026년 9월 <i>이번 달</i></span>
+    <span class="wn-label" id="monthNavLabel"></span>
     <button class="wn-arrow" onclick="navMonth(1)">›</button>
   </div>
 
@@ -1558,7 +1589,7 @@
   <div id="weekView">
   <div class="week-nav">
     <button class="wn-arrow" onclick="navWeek(-1)">‹</button>
-    <span class="wn-label" id="weekNavLabel">2026.9.15 ~ 9.21 <i>이번 주</i></span>
+    <span class="wn-label" id="weekNavLabel"></span>
     <button class="wn-arrow" onclick="navWeek(1)">›</button>
   </div>
 
@@ -1584,7 +1615,7 @@
   <div id="monthView" style="display:none;">
     <div class="week-nav">
       <button class="wn-arrow" onclick="navCalMonth(-1)">‹</button>
-      <span class="wn-label" id="calMonthLabel">2026년 9월</span>
+      <span class="wn-label" id="calMonthLabel"></span>
       <button class="wn-arrow" onclick="navCalMonth(1)">›</button>
     </div>
     <div class="month-legend">
@@ -1615,7 +1646,7 @@
   <div class="sub-top"><button class="back-btn" onclick="closeSub('weeksettle')">←</button><h1 class="sub-title">주말정산</h1></div>
   <div class="week-nav">
     <button class="wn-arrow" onclick="navWeek(-1)">‹</button>
-    <span class="wn-label" id="weeksettleNavLabel">2026.9.15 ~ 9.21 <i>이번 주</i></span>
+    <span class="wn-label" id="weeksettleNavLabel"></span>
     <button class="wn-arrow" onclick="navWeek(1)">›</button>
   </div>
   <div class="sub-body">
@@ -1633,7 +1664,7 @@
     <div id="wsExpenseGroups"></div>
     <p class="ac-sub" id="wsEmptyNote" style="display:none;text-align:center;padding:10px 0;">이번 주엔 아직 카테고리별 기록이 없어요.</p>
     </div>
-  <button class="save-btn" onclick="logMissionCompletion('weeksettle').then(loadMyStats);closeSub('weeksettle')">제출</button>
+  <button class="save-btn" onclick="finishWeekSettle()">제출</button>
   <p class="autosave-note">입력하는 즉시 자동저장돼요</p>
   </div>
 </div>
@@ -1678,11 +1709,11 @@
     </div>
 
     <div class="section-head" style="margin:24px 0 10px;padding:0;"><h2>한 달 성찰</h2></div>
-    <div class="field"><label>잘한 지출</label><textarea placeholder="예: 배당주를 계획대로 모았다"></textarea></div>
-    <div class="field"><label>못한 지출</label><textarea placeholder="예: 충동적으로 옷을 샀다"></textarea></div>
-    <div class="field"><label>전체 인사이트</label><textarea placeholder="이번 달 재정 흐름을 돌아본 소감"></textarea></div>
+    <div class="field"><label>잘한 지출</label><textarea id="msGood" placeholder="예: 배당주를 계획대로 모았다" oninput="scheduleReflectionSave()"></textarea></div>
+    <div class="field"><label>못한 지출</label><textarea id="msBad" placeholder="예: 충동적으로 옷을 샀다" oninput="scheduleReflectionSave()"></textarea></div>
+    <div class="field"><label>전체 인사이트</label><textarea id="msInsight" placeholder="이번 달 재정 흐름을 돌아본 소감" oninput="scheduleReflectionSave()"></textarea></div>
   </div>
-  <button class="save-btn" onclick="logMissionCompletion('monthsettle').then(loadMyStats);closeSub('monthsettle')">월말정산 완료</button>
+  <button class="save-btn" onclick="finishMonthSettle()">월말정산 완료</button>
   <p class="autosave-note">입력하는 즉시 자동저장돼요</p>
 </div>
 
@@ -1815,7 +1846,7 @@
   <p class="idx-chart-note" id="idxChartNote"></p>
 
   <div class="sub-body" style="padding-top:0;padding-bottom:0;">
-    <div class="field"><label>메모 (오늘 흐름을 보고 든 생각)</label><textarea id="idxMemo" placeholder="위 추이를 보고 든 생각을 적어보세요" onchange="saveIndexMemo()"></textarea></div>
+    <div class="field"><label>메모 (오늘 흐름을 보고 든 생각)</label><textarea id="idxMemo" placeholder="위 추이를 보고 든 생각을 적어보세요" onchange="saveIndexMemo()" oninput="debouncedCall('idxMemo', saveIndexMemo, 800)"></textarea></div>
     <button class="save-btn" style="margin-top:0;" onclick="saveIndexMemo()">메모 저장</button>
   </div>
 
@@ -1826,7 +1857,7 @@
 <div class="subscreen" id="sub-budget">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('budget')">←</button><h1 class="sub-title">아침예산</h1></div>
   <div class="sub-body">
-    <p class="se-intro" id="budgetDateNote">오늘(9월 1일)에 결제 예정인 항목이에요. 실제로 다를 것 같으면 미리 고쳐두세요.</p>
+    <p class="se-intro" id="budgetDateNote"></p>
     <div id="budgetTodayList"></div>
     <p class="field-hint" id="budgetEmptyNote" style="display:none;margin:0 20px;">오늘은 결제 예정인 고정항목이 없어요.</p>
   </div>
@@ -1862,22 +1893,17 @@
       <button onclick="addFridgeTag()">＋ 추가</button>
     </div>
 
-    <p class="group-label" style="margin-top:20px;">이번 주 식단 (9/14 ~ 9/20)</p>
+    <p class="group-label" style="margin-top:20px;" id="mealWeekLabel">이번 주 식단</p>
     <div class="meal-grid" id="mealPlanGrid"></div>
 
     <p class="group-label" style="margin-top:20px;">장보기 리스트 + 예산</p>
     <p class="field-hint" style="margin:0 20px 8px;">식단에 맞춰 살 것과 수량을 미리 적어두세요.</p>
-    <div id="groceryList">
-      <div class="grocery-row"><input type="checkbox"><input class="gr-name" type="text" value="돼지고기 앞다리살"><input class="gr-qty" type="number" placeholder="1" min="1"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button></div>
-      <div class="grocery-row"><input type="checkbox"><input class="gr-name" type="text" value="계란"><input class="gr-qty" type="number" placeholder="1" min="1" value="1"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button></div>
-      <div class="grocery-row"><input type="checkbox"><input class="gr-name" type="text" value="대파"><input class="gr-qty" type="number" placeholder="1" min="1"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button></div>
-      <div class="grocery-row"><input type="checkbox"><input class="gr-name" type="text" value="양파"><input class="gr-qty" type="number" placeholder="1" min="1"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button></div>
-    </div>
+    <div id="groceryList"></div>
     <button class="add-row" onclick="addGroceryRow()">＋ 장보기 항목 추가</button>
 
     <div class="field" style="margin-top:14px;">
       <label>이번 주 장보기 예산</label>
-      <input type="text" inputmode="numeric" id="groceryBudget" value="70,000" oninput="formatMoneyInput(this);recalcGroceryActual()">
+      <input type="text" inputmode="numeric" id="groceryBudget" value="" placeholder="예: 70,000" oninput="formatMoneyInput(this);recalcGroceryActual()">
     </div>
 
     <div class="meal-divider"></div>
@@ -1888,7 +1914,7 @@
     <button class="add-row" onclick="addGroceryActualRow()">＋ 산 것 추가</button>
 
     <div class="settle-total-row" id="groceryActualTotalRow" style="margin-top:10px;">
-      <span>실제 지출 합계</span><b id="groceryActualTotal">12,000원</b>
+      <span>실제 지출 합계</span><b id="groceryActualTotal">0원</b>
     </div>
     <p class="field-hint" id="groceryBudgetCompare" style="margin:6px 20px 0;"></p>
   </div>
@@ -1897,6 +1923,16 @@
 </div>
 
 <div class="toast" id="toast">저장됐어요</div>
+<div id="recoveryOverlay" style="display:none;position:fixed;inset:0;z-index:99998;background:var(--bg,#faf6ec);align-items:center;justify-content:center;flex-direction:column;padding:24px;">
+  <div style="width:100%;max-width:360px;">
+    <h2 style="margin:0 0 6px;">새 비밀번호 설정</h2>
+    <p class="field-hint" style="margin:0 0 16px;">6자 이상으로 만들어주세요.</p>
+    <div class="field"><label>새 비밀번호</label><input id="recoveryPw" type="password" placeholder="6자 이상"></div>
+    <div class="field"><label>새 비밀번호 확인</label><input id="recoveryPw2" type="password" placeholder="한 번 더" onkeydown="if(event.key==='Enter'){event.preventDefault();submitNewPassword();}"></div>
+    <p id="recoveryMsg" class="field-hint" style="color:var(--red);min-height:18px;"></p>
+    <button class="save-btn" id="recoveryBtn" onclick="submitNewPassword()" style="position:static;width:100%;">비밀번호 변경</button>
+  </div>
+</div>
 
 <div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
   <button class="img-lightbox-close" onclick="closeImgLightbox()">✕</button>
@@ -1956,6 +1992,32 @@
     sb = window.supabase.createClient(SB_URL, SB_KEY, {
       auth: { storage: window.sessionStorage }
     });
+    // 안전망: insert/update/upsert/delete가 실패하면(오프라인·권한·제약조건 등) 조용히 넘어가지 않고 알림
+    try{
+      let proto = Object.getPrototypeOf(sb.from('profiles').select('id')); // select()가 반환하는 필터 빌더에 then이 있음(요청은 then 호출 전엔 안 나감)
+      while(proto && !Object.prototype.hasOwnProperty.call(proto, 'then')) proto = Object.getPrototypeOf(proto);
+      if(proto && typeof proto.then === 'function' && !proto.__writeGuard){
+        const origThen = proto.then;
+        proto.then = function(onF, onR){
+          const self = this;
+          const guarded = origThen.call(self, function(res){
+            try{
+              const m = self.method;
+              if(res && res.error && m && m !== 'GET' && m !== 'HEAD'){
+                const offline = /fetch|network|failed to load/i.test(res.error.message || '');
+                const isDup = res.error.code === '23505' || /duplicate key/i.test(res.error.message || '');
+                if(isDup && window.__suppressDupToast){ /* 호출한 코드가 기존 기록 갱신으로 처리함 */ }
+                else if(window.__onWriteError) window.__onWriteError(offline ? '인터넷 연결을 확인해주세요. 방금 입력이 저장되지 않았을 수 있어요.' : isDup ? '이미 같은 기록이 있어서 저장하지 않았어요.' : ('저장되지 않았어요: ' + (res.error.message || '알 수 없는 오류')));
+              }
+            }catch(e){}
+            return res;
+          });
+          return guarded.then(onF, onR);
+        };
+        proto.__writeGuard = true;
+      }
+    }catch(e){ console.warn('write guard not installed', e); }
+    try{ sb.auth.onAuthStateChange((event) => { if(event === 'PASSWORD_RECOVERY'){ recoveryMode = true; try{ showRecoveryForm(); }catch(e){} } }); }catch(e){}
   }
 </script>
 <script>
@@ -1976,6 +2038,8 @@ function addCustomRow(){
 }
 let topZ = 20;
 function openSub(id){
+  try{ refreshDateLabels(); }catch(e){}
+  if(id === 'inquiry'){ try{ captureInquiryContext(); }catch(e){} }
   const el = document.getElementById('sub-'+id);
   topZ++;
   el.style.zIndex = topZ;
@@ -1990,7 +2054,8 @@ function openSub(id){
   }
   if(id === 'mealplan'){
     refreshMealPlanIfNewWeek().then(() => {
-      try{ renderMealPlanGrid(); syncGroceryListToActual(); renderFridge(); }catch(e){ console.error('mealplan render failed', e); }
+      try{ renderMealPlanGrid(); }catch(e){ console.error('mealplan render failed', e); }
+      loadMealState().catch(e => console.error('mealplan state load failed', e));
     }).catch(e => console.error('mealplan refresh failed', e));
   }
   if(id === 'categories'){
@@ -2015,6 +2080,9 @@ function openSub(id){
   }
   if(id === 'monthsettle'){
     try{ renderMonthSettle(); }catch(e){ console.error('monthsettle render failed', e); }
+  }
+  if(id === 'inquiry'){
+    loadMyInquiries().catch(e => console.error('inquiry load failed', e));
   }
   if(id === 'idx'){
     (async () => {
@@ -2067,6 +2135,8 @@ function closeAllSubs(){
   });
 }
 function closeSub(id){
+  setTimeout(() => { try{ checkDayRollover(); }catch(e){} }, 80); // 화면을 닫아 홈으로 돌아왔을 때 날짜가 바뀌어 있으면 갱신
+  if(id === 'ledger'){ try{ warnUnfinishedRows(); }catch(e){} }
   document.getElementById('sub-'+id).classList.remove('open');
   const banner = document.getElementById(id + 'ViewBanner');
   if(banner) banner.style.display = 'none';
@@ -2078,10 +2148,29 @@ function closeSub(id){
   }
 }
 const _saveTimers = {};
+// 자산·부채 카드의 입력칸은 onchange(포커스를 벗어날 때)에만 저장되던 것을, 타이핑 중에도 0.7초 뒤 저장
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(!el || !el.closest) return;
+  const card = el.closest('.asset-card'); if(!card || !card.dataset.id) return;
+  const h = el.getAttribute('onchange') || '';
+  const m = h.match(/^(saveAssetField|saveLiabilityField)\(this,'(\w+)'\)/);
+  if(!m) return;
+  debouncedCall(m[1] + ':' + card.dataset.id + ':' + m[2], () => window[m[1]](el, m[2]), 700);
+});
+const _pendingFns = {};
 function debouncedCall(key, fn, delay){
   clearTimeout(_saveTimers[key]);
-  _saveTimers[key] = setTimeout(fn, delay || 600);
+  _pendingFns[key] = fn;
+  _saveTimers[key] = setTimeout(() => { delete _pendingFns[key]; fn(); }, delay || 600);
 }
+function flushPendingSaves(){
+  Object.keys(_pendingFns).forEach(k => { clearTimeout(_saveTimers[k]); const f = _pendingFns[k]; delete _pendingFns[k]; try{ f(); }catch(e){} });
+  try{ if(typeof mealSaveTimer !== 'undefined' && mealSaveTimer) saveMealStateNow(); }catch(e){}
+  try{ saveReflectionNow(); }catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') flushPendingSaves(); });
+window.addEventListener('pagehide', flushPendingSaves);
 // 날짜를 안 누르고 추가 버튼을 누른 경우: 보이는 주의 오늘(없으면 첫날)을 자동 선택
 async function ensureSelectedDay(){
   if(selectedDayDate instanceof Date && !isNaN(selectedDayDate)) return true;
@@ -2096,16 +2185,134 @@ async function ensureSelectedDay(){
   }
   return selectedDayDate instanceof Date;
 }
+/* ══ 가계부 입력: [완료] 버튼 · 작성 중 임시보관 ══
+   · 금액·카테고리를 적는 동안은 가계부 기록(합계)에 반영하지 않아요 → 적다 만 중간 값(예: 450,000을 치다 멈춘 45)이 기록되는 일이 없어요.
+   · 대신 적는 즉시 이 기기에 임시보관해요 → 앱을 닫거나 다른 날짜로 넘어가도 사라지지 않고, 다시 열면 이어서 완료할 수 있어요.
+   · [완료]를 누르면 바로 저장되고 달력·합계에 즉시 반영돼요. */
+var _memDrafts = {};
+function draftStoreKey(){ return 'rbDrafts:' + (currentUser ? currentUser.id : 'anon'); }
+function readDrafts(){ try{ return JSON.parse(localStorage.getItem(draftStoreKey()) || '{}') || {}; }catch(e){ return Object.assign({}, _memDrafts); } }
+function writeDrafts(d){ _memDrafts = Object.assign({}, d); try{ localStorage.setItem(draftStoreKey(), JSON.stringify(d)); }catch(e){} }
+function rowDraftKeys(row){
+  if(row.dataset.autoFixed === '1') return ['fx:' + row.dataset.dayKey + ':' + row.dataset.categoryId];
+  const k = []; if(row.dataset.txId) k.push('tx:' + row.dataset.txId); if(row.dataset.tempId) k.push('tx:' + row.dataset.tempId); return k;
+}
+function rowKind(row){ const dot = row.querySelector('.tx-dot'); return dot && dot.classList.contains('income') ? 'income' : 'expense'; }
+function captureDraft(row){
+  if(!currentUser) return;
+  const d = readDrafts(); const fixed = row.dataset.autoFixed === '1';
+  rowDraftKeys(row).forEach(k => delete d[k]);
+  const rec = { fixed, dayKey: row.dataset.dayKey, amt: rawMoney(row.querySelector('.tx-input')), ts: Date.now() };
+  if(fixed) rec.categoryId = row.dataset.categoryId;
+  else { rec.kind = rowKind(row); rec.cat = row.querySelector('.tx-cat').value; rec.name = row.querySelector('.tx-name').value; rec.txId = row.dataset.txId || null; rec.tempId = row.dataset.tempId || null; }
+  d[rowDraftKeys(row)[0]] = rec;
+  writeDrafts(d);
+}
+function clearDraft(row){ const d = readDrafts(); rowDraftKeys(row).forEach(k => delete d[k]); writeDrafts(d); }
+function setRowState(row, state){ // 'editing' | 'done' | 'idle'
+  row.classList.toggle('editing', state === 'editing');
+  row.classList.toggle('done-ok', state === 'done');
+  const b = row.querySelector('.row-done'); if(!b) return;
+  b.disabled = false; b.textContent = state === 'done' ? '✓ 완료됨' : '완료';
+}
+function onRowEdited(e){
+  const t = e.target; if(!t || !t.matches || !t.matches('.tx-cat, .tx-name, .tx-input') || t.disabled) return;
+  const row = t.closest('.tx-row'); if(!row || !row.querySelector('.row-done')) return;
+  setRowState(row, 'editing'); captureDraft(row); updateDraftHint();
+}
+document.addEventListener('input', onRowEdited);
+document.addEventListener('change', onRowEdited);
+function manualRowHtml(kind, vals){
+  const cats = kind === 'income' ? incomeOptions(vals.cat || '') : catOptions(vals.cat || '');
+  return `<div class="tx-m-top"><span class="tx-dot ${kind}"></span><select class="tx-cat">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" value="${escAttr(vals.name||'')}"></div>`
+    + `<div class="tx-m-bottom"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" value="${vals.amt ? Number(vals.amt).toLocaleString() : ''}" oninput="formatMoneyInput(this)"><button class="row-done" onclick="completeRow(this)">완료</button><button class="row-del" onclick="deleteManualTx(this)">✕</button></div>`;
+}
+function createManualRow(kind, vals, state, ids){
+  const row = document.createElement('div'); row.className = 'tx-row manual';
+  if(ids) Object.assign(row.dataset, ids);
+  row.innerHTML = manualRowHtml(kind, vals);
+  setRowState(row, state); return row;
+}
 async function addTx(type){
   if(!(await ensureSelectedDay())) return;
   const list = document.getElementById('dayTxList');
-  const row = document.createElement('div');
-  row.className = 'tx-row';
-  row.dataset.tempId = 'tmp'+Date.now()+Math.random();
-  row.dataset.dayKey = dateKey(selectedDayDate);
-  const cats = type==='expense' ? catOptions('') : incomeOptions('');
-  row.innerHTML = `<span class="tx-dot ${type}"></span><select class="tx-cat" onchange="saveManualTx(this)">${cats}</select><input class="tx-name" type="text" placeholder="거래명(선택)" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);debouncedCall(this.closest('.tx-row').dataset.tempId, ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
+  const row = createManualRow(type, {}, 'editing', { tempId: 'tmp' + Date.now() + Math.floor(Math.random()*1e6), dayKey: dateKey(selectedDayDate) });
   list.appendChild(row);
+  row.querySelector('.tx-input').focus();
+}
+async function completeRow(btn){
+  const row = btn.closest('.tx-row'); if(!row || row._completing) return;
+  const fixed = row.dataset.autoFixed === '1';
+  const amtInput = row.querySelector('.tx-input'); const amount = rawMoney(amtInput);
+  if(!fixed){
+    if(!amount){ toastMsg('금액을 입력해주세요', 1800); amtInput.focus(); return; }
+    if(rowKind(row) === 'expense' && !row.querySelector('.tx-cat').value){ toastMsg('카테고리를 선택해주세요', 1800); row.querySelector('.tx-cat').focus(); return; }
+  }
+  row._completing = true; btn.disabled = true; btn.textContent = '저장 중...';
+  let ok = false;
+  try{ ok = fixed ? await saveFixedTx(amtInput) : await saveManualTx(btn); }catch(e){ ok = false; }
+  row._completing = false;
+  if(ok === true){
+    clearDraft(row); setRowState(row, 'done');
+    if(fixed){ row.classList.toggle('skipped', amount === 0); row.classList.toggle('confirmed', amount > 0); }
+    markDuplicates(); updateDraftHint();
+  } else {
+    setRowState(row, 'editing'); btn.textContent = '다시 시도';
+    toastMsg('저장하지 못했어요. 적은 내용은 보관돼 있으니 다시 눌러주세요', 3500);
+  }
+}
+function updateDraftHint(){
+  const list = document.getElementById('dayTxList'); if(!list) return;
+  const n = [...list.querySelectorAll('.tx-row.editing')].filter(r => rawMoney(r.querySelector('.tx-input')) > 0 || r.dataset.autoFixed === '1').length;
+  let h = list.querySelector('.draft-hint');
+  if(n === 0){ if(h) h.remove(); return; }
+  if(!h){ h = document.createElement('p'); h.className = 'draft-hint'; list.insertBefore(h, list.firstChild); }
+  h.textContent = `아직 완료하지 않은 항목이 ${n}개 있어요. [완료]를 눌러야 가계부에 반영돼요. (적은 내용은 자동으로 보관돼요)`;
+}
+function markDuplicates(){
+  const list = document.getElementById('dayTxList'); if(!list) return;
+  list.querySelectorAll('.dup-hint').forEach(e => e.remove());
+  const seen = {};
+  list.querySelectorAll('.tx-row.manual').forEach(row => {
+    if(!row.dataset.txId) return;
+    const k = [rowKind(row), row.querySelector('.tx-cat').value, row.querySelector('.tx-name').value.trim(), rawMoney(row.querySelector('.tx-input'))].join('|');
+    if(seen[k]){ const sp = document.createElement('span'); sp.className = 'dup-hint'; sp.textContent = '같은 내용 중복?'; row.querySelector('.tx-m-top').appendChild(sp); }
+    else seen[k] = 1;
+  });
+}
+function applyDraftsToDay(key){
+  const drafts = readDrafts(); const list = document.getElementById('dayTxList'); let n = 0;
+  Object.values(drafts).forEach(rec => {
+    if(!rec || rec.dayKey !== key) return;
+    if(rec.fixed){
+      const row = [...list.querySelectorAll('.tx-row.fixed')].find(r => r.dataset.categoryId === rec.categoryId);
+      if(!row) return;
+      row.querySelector('.tx-input').value = Number(rec.amt || 0).toLocaleString();
+      setRowState(row, 'editing'); n++;
+    } else if(rec.txId){
+      const row = [...list.querySelectorAll('.tx-row.manual')].find(r => r.dataset.txId === rec.txId);
+      if(!row) return;
+      const sel = row.querySelector('.tx-cat');
+      if(rec.cat && ![...sel.options].some(o => o.value === rec.cat)){ const o = document.createElement('option'); o.textContent = rec.cat; sel.appendChild(o); }
+      sel.value = rec.cat || '';
+      row.querySelector('.tx-name').value = rec.name || '';
+      row.querySelector('.tx-input').value = rec.amt ? Number(rec.amt).toLocaleString() : '';
+      setRowState(row, 'editing'); n++;
+    } else {
+      list.appendChild(createManualRow(rec.kind, { cat: rec.cat, name: rec.name, amt: rec.amt }, 'editing', { tempId: rec.tempId || ('tmp' + Date.now()), dayKey: key })); n++;
+    }
+  });
+  return n;
+}
+var _draftAnnounced = false;
+function announceDrafts(){
+  if(_draftAnnounced || !currentUser) return; _draftAnnounced = true;
+  const n = Object.values(readDrafts()).filter(r => r && (r.fixed || r.amt > 0)).length;
+  if(n > 0) toastMsg(`완료하지 않은 가계부 입력 ${n}건이 보관돼 있어요. 해당 날짜에서 [완료]를 눌러주세요`, 5000);
+}
+function warnUnfinishedRows(){
+  const n = [...document.querySelectorAll('#dayTxList .tx-row.editing')].filter(r => rawMoney(r.querySelector('.tx-input')) > 0).length;
+  if(n > 0) toastMsg(`완료하지 않은 항목 ${n}개는 보관돼 있어요. 다시 열면 이어서 완료할 수 있어요`, 3500);
 }
 async function renderWeekSettle(){
   if(!currentUser) return;
@@ -2147,7 +2354,7 @@ async function renderWeekSettle(){
 
     const group = document.createElement('div');
     group.className = 'settle-group';
-    const budgetText = budget > 0 ? (budget>=10000 ? Math.round(budget/10000*10)/10+'만' : budget.toLocaleString()) : '-';
+    const budgetText = budget > 0 ? budget.toLocaleString()+'원' : '-';
     const subLabel = cat.kind === 'income' ? `<i>${cat.income_tag||''}</i>` : '';
     group.innerHTML = `
       <div class="settle-row" onclick="toggleDays(this)">
@@ -2161,6 +2368,43 @@ async function renderWeekSettle(){
     (cat.kind === 'income' ? incomeWrap : expenseWrap).appendChild(group);
   });
 
+  // 직접 추가한 지출/수입(카테고리 id 없이 category_snapshot으로 저장된 것)도 주말정산에 포함
+  {
+    const catIds = new Set(myCategoriesCache.map(c=>c.id));
+    const todayKeyWs = dateKey(new Date());
+    const manualGroups = {}; // 'kind|label' -> [7일 금액]
+    weekDates.forEach((d,i) => {
+      const key = dateKey(d);
+      if(key > todayKeyWs) return;
+      (weekTxCache[key]||[]).forEach(t => {
+        if(t.is_auto_fixed) return;
+        if(t.category_id && catIds.has(t.category_id)) return; // 위에서 이미 집계됨
+        const label = t.category_snapshot || (t.kind==='income' ? '기타 수입' : '기타 지출');
+        const gk = t.kind + '|' + label;
+        if(!manualGroups[gk]) manualGroups[gk] = [0,0,0,0,0,0,0];
+        manualGroups[gk][i] += Number(t.amount)||0;
+      });
+    });
+    Object.entries(manualGroups).forEach(([gk, dayAmounts]) => {
+      const [kind, label] = gk.split('|');
+      const total = dayAmounts.reduce((s,v)=>s+v,0);
+      if(total === 0) return;
+      anyRow = true;
+      if(kind === 'income') incomeTotal += total; else expenseTotal += total;
+      const group = document.createElement('div');
+      group.className = 'settle-group';
+      group.innerHTML = `
+      <div class="settle-row" onclick="toggleDays(this)">
+        <span class="tx-dot ${kind}"></span><span class="sr-name">${label} <i>직접 입력</i></span>
+        <span class="sr-nums"><span class="sr-col"><small>예산</small><b class="sr-budget">-</b></span><span class="sr-col"><small>실제</small><b class="sr-total">${total.toLocaleString()}원</b></span></span><span class="sr-chev">⌄</span>
+      </div>
+      <div class="day-inputs">
+        ${dayLabels.map((dl,i)=>`<div class="di-cell"><label>${dl}</label><input type="text" value="${dayAmounts[i]?dayAmounts[i].toLocaleString():''}" readonly></div>`).join('')}
+      </div>`;
+      (kind === 'income' ? incomeWrap : expenseWrap).appendChild(group);
+    });
+  }
+
   document.getElementById('wsIncomeTotal').textContent = incomeTotal.toLocaleString()+'원';
   document.getElementById('wsExpenseTotal').textContent = expenseTotal.toLocaleString()+'원';
   document.getElementById('wsEmptyNote').style.display = anyRow ? 'none' : 'block';
@@ -2169,7 +2413,8 @@ async function renderWeekSettle(){
 const MS_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D85A30','#D4537E','#888780','#8B5CF6','#F59E0B'];
 let msIncChartInstance, msExpChartInstance;
 let monthSettleOffset = 0;
-function navMonthSettle(dir){
+async function navMonthSettle(dir){
+  await saveReflectionNow(); // 달을 넘기기 전에 쓰던 성찰 저장
   monthSettleOffset += dir;
   renderMonthSettle();
 }
@@ -2183,6 +2428,7 @@ async function renderMonthSettle(){
   const label = `${target.getFullYear()}년 ${target.getMonth()+1}월${monthSettleOffset===0?' · 이번 달':''}`;
   document.getElementById('monthsettleTitle').textContent = `월말정산 · ${target.getMonth()+1}월`;
   document.getElementById('monthsettleNavLabel').textContent = label;
+  loadReflection(monthStart).catch(e => console.error('reflection load failed', e));
 
   const { data, error } = await sb.from('transactions').select('*')
     .eq('user_id', currentUser.id).gte('tx_date', monthStart).lte('tx_date', monthEnd);
@@ -2276,10 +2522,13 @@ document.addEventListener('input', function(e){
 });
 const INCOME_TAGS = ['노동수입','금융수입','이벤트수입'];
 function incomeOptions(selected){
-  return INCOME_TAGS.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
+  const tags = (selected && !INCOME_TAGS.includes(selected)) ? [...INCOME_TAGS, selected] : INCOME_TAGS;
+  return tags.map(c => `<option${c===selected?' selected':''}>${c}</option>`).join('');
 }
 function catOptions(selected){
-  const names = [...new Set(myCategoriesCache.filter(c=>c.kind==='expense' && !c.linked_asset_id).map(c=>c.category))];
+  const names = [...new Set(myCategoriesCache.filter(c=>c.kind==='expense' && !c.linked_asset_id && !c.ended_on).map(c=>c.category))];
+  // 투자 연결·종료된 카테고리처럼 목록엔 없지만 이미 쓰인 값은 그대로 보여줌 ('선택 안 됨'으로 잘못 보이거나, 수정할 때 빈 값으로 덮이는 것 방지)
+  if(selected && !names.includes(selected)) names.push(selected);
   const placeholder = `<option value=""${!selected?' selected':''}>카테고리 선택 안 됨 ⚠️</option>`;
   if(names.length === 0) return placeholder;
   return placeholder + names.map(n => `<option${n===selected?' selected':''}>${n}</option>`).join('');
@@ -2291,7 +2540,11 @@ let weekTxCache = {}; // { 'YYYY-MM-DD': [tx, ...] }
 function dayLabelForDate(d){
   const day = d.getDate();
   const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-  return (day === lastDay) ? ['말일', String(day)] : [String(day)];
+  if(day !== lastDay) return [String(day)];
+  // 말일에는 '말일' + 그 달에 없는 날짜(예: 2월의 29·30·31일, 4월의 31일)로 지정된 항목도 함께 해당
+  const labels = ['말일'];
+  for(let n = day; n <= 31; n++) labels.push(String(n));
+  return labels;
 }
 async function loadMyCategories(){
   if(!currentUser) return;
@@ -2299,10 +2552,17 @@ async function loadMyCategories(){
   if(error){ console.error('categories load failed', error); return; }
   myCategoriesCache = data || [];
 }
+function categoryActiveOn(c, key){
+  if(c.effective_from && key < c.effective_from) return false;
+  if(c.ended_on && key >= c.ended_on) return false;
+  return true;
+}
 function getDueItemsForDate(d){
   const labels = dayLabelForDate(d); // ['말일','30'] or ['5']
   const items = [];
+  const dKey = dateKey(d);
   myCategoriesCache.forEach(c => {
+    if(!categoryActiveOn(c, dKey)) return;
     if(c.category_splits && c.category_splits.length > 0){
       c.category_splits.forEach(s => {
         if(labels.includes(s.day_label)){
@@ -2378,13 +2638,15 @@ async function showRealDay(el, d){
       <div class="tx-fixed-top">
         <span class="tx-dot ${item.kind}"></span><span class="tx-fixed-badge${item.kind==='income'?' income':''}">고정</span>
         ${catSelectHtml}
+        <button class="row-done" onclick="completeRow(this)">완료</button>
       </div>
       <div class="tx-fixed-bottom">
         <span class="tx-fixed-name">${item.name}</span>
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
-        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('${item.category_id}', ()=>saveFixedTx(this))" onchange="saveFixedTx(this)">
+        <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this)">
         <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
       </div>`;
+    setRowState(row, existing ? 'done' : 'idle');
     list.appendChild(row);
   });
 
@@ -2408,14 +2670,16 @@ async function showRealDay(el, d){
       list.appendChild(row);
       return;
     }
-    const catHtml = tx.kind === 'income'
-      ? `<select class="tx-cat" onchange="saveManualTx(this)">${incomeOptions('')}</select>`
-      : `<select class="tx-cat" onchange="saveManualTx(this)">${catOptions(tx.category_snapshot||'')}</select>`;
-    row.innerHTML = `<span class="tx-dot ${tx.kind}"></span>${catHtml}<input class="tx-name" type="text" placeholder="거래명(선택)" value="${tx.name||''}" onchange="saveManualTx(this)"><input class="tx-input" type="text" inputmode="numeric" value="${Number(tx.amount).toLocaleString()}" oninput="formatMoneyInput(this);debouncedCall('${tx.id}', ()=>saveManualTx(this))" onchange="saveManualTx(this)"><button class="row-del" onclick="deleteManualTx(this)">✕</button>`;
+    row.className = 'tx-row manual';
+    row.innerHTML = manualRowHtml(tx.kind, { cat: tx.category_snapshot || '', name: tx.name || '', amt: Number(tx.amount) });
+    setRowState(row, 'done');
     list.appendChild(row);
   });
 
-  if(due.length === 0 && manualTx.length === 0){
+  const draftsApplied = applyDraftsToDay(key);
+  markDuplicates();
+  updateDraftHint();
+  if(due.length === 0 && manualTx.length === 0 && !draftsApplied){
     const emptyNote = document.createElement('p');
     emptyNote.className = 'field-hint';
     emptyNote.style.margin = '0 20px';
@@ -2426,9 +2690,10 @@ async function showRealDay(el, d){
 async function skipFixedTx(btn){
   const row = btn.closest('.tx-row');
   const input = row.querySelector('.tx-input');
+  if(!confirm('이번엔 없었던 항목으로 처리할까요?\n(금액이 0원으로 기록돼요)')) return;
   input.value = '0';
-  await saveFixedTx(input);
-  row.classList.add('skipped');
+  const ok = await saveFixedTx(input);
+  if(ok === true){ clearDraft(row); row.classList.add('skipped'); row.classList.remove('confirmed'); setRowState(row, 'done'); updateDraftHint(); }
 }
 async function addInvestTx(){
   if(!(await ensureSelectedDay())) return;
@@ -2475,7 +2740,7 @@ async function handleInvestTypeChange(select){
     <input class="invest-new-name" type="text" placeholder="새 투자 이름 (예: OO프로젝트)" style="display:none;">
     <div class="invest-save-row">
       <input class="tx-input" type="text" inputmode="numeric" placeholder="투자금액" oninput="formatMoneyInput(this)">
-      <button class="add-row-sm" onclick="saveInvestTxNew(this)">저장</button>
+      <button class="add-row-sm" onclick="saveInvestTxNew(this)">완료</button>
     </div>
   `;
 }
@@ -2498,25 +2763,25 @@ async function saveInvestTxNew(btn){
   let categoryId = assetSelect.value;
   if(categoryId === '__new__'){
     const newName = area.querySelector('.invest-new-name').value.trim();
-    if(!newName){ alert('새 투자 이름을 입력해주세요'); btn.disabled=false; btn.textContent='저장'; return; }
+    if(!newName){ alert('새 투자 이름을 입력해주세요'); btn.disabled=false; btn.textContent='완료'; return; }
     const { data: newAsset, error: assetErr } = await sb.from('assets').insert({
       user_id: currentUser.id, asset_type: assetType, name: newName, amount: 0,
     }).select().single();
-    if(assetErr){ alert('자산 생성 실패: ' + assetErr.message); btn.disabled=false; btn.textContent='저장'; return; }
+    if(assetErr){ alert('자산 생성 실패: ' + assetErr.message); btn.disabled=false; btn.textContent='완료'; return; }
     myAssetsCache.push(newAsset);
     const { data: newCat, error: catErr } = await sb.from('ledger_categories').insert({
       user_id: currentUser.id, kind: 'expense', category: assetType, name: newName, linked_asset_id: newAsset.id,
     }).select().single();
-    if(catErr){ alert('카테고리 생성 실패: ' + catErr.message); btn.disabled=false; btn.textContent='저장'; return; }
+    if(catErr){ alert('카테고리 생성 실패: ' + catErr.message); btn.disabled=false; btn.textContent='완료'; return; }
     myCategoriesCache.push(newCat);
     categoryId = newCat.id;
   }
-  if(!categoryId){ alert('투자 항목을 선택해주세요'); btn.disabled=false; btn.textContent='저장'; return; }
+  if(!categoryId){ alert('투자 항목을 선택해주세요'); btn.disabled=false; btn.textContent='완료'; return; }
 
   const { data, error } = await sb.from('transactions').insert({
     user_id: currentUser.id, category_id: categoryId, amount, kind:'expense', tx_date:key, is_auto_fixed:false,
   }).select().single();
-  if(error){ alert('저장 실패: ' + error.message); btn.disabled=false; btn.textContent='저장'; return; }
+  if(error){ alert('저장 실패: ' + error.message); btn.disabled=false; btn.textContent='완료'; return; }
   if(!weekTxCache[key]) weekTxCache[key] = [];
   weekTxCache[key].push(data);
 
@@ -2566,7 +2831,28 @@ async function deleteInvestTx(btn){
   refreshWeekGridDisplay();
   refreshLedgerSummary();
 }
-async function saveFixedTx(input){
+function saveFixedTx(input){
+  const row = input.closest('.tx-row');
+  if(!row) return;
+  row._saveChain = (row._saveChain || Promise.resolve())
+    .then(()=>_saveFixedTxNow(input))
+    .catch(e=>{ console.error('fixed tx save failed', e); return false; });
+  return row._saveChain;
+}
+/* 고정항목 기록은 '같은 날 같은 항목 1건'만 허용(DB 규칙). 이미 있으면(다른 기기·탭에서 먼저 저장된 경우 등) 새로 넣지 않고 기존 기록의 금액을 갱신 */
+async function upsertFixedTx(payload){
+  window.__suppressDupToast = true;
+  let res;
+  try{ res = await sb.from('transactions').insert(payload).select().single(); } finally { window.__suppressDupToast = false; }
+  if(!res.error) return res;
+  const isDup = res.error.code === '23505' || /duplicate key/i.test(res.error.message || '');
+  if(!isDup) return res;
+  const { data: ex, error: e2 } = await sb.from('transactions').select('id')
+    .eq('user_id', payload.user_id).eq('category_id', payload.category_id).eq('tx_date', payload.tx_date).eq('is_auto_fixed', true).maybeSingle();
+  if(e2 || !ex) return res;
+  return await sb.from('transactions').update({ amount: payload.amount }).eq('id', ex.id).select().single();
+}
+async function _saveFixedTxNow(input){
   const row = input.closest('.tx-row');
   const amount = rawMoney(input);
   const categoryId = row.dataset.categoryId;
@@ -2574,20 +2860,30 @@ async function saveFixedTx(input){
   const key = row.dataset.dayKey || dateKey(selectedDayDate);
   if(row.dataset.txId){
     const { error } = await sb.from('transactions').update({ amount }).eq('id', row.dataset.txId);
-    if(error){ console.error('fixed tx update failed', error); return; }
+    if(error){ console.error('fixed tx update failed', error); return false; }
     const tx = weekTxCache[key]?.find(t=>t.id===row.dataset.txId);
     if(tx) tx.amount = amount;
   } else {
-    const { data, error } = await sb.from('transactions').insert({
+    const { data, error } = await upsertFixedTx({
       user_id: currentUser.id, category_id: categoryId, amount, kind, tx_date: key, is_auto_fixed: true,
-    }).select().single();
-    if(error){ console.error('fixed tx insert failed', error); return; }
+    });
+    if(error){ console.error('fixed tx insert failed', error); return false; }
     row.dataset.txId = data.id;
     if(!weekTxCache[key]) weekTxCache[key] = [];
     weekTxCache[key].push(data);
   }
   refreshWeekGridDisplay();
   refreshLedgerSummary();
+  flashSaved();
+  return true;
+}
+function flashSaved(){
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = '저장됐어요 ✓';
+  t.classList.add('show');
+  clearTimeout(flashSaved._t);
+  flashSaved._t = setTimeout(()=>t.classList.remove('show'), 1200);
 }
 function saveManualTx(el){
   const row = el.closest('.tx-row');
@@ -2595,7 +2891,7 @@ function saveManualTx(el){
   // 금액 debounce + 이름/카테고리 onchange가 거의 동시에 오면 insert가 두 번 나가던 문제 방지
   row._saveChain = (row._saveChain || Promise.resolve())
     .then(()=>_saveManualTxNow(row))
-    .catch(e=>console.error('manual tx save failed', e));
+    .catch(e=>{ console.error('manual tx save failed', e); return false; });
   return row._saveChain;
 }
 async function _saveManualTxNow(row){
@@ -2613,19 +2909,26 @@ async function _saveManualTxNow(row){
   };
   if(row.dataset.txId){
     const { error } = await sb.from('transactions').update(payload).eq('id', row.dataset.txId);
-    if(error){ console.error('manual tx update failed', error); return; }
+    if(error){ console.error('manual tx update failed', error); return false; }
+    // 화면 캐시도 갱신 — 안 하면 다른 탭 갔다 오면 수정 전 값(카테고리/금액)이 다시 보임
+    const list = weekTxCache[key] || (weekTxCache[key] = []);
+    const cached = list.find(t=>t.id===row.dataset.txId);
+    if(cached) Object.assign(cached, payload); else list.push({ id: row.dataset.txId, ...payload });
   } else {
     const { data, error } = await sb.from('transactions').insert(payload).select().single();
-    if(error){ console.error('manual tx insert failed', error); return; }
+    if(error){ console.error('manual tx insert failed', error); return false; }
     row.dataset.txId = data.id;
     if(!weekTxCache[key]) weekTxCache[key] = [];
     weekTxCache[key].push(data);
   }
+  flashSaved();
   refreshWeekGridDisplay();
   refreshLedgerSummary();
+  return true;
 }
 async function deleteManualTx(btn){
   const row = btn.closest('.tx-row');
+  if(row.dataset.txId && !confirm('이 기록을 삭제할까요?\n되돌릴 수 없어요.')) return;
   if(row._saveChain) await row._saveChain; // 저장 중이던 행이면 저장 끝난 뒤 삭제
   const id = row.dataset.txId;
   if(id){
@@ -2634,7 +2937,9 @@ async function deleteManualTx(btn){
     const key = row.dataset.dayKey || dateKey(selectedDayDate);
     if(weekTxCache[key]) weekTxCache[key] = weekTxCache[key].filter(t=>t.id!==id);
   }
+  clearDraft(row);
   row.remove();
+  updateDraftHint();
   refreshWeekGridDisplay();
   refreshLedgerSummary();
 }
@@ -2657,6 +2962,12 @@ function saveMission(id){
   if(id === 'mealplan'){
     try{ syncPurchasesToFridge(); }catch(e){ console.error('fridge sync failed', e); }
   }
+  if(id === 'settle'){
+    persistEveningActual().catch(e => { console.error('evening save failed', e); alert('저녁정산 저장 실패: ' + e.message); });
+  }
+  if(id === 'budget'){
+    persistMorningBudget().catch(e => console.error('morning save failed', e));
+  }
   logMissionCompletion(id).then(() => { try{ loadMyStats(); }catch(e){} });
   const card = document.querySelector('.mission[data-target="'+id+'"]');
   if(card) card.classList.add('done');
@@ -2667,27 +2978,95 @@ function saveMission(id){
   updateCount();
 }
 function refreshTodayLedgerCell(){
-  if(!todaysEveningActual) return;
-  const total = todaysEveningActual.reduce((s,i)=>s+i.amt, 0);
-  const todayDayNum = new Date().getDate();
-  document.querySelectorAll('.g-cell').forEach(cell=>{
-    if(cell.textContent.trim().startsWith(String(todayDayNum))){
-      const small = cell.querySelector('small');
-      if(small) small.textContent = '-' + Math.round(total/1000) + '천';
+  // 예전: 날짜 숫자로 칸을 찾아 글자만 바꿈(1일이 10~19일 칸까지 바꾸는 버그, 저장도 안 됨)
+  // 이제 실제 저장은 persistEveningActual()이 하고, 끝나면 가계부를 다시 그림
+}
+async function persistEveningActual(){
+  if(!currentUser) return;
+  const todayKey = dateKey(new Date());
+  const inputs = [...document.querySelectorAll('#settleTodayList .am-actual')].filter(i => i.dataset.catId);
+  if(inputs.length === 0) return;
+  const { data: existing } = await sb.from('transactions').select('id, category_id')
+    .eq('user_id', currentUser.id).eq('tx_date', todayKey).eq('is_auto_fixed', true);
+  const exMap = {}; (existing||[]).forEach(t => { exMap[t.category_id] = t.id; });
+  for(const inp of inputs){
+    const amount = rawMoney(inp);
+    const catId = inp.dataset.catId;
+    if(exMap[catId]){
+      const { error } = await sb.from('transactions').update({ amount }).eq('id', exMap[catId]);
+      if(error) throw error;
+    } else {
+      const { error } = await upsertFixedTx({
+        user_id: currentUser.id, category_id: catId, amount, kind: inp.dataset.type || 'expense', tx_date: todayKey,
+        is_auto_fixed: true, category_snapshot: inp.dataset.cat || null, category_label: inp.dataset.nm || null,
+      });
+      if(error) throw error;
     }
-  });
+  }
+  try{
+    await navWeek(0); // 지금 보고 있는 주 다시 불러와서 그리기
+  }catch(e){}
+}
+/* 아침예산 계획도 저장 (user_records key='morning:YYYY-MM-DD') */
+async function persistMorningBudget(){
+  if(!currentUser || !todaysMorningBudget) return;
+  await sb.from('user_records').upsert({
+    user_id: currentUser.id, key: 'morning:' + dateKey(new Date()), value: { items: todaysMorningBudget }, updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' });
+}
+async function loadStoredMorningBudget(){
+  if(!currentUser) return null;
+  const { data } = await sb.from('user_records').select('value').eq('user_id', currentUser.id).eq('key', 'morning:' + dateKey(new Date())).maybeSingle();
+  return data && data.value && Array.isArray(data.value.items) ? data.value.items : null;
 }
 /* ── 금액 입력 콤마 포맷 유틸 ── */
 function formatMoneyInput(el){
   const raw = el.value.replace(/[^\d]/g, '');
   el.value = raw ? Number(raw).toLocaleString() : '';
 }
+/* 소수점이 필요한 값(목표 수치, 커스텀 지표)용: 점(.)을 보존 */
+function formatDecimalInput(el){
+  const v = el.value.replace(/[^\d.]/g, '');
+  const dot = v.indexOf('.');
+  let intPart = dot >= 0 ? v.slice(0, dot) : v;
+  const dec = dot >= 0 ? v.slice(dot + 1).replace(/\./g, '') : null;
+  intPart = intPart ? Number(intPart).toLocaleString() : (dec !== null ? '0' : '');
+  el.value = dec !== null ? intPart + '.' + dec : intPart;
+}
+function rawDecimal(el){ return Number((el.value || '').replace(/,/g, '')) || 0; }
+function fmtNum(n){ return Number(n).toLocaleString(undefined, { maximumFractionDigits: 6 }); }
 function rawMoney(el){
   return Number((el.value || '').replace(/[^\d]/g, '')) || 0;
 }
+/* 오늘의 미션 규칙: 월~금 = 지수체크 / 토·일 = 주말정산 / 말일 = 월말정산(추가) */
+const WEEKDAY_KO = ['일','월','화','수','목','금','토'];
+function missionDayInfo(d){
+  const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const dow = d.getDay();
+  return { dow, isWeekend: dow === 0 || dow === 6, isMonthEnd: d.getDate() === last };
+}
+function weekendRangeKeys(d){ // 오늘이 토·일이면 그 주말의 [토, 일] 날짜키
+  const sat = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() === 0 ? 1 : 0));
+  const sun = new Date(sat.getFullYear(), sat.getMonth(), sat.getDate() + 1);
+  return [dateKey(sat), dateKey(sun)];
+}
+function applyDayMissions(){
+  const now = new Date(); const info = missionDayInfo(now);
+  const show = (t, on) => { const el = document.querySelector('.mission[data-target="'+t+'"]'); if(el) el.classList.toggle('day-hidden', !on); };
+  show('idx', !info.isWeekend); show('weeksettle', info.isWeekend); show('monthsettle', info.isMonthEnd);
+  const dt = document.getElementById('missionDateText');
+  if(dt) dt.textContent = `${now.getMonth()+1}월 ${now.getDate()}일 ${WEEKDAY_KO[now.getDay()]}요일`;
+}
+function openMissionSettle(which){
+  // 홈 미션에서 열면 항상 '이번 주 / 이번 달'부터 (가계부에서 다른 주·달을 보고 있었더라도)
+  if(which === 'weeksettle'){ weekOffset = 0; weekTxCache = {}; }
+  else { monthSettleOffset = 0; }
+  openSub(which);
+}
 function updateCount(){
-  const total = document.querySelectorAll('.mission:not(.locked)').length;
-  const done = document.querySelectorAll('.mission:not(.locked).done').length;
+  try{ applyDayMissions(); }catch(e){}
+  const total = document.querySelectorAll('.mission:not(.locked):not(.day-hidden)').length;
+  const done = document.querySelectorAll('.mission:not(.locked):not(.day-hidden).done').length;
   const countEl = document.getElementById('missionCount');
   if(countEl) countEl.textContent = total > 0 ? (total+'개 중 '+done+'개 완료') : '';
 }
@@ -2704,6 +3083,13 @@ async function loadTodayMissionStatus(){
     const card = document.querySelector('.mission[data-target="'+row.mission_type+'"]');
     if(card) card.classList.add('done');
   });
+  // 주말정산은 토·일 중 하루만 제출해도 그 주말은 완료로 표시
+  const info = missionDayInfo(new Date());
+  if(info.isWeekend){
+    const [satKey, sunKey] = weekendRangeKeys(new Date());
+    const { data: wk } = await sb.from('mission_logs').select('log_date').eq('user_id', currentUser.id).eq('mission_type', 'weeksettle').gte('log_date', satKey).lte('log_date', sunKey);
+    if(wk && wk.length > 0){ const c = document.querySelector('.mission[data-target="weeksettle"]'); if(c) c.classList.add('done'); }
+  }
   updateCount();
 }
 
@@ -2719,7 +3105,7 @@ function makeAssetCardEl(asset, investedTotal){
   const typeOpts = ['비유동자산','고정투자자산','변동자산'].map(t=>`<option value="${t}" ${t===asset.asset_type?'selected':''}>${t}</option>`).join('');
   card.innerHTML = `
     <div class="asset-row">
-      <input class="a-name" type="text" value="${asset.name||''}" placeholder="항목 이름" onchange="saveAssetField(this,'name')">
+      <input class="a-name" type="text" value="${escAttr(asset.name||'')}" placeholder="항목 이름" onchange="saveAssetField(this,'name')">
       <input class="a-amt asset-input" type="text" inputmode="numeric" value="${(asset.amount||0).toLocaleString()}" placeholder="기본금액" oninput="formatMoneyInput(this);recomputeRoadmap()" onchange="saveAssetField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
@@ -2727,8 +3113,8 @@ function makeAssetCardEl(asset, investedTotal){
     <div class="asset-detail">
       <div class="field"><label>분류</label><select onchange="changeAssetType(this)">${typeOpts}</select></div>
       <div class="field"><label>만기일 (있는 경우만)</label><input type="date" value="${asset.maturity_date||''}" onchange="saveAssetField(this,'maturity_date')"></div>
-      <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" value="${asset.fixed_rate||''}" placeholder="예: 연 3%" onchange="saveAssetField(this,'fixed_rate')"></div>
-      <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?" onchange="saveAssetField(this,'next_plan')">${asset.next_plan||''}</textarea></div>
+      <div class="field"><label>고정 수익률 (있는 경우만)</label><input type="text" value="${escAttr(asset.fixed_rate||'')}" placeholder="예: 연 3%" onchange="saveAssetField(this,'fixed_rate')"></div>
+      <div class="field"><label>다음 계획</label><textarea placeholder="이 자산으로 앞으로 뭘 할 계획인가요?" onchange="saveAssetField(this,'next_plan')">${escAttr(asset.next_plan||'')}</textarea></div>
       <button class="add-row" style="border-color:var(--red);color:var(--red);" onclick="deleteAssetCard(this)">삭제</button>
     </div>
   `;
@@ -2755,9 +3141,11 @@ async function saveAssetField(el, field){
   const id = card.dataset.id;
   if(!id) return;
   let value = el.value;
-  if(field === 'amount') value = rawMoney(el);
-  const { error } = await sb.from('assets').update({ [field]: value || null }).eq('id', id);
-  if(error) console.error('asset save failed', error);
+  if(field === 'amount') value = rawMoney(el);            // 0원도 그대로 저장 (NOT NULL 컬럼)
+  else if(field === 'name') value = el.value.trim();      // 빈 이름도 '' 로 저장 (NOT NULL 컬럼)
+  else value = el.value || null;                          // 만기일·수익률·계획은 비우면 null
+  const { error } = await sb.from('assets').update({ [field]: value }).eq('id', id);
+  if(error){ console.error('asset save failed', error); toastMsg('자산 저장 실패: ' + error.message, 3500); }
 }
 async function changeAssetType(selectEl){
   const card = selectEl.closest('.asset-card');
@@ -2771,6 +3159,8 @@ async function changeAssetType(selectEl){
 async function deleteAssetCard(btn){
   const card = btn.closest('.asset-card');
   const id = card.dataset.id;
+  const nm = (card.querySelector('.a-name') || {}).value || '이 자산';
+  if(!confirm(`"${nm}" 항목을 삭제할까요?\n투자 기록과의 연결이 끊기고 되돌릴 수 없어요.`)) return;
   if(id){
     const { error } = await sb.from('assets').delete().eq('id', id);
     if(error){ console.error('asset delete failed', error); return; }
@@ -2874,10 +3264,13 @@ async function loadSurvivalIndex(){
   const [{ data: assets }, { data: liabilities }, { data: invested }] = await Promise.all([
     sb.from('assets').select('amount').eq('user_id', currentUser.id),
     sb.from('liabilities').select('amount').eq('user_id', currentUser.id),
-    sb.from('asset_investment_totals').select('invested_total'),
+    sb.from('asset_investment_totals').select('asset_id, invested_total'),
   ]);
   const assetSum = (assets||[]).reduce((s,a)=>s+Number(a.amount||0),0);
-  const investedSum = (invested||[]).reduce((s,i)=>s+Number(i.invested_total||0),0);
+  // 관리자는 RLS상 전 회원 데이터가 보이므로 반드시 내 자산만 합산
+  const { data: myAssetIds } = await sb.from('assets').select('id').eq('user_id', currentUser.id);
+  const mine = new Set((myAssetIds||[]).map(a=>a.id));
+  const investedSum = (invested||[]).filter(i=>mine.has(i.asset_id)).reduce((s,i)=>s+Number(i.invested_total||0),0);
   const liabilitySum = (liabilities||[]).reduce((s,l)=>s+Number(l.amount||0),0);
   const netWorth = assetSum + investedSum - liabilitySum;
   const monthlyAssetIncome = netWorth * 0.04 / 12;
@@ -2939,14 +3332,14 @@ function makeLiabilityCardEl(liab){
   card.dataset.id = liab.id;
   card.innerHTML = `
     <div class="asset-row">
-      <input class="a-name" type="text" value="${liab.name||''}" placeholder="항목 이름 (예: 신용대출)" onchange="saveLiabilityField(this,'name')">
+      <input class="a-name" type="text" value="${escAttr(liab.name||'')}" placeholder="항목 이름 (예: 신용대출)" onchange="saveLiabilityField(this,'name')">
       <input class="a-amt liability-input" type="text" inputmode="numeric" value="${(liab.amount||0).toLocaleString()}" placeholder="금액" oninput="formatMoneyInput(this);recomputeRoadmap()" onchange="saveLiabilityField(this,'amount')">
       <button class="asset-expand" onclick="toggleAssetDetail(this)">⌄</button>
     </div>
     <div class="asset-detail">
       <div class="field"><label>상환일/만기 (있는 경우만)</label><input type="date" value="${liab.due_date||''}" onchange="saveLiabilityField(this,'due_date')"></div>
-      <div class="field"><label>이자율 (있는 경우만)</label><input type="text" value="${liab.interest_rate||''}" placeholder="예: 연 5.2%" onchange="saveLiabilityField(this,'interest_rate')"></div>
-      <div class="field"><label>다음 계획</label><textarea placeholder="상환 계획 등" onchange="saveLiabilityField(this,'next_plan')">${liab.next_plan||''}</textarea></div>
+      <div class="field"><label>이자율 (있는 경우만)</label><input type="text" value="${escAttr(liab.interest_rate||'')}" placeholder="예: 연 5.2%" onchange="saveLiabilityField(this,'interest_rate')"></div>
+      <div class="field"><label>다음 계획</label><textarea placeholder="상환 계획 등" onchange="saveLiabilityField(this,'next_plan')">${escAttr(liab.next_plan||'')}</textarea></div>
       <button class="add-row" style="border-color:var(--red);color:var(--red);" onclick="deleteLiabilityCard(this)">삭제</button>
     </div>
   `;
@@ -2966,12 +3359,16 @@ async function saveLiabilityField(el, field){
   if(!id) return;
   let value = el.value;
   if(field === 'amount') value = rawMoney(el);
-  const { error } = await sb.from('liabilities').update({ [field]: value || null }).eq('id', id);
-  if(error) console.error('liability save failed', error);
+  else if(field === 'name') value = el.value.trim();
+  else value = el.value || null;
+  const { error } = await sb.from('liabilities').update({ [field]: value }).eq('id', id);
+  if(error){ console.error('liability save failed', error); toastMsg('부채 저장 실패: ' + error.message, 3500); }
 }
 async function deleteLiabilityCard(btn){
   const card = btn.closest('.asset-card');
   const id = card.dataset.id;
+  const nm = (card.querySelector('.a-name') || {}).value || '이 부채';
+  if(!confirm(`"${nm}" 항목을 삭제할까요? 되돌릴 수 없어요.`)) return;
   if(id){
     const { error } = await sb.from('liabilities').delete().eq('id', id);
     if(error){ console.error('liability delete failed', error); return; }
@@ -3012,7 +3409,7 @@ function recomputeRoadmap(){
   const age0 = Number(document.getElementById('ageInput').value) || 30;
   const rate = Number(document.getElementById('rateInput').value) / 100;
   const monthly = rawMoney(document.getElementById('monthlyInvest'));
-  const startYear = 2026;
+  const startYear = new Date().getFullYear();
 
   let asset = total;
   const years = [], ages = [], assets = [], flags = [];
@@ -3082,10 +3479,10 @@ function makeGoalCardEl(goal){
   card.dataset.unit = goal.unit;
   const pct = goal.target ? Math.min(Math.round(goal.current/goal.target*100), 100) : 0;
   card.innerHTML = `
-    <div class="goal-top"><span class="goal-name" id="goalName_${goal.id}">${goal.name}</span><span class="goal-pct">${pct}%</span></div>
+    <div class="goal-top"><span class="goal-name" id="goalName_${goal.id}">${escAttr(goal.name)}</span><span class="goal-pct">${pct}%</span></div>
     <div class="goal-bar"><i style="width:${pct}%"></i></div>
     <div class="goal-foot">
-      <span class="goal-cur-text">${Number(goal.current).toLocaleString()} / ${Number(goal.target).toLocaleString()}${goal.unit}</span>
+      <span class="goal-cur-text">${fmtNum(goal.current)} / ${fmtNum(goal.target)}${escAttr(goal.unit)}</span>
       <span style="display:flex;gap:6px;">
         <button class="goal-edit" onclick="toggleGoalEdit(this)">현재치 수정</button>
         <button class="goal-edit" onclick="toggleGoalMeta(this)">✏️</button>
@@ -3093,11 +3490,11 @@ function makeGoalCardEl(goal){
       </span>
     </div>
     <div class="goal-edit-row">
-      <input type="text" inputmode="numeric" class="goal-cur-input" value="${Number(goal.current).toLocaleString()}" oninput="formatMoneyInput(this)">
+      <input type="text" inputmode="decimal" class="goal-cur-input" value="${fmtNum(goal.current)}" oninput="formatDecimalInput(this)">
       <button class="goal-save-btn" onclick="saveGoalCur(this)">저장</button>
     </div>
     <div class="goal-meta-row" style="display:none;margin-top:8px;">
-      <div class="field"><label>목표명</label><input class="goal-meta-name" type="text" value="${goal.name}"></div>
+      <div class="field"><label>목표명</label><input class="goal-meta-name" type="text" value="${escAttr(goal.name)}"></div>
       <div class="field">
         <label>단위</label>
         <select class="goal-meta-unit">
@@ -3108,7 +3505,7 @@ function makeGoalCardEl(goal){
           <option value="개" ${goal.unit==='개'?'selected':''}>개 (개수)</option>
         </select>
       </div>
-      <div class="field"><label>목표치</label><input class="goal-meta-target" type="text" inputmode="numeric" value="${Number(goal.target).toLocaleString()}" oninput="formatMoneyInput(this)"></div>
+      <div class="field"><label>목표치</label><input class="goal-meta-target" type="text" inputmode="decimal" value="${fmtNum(goal.target)}" oninput="formatDecimalInput(this)"></div>
       <button class="goal-save-btn" onclick="saveGoalMeta(this)">저장</button>
     </div>
   `;
@@ -3130,7 +3527,7 @@ async function addGoal(){
   const targetEl = document.getElementById('gfTarget');
   const unit = document.getElementById('gfUnit').value;
   const name = nameEl.value.trim();
-  const target = rawMoney(targetEl);
+  const target = rawDecimal(targetEl);
   const errEl = document.getElementById('gfError');
   if(!name || !target){
     errEl.textContent = '목표명과 목표치를 입력해주세요';
@@ -3158,9 +3555,9 @@ async function saveGoalCur(btn){
   const id = card.dataset.id;
   const target = Number(card.dataset.target);
   const unit = card.dataset.unit;
-  const curNum = rawMoney(card.querySelector('.goal-cur-input'));
+  const curNum = rawDecimal(card.querySelector('.goal-cur-input'));
   const { error } = await sb.from('investment_goals').update({ current: curNum }).eq('id', id);
-  if(error){ console.error('goal current save failed', error); return; }
+  if(error){ console.error('goal current save failed', error); toastMsg('목표 저장 실패: ' + error.message, 3500); return; }
   const pct = target ? Math.min(Math.round(curNum/target*100), 100) : 0;
   card.querySelector('.goal-pct').textContent = pct + '%';
   card.querySelector('.goal-bar i').style.width = pct + '%';
@@ -3172,13 +3569,13 @@ async function saveGoalMeta(btn){
   const id = card.dataset.id;
   const name = card.querySelector('.goal-meta-name').value.trim();
   const unit = card.querySelector('.goal-meta-unit').value;
-  const target = rawMoney(card.querySelector('.goal-meta-target'));
+  const target = rawDecimal(card.querySelector('.goal-meta-target'));
   if(!name || !target) return;
   const { error } = await sb.from('investment_goals').update({ name, unit, target }).eq('id', id);
-  if(error){ console.error('goal meta save failed', error); return; }
+  if(error){ console.error('goal meta save failed', error); toastMsg('목표 저장 실패: ' + error.message, 3500); return; }
   card.dataset.target = target;
   card.dataset.unit = unit;
-  const current = rawMoney(card.querySelector('.goal-cur-input'));
+  const current = rawDecimal(card.querySelector('.goal-cur-input'));
   const pct = target ? Math.min(Math.round(current/target*100), 100) : 0;
   card.querySelector('#goalName_'+id).textContent = name;
   card.querySelector('.goal-pct').textContent = pct + '%';
@@ -3189,6 +3586,7 @@ async function saveGoalMeta(btn){
 async function deleteGoal(btn){
   const card = btn.closest('.goal-card');
   const id = card.dataset.id;
+  if(!confirm('이 목표를 삭제할까요? 되돌릴 수 없어요.')) return;
   const { error } = await sb.from('investment_goals').delete().eq('id', id);
   if(error){ console.error('goal delete failed', error); return; }
   card.remove();
@@ -3228,7 +3626,6 @@ function calcDiff(input){
 }
 
 /* ── 아침예산 → 저녁정산 실제 연동 ── */
-const TODAY_DAY = new Date().getDate(); // 실제 오늘 날짜 (매일 자동으로 바뀜)
 let todaysMorningBudget = null; // null이면 아직 아침예산을 저장 안 한 상태
 let todaysEveningActual = null; // null이면 아직 저녁정산을 저장 안 한 상태 → 가계부엔 기존 데모값이 보임
 
@@ -3279,7 +3676,7 @@ async function skipTodayFixedItem(btnEl, categoryId){
   } else {
     const kindEl = field.querySelector('input[inputmode="numeric"]');
     const kind = kindEl ? kindEl.dataset.type : 'expense';
-    await sb.from('transactions').insert({
+    await upsertFixedTx({
       user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
     });
   }
@@ -3294,7 +3691,9 @@ async function moveFixedItemDate(btnEl, categoryId, category, kind){
   const day = parseInt(input);
   if(!day || day < 1 || day > 31){ alert('1~31 사이 숫자를 입력해주세요'); return; }
   const now = new Date();
-  const targetDate = new Date(now.getFullYear(), now.getMonth(), day);
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const moveDay = Math.min(day, lastDayOfMonth); // 4월에 31 → 4월 30일(말일). (JS는 4/31을 5/1로 바꿔버려서 다음 달로 넘어갔었음)
+  const targetDate = new Date(now.getFullYear(), now.getMonth(), moveDay);
   const targetKey = dateKey(targetDate);
   const todayKey = dateKey(now);
 
@@ -3304,7 +3703,7 @@ async function moveFixedItemDate(btnEl, categoryId, category, kind){
   if(existing){
     await sb.from('transactions').update({ amount: 0 }).eq('id', existing.id);
   } else {
-    await sb.from('transactions').insert({
+    await upsertFixedTx({
       user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
     });
   }
@@ -3315,7 +3714,7 @@ async function moveFixedItemDate(btnEl, categoryId, category, kind){
   if(error){ alert('옮기기 실패: ' + error.message); return; }
 
   const t = document.getElementById('toast');
-  t.textContent = `"${category}"(${amount.toLocaleString()}원)를 ${day}일로 옮겼어요.`;
+  t.textContent = `"${category}"(${amount.toLocaleString()}원)를 ${moveDay}일로 옮겼어요.` + (moveDay !== day ? ` (이번 달은 ${lastDayOfMonth}일까지라 말일로 옮겼어요)` : '');
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
 
@@ -3344,7 +3743,7 @@ async function renderMorningBudget(){
     field.innerHTML = `
       <label><span class="tx-dot ${item.kind}"></span><span class="item-nm">${item.name}</span> <span class="am-plan">· ${item.category}</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" inputmode="numeric" value="${item.amount.toLocaleString()}" id="morningAmt${i}" oninput="formatMoneyInput(this)" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${item.category}" style="flex:1;">
+        <input type="text" inputmode="numeric" value="${item.amount.toLocaleString()}" id="morningAmt${i}" oninput="formatMoneyInput(this)" data-type="${item.kind}" data-cat-id="${item.category_id}" data-cat="${escAttr(item.category||'')}" style="flex:1;">
         <button class="row-del" onclick="skipTodayFixedItem(this,'${item.category_id}')">✕</button>
       </div>
       <p class="field-hint">오늘 ${item.kind==='income'?'입금':'결제'} 예정 금액이에요. 실제로 다르면 미리 고쳐두세요.
@@ -3356,8 +3755,11 @@ async function renderMorningBudget(){
 }
 
 async function renderEveningSettle(){
-  // 아침예산을 아직 저장 안 했으면, 지금 화면에 있는 값을 그대로 캡처해서 사용
-  if(todaysMorningBudget === null) captureMorningBudget();
+  // 아침예산: 저장된 게 있으면 그걸, 없으면 지금 화면 값을 캡처
+  if(todaysMorningBudget === null){
+    const stored = await loadStoredMorningBudget().catch(()=>null);
+    if(stored) todaysMorningBudget = stored; else captureMorningBudget();
+  }
 
   let items = todaysMorningBudget || [];
   if(items.length === 0 && currentUser){
@@ -3382,7 +3784,7 @@ async function renderEveningSettle(){
     field.innerHTML = `
       <label><span class="item-nm">${item.name}</span> <span class="am-plan">· 아침 계획 ${item.amt.toLocaleString()}원</span></label>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input class="am-actual" type="text" inputmode="numeric" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" value="${item.amt.toLocaleString()}" oninput="formatMoneyInput(this);calcDiff(this)" style="flex:1;">
+        <input class="am-actual" type="text" inputmode="numeric" placeholder="오늘 실제 쓴 금액" data-plan="${item.amt}" data-type="${item.type||'expense'}" data-cat-id="${item.categoryId||''}" data-cat="${escAttr(item.category||'')}" data-nm="${escAttr(item.name||'')}" value="${item.amt.toLocaleString()}" oninput="formatMoneyInput(this);calcDiff(this)" style="flex:1;">
         ${item.categoryId ? `<button class="row-del" onclick="skipTodayFixedItem(this,'${item.categoryId}')">✕</button>` : ''}
       </div>
       <p class="am-diff" data-for="diff"></p>
@@ -3414,7 +3816,7 @@ async function renderEveningSettle(){
 function renderWeekStrip(){
   const strip = document.getElementById('weekStrip');
   if(!strip) return;
-  const today = new Date(2026, 8, TODAY_DAY); // 데모 기준 "오늘"
+  const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 월=0 ... 일=6
   const monday = new Date(today);
   monday.setDate(today.getDate() - dow);
@@ -3669,7 +4071,9 @@ async function renderStamps(){
   if(countLabel) countLabel.textContent = `${loggedDates.size}/${targetDays}일`;
 }
 
+var currentDemoMode = null;
 function setDemoMode(mode){
+  currentDemoMode = mode;
   const main = document.getElementById('mainScreen');
   const bonbu = document.getElementById('sub-bonbu');
   const bonbuBack = bonbu.querySelector('.back-btn');
@@ -3716,6 +4120,7 @@ function setDemoMode(mode){
     })();
   } else if(mode === 'admin'){
     admin.style.display = 'block';
+    try{ loadAdminInquiries(); }catch(e){ console.error('inquiry list load failed', e); }
     try{ loadApprovalList(); }catch(e){ console.error('approval list load failed', e); }
     try{ loadMemberList(); }catch(e){ console.error('member list load failed', e); }
     try{ loadFocusModeList(); }catch(e){ console.error('focus mode list load failed', e); }
@@ -3725,12 +4130,6 @@ function setDemoMode(mode){
     try{ loadRoutineAdminStats(); }catch(e){ console.error('routine admin stats load failed', e); }
     try{ loadBonbuAdminStats(); }catch(e){ console.error('bonbu admin stats load failed', e); }
   }
-}
-function requestPasswordReset(){
-  const t = document.getElementById('toast');
-  t.textContent = '재설정 링크를 이메일로 보냈어요';
-  t.classList.add('show');
-  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2000);
 }
 function showOnboard(step){
   document.getElementById('loginStep').style.display = 'none';
@@ -3773,20 +4172,16 @@ function addObGoalPreview(){
   const list = document.getElementById('obGoalPreviewList');
   const row = document.createElement('div');
   row.className = 'ob-preview-row';
-  row.innerHTML = `<span>${name} · 목표 ${target}${unit}</span><button onclick="this.parentElement.remove()">✕</button>`;
+  row.dataset.name = name; row.dataset.unit = unit; row.dataset.target = target;
+  const sp = document.createElement('span'); sp.textContent = `${name} · 목표 ${target}${unit}`;
+  const rm = document.createElement('button'); rm.textContent = '✕'; rm.onclick = () => row.remove();
+  row.appendChild(sp); row.appendChild(rm);
   list.appendChild(row);
   document.getElementById('obGoalName').value = '';
   document.getElementById('obGoalTarget').value = '';
 }
 /* ── 냉장고: 수량 기반, 구매내역과 자동 연동 ── */
-let fridgeItems = [
-  { name:'양파', qty:1 },
-  { name:'계란', qty:1 },
-  { name:'파', qty:1 },
-  { name:'만두', qty:1 },
-  { name:'감자', qty:1 },
-  { name:'김치', qty:1 },
-];
+let fridgeItems = []; // DB(user_records 'mealplan')에서 불러옴
 function renderFridge(){
   const list = document.getElementById('fridgeList');
   if(!list) return;
@@ -3806,7 +4201,79 @@ function renderFridge(){
     `;
     list.appendChild(row);
   });
+  scheduleMealSave();
 }
+/* ── 냉장고·장보기·구매내역 저장 (user_records key='mealplan') ── */
+let mealStateLoaded = false, mealSaveTimer = null;
+function mealWeekKey(){
+  const t = new Date(); const dow = (t.getDay()+6)%7;
+  return dateKey(new Date(t.getFullYear(), t.getMonth(), t.getDate()-dow));
+}
+function collectMealState(){
+  return {
+    week: mealWeekKey(),
+    fridge: fridgeItems.map(f=>({ name:f.name, qty:Number(f.qty)||0 })),
+    grocery: [...document.querySelectorAll('#groceryList .grocery-row')].map(r=>({
+      name: (r.querySelector('.gr-name')||{}).value||'', qty: (r.querySelector('.gr-qty')||{}).value||'', checked: !!(r.querySelector('input[type=checkbox]')||{}).checked,
+    })).filter(g=>g.name.trim()),
+    budget: rawMoney(document.getElementById('groceryBudget')),
+    actual: [...document.querySelectorAll('#groceryActualList .grocery-actual-row')].map(r=>({
+      name: r.querySelector('.ga-name').value, qty: r.querySelector('.ga-qty').value, amt: rawMoney(r.querySelector('.ga-amt')), synced: r.dataset.synced==='1',
+    })).filter(a=>a.name.trim() || a.amt),
+  };
+}
+function scheduleMealSave(){
+  if(!mealStateLoaded || !currentUser) return; // 불러오기 전에 빈 값으로 덮어쓰지 않도록
+  clearTimeout(mealSaveTimer);
+  mealSaveTimer = setTimeout(saveMealStateNow, 600);
+}
+async function saveMealStateNow(){
+  clearTimeout(mealSaveTimer);
+  if(!mealStateLoaded || !currentUser) return;
+  const { error } = await sb.from('user_records').upsert({
+    user_id: currentUser.id, key: 'mealplan', value: collectMealState(), updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' });
+  if(error){ console.error('mealplan save failed', error); alert('냉장고/장보기 저장 실패: ' + error.message); }
+}
+async function loadMealState(){
+  mealStateLoaded = false;
+  let st = null;
+  if(currentUser){
+    const { data, error } = await sb.from('user_records').select('value').eq('user_id', currentUser.id).eq('key','mealplan').maybeSingle();
+    if(error){ console.error('mealplan load failed', error); }
+    st = data ? data.value : null;
+  }
+  const week = mealWeekKey();
+  const sameWeek = st && st.week === week;
+  fridgeItems = (st && st.fridge) ? st.fridge.map(f=>({ name:f.name, qty:Number(f.qty)||0 })) : [];
+  const gl = document.getElementById('groceryList'); gl.innerHTML = '';
+  const al = document.getElementById('groceryActualList'); al.innerHTML = '';
+  // 냉장고는 계속 유지, 장보기·구매내역·예산은 주가 바뀌면 새로 시작
+  if(sameWeek){
+    (st.grocery||[]).forEach(g => addGroceryRow(g.name, g.qty, g.checked));
+    document.getElementById('groceryBudget').value = st.budget ? Number(st.budget).toLocaleString() : '';
+    (st.actual||[]).forEach(a => addGroceryActualRow(a.name, a.qty, a.amt, a.synced));
+  } else {
+    document.getElementById('groceryBudget').value = '';
+  }
+  if(al.children.length === 0) syncGroceryListToActual(); else recalcGroceryActual();
+  const lbl = document.getElementById('mealWeekLabel');
+  if(lbl){ const m = new Date(week+'T00:00:00'); const e = new Date(m); e.setDate(m.getDate()+6);
+    lbl.textContent = `이번 주 식단 (${m.getMonth()+1}/${m.getDate()} ~ ${e.getMonth()+1}/${e.getDate()})`; }
+  mealStateLoaded = true;
+  renderFridge();
+  if(!st && currentUser) saveMealStateNow();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const sub = document.getElementById('sub-mealplan');
+  if(!sub) return;
+  ['input','change'].forEach(ev => sub.addEventListener(ev, e => {
+    if(e.target.closest('#groceryList, #groceryActualList, #groceryBudget')) scheduleMealSave();
+  }));
+  sub.addEventListener('click', e => {
+    if(e.target.closest('#groceryList .row-del, #groceryActualList .row-del, .add-row')) setTimeout(scheduleMealSave, 0);
+  });
+});
 function adjustFridgeQty(i, delta){
   fridgeItems[i].qty = Math.max(0, fridgeItems[i].qty + delta);
   renderFridge();
@@ -3822,12 +4289,10 @@ function setFridgeQty(i, val){
 function addFridgeToGroceryList(i){
   const name = fridgeItems[i].name;
   const wrap = document.getElementById('groceryList');
-  const already = [...wrap.querySelectorAll('.grocery-row input[type="text"]')].some(inp => inp.value === name);
+  const already = [...wrap.querySelectorAll('.grocery-row .gr-name')].some(inp => inp.value === name);
   if(already) return;
-  const row = document.createElement('div');
-  row.className = 'grocery-row';
-  row.innerHTML = `<input type="checkbox"><input type="text" value="${name}"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button>`;
-  wrap.appendChild(row);
+  addGroceryRow(name, '', false);
+  scheduleMealSave();
   const t = document.getElementById('toast');
   t.textContent = `"${name}" 장보기 리스트에 담았어요`;
   t.classList.add('show');
@@ -3845,21 +4310,26 @@ function addFridgeTag(){
 }
 function syncPurchasesToFridge(){
   document.querySelectorAll('#groceryActualList .grocery-actual-row').forEach(row => {
+    if(row.dataset.synced === '1') return; // 이미 냉장고에 넣은 행
     const name = row.querySelector('.ga-name').value.trim();
     if(!name) return;
+    row.dataset.synced = '1';
     const qty = Number(row.querySelector('.ga-qty').value) || 1;
     const existing = fridgeItems.find(f => f.name === name);
     if(existing) existing.qty += qty;
     else fridgeItems.push({ name, qty });
   });
   renderFridge();
+  return saveMealStateNow();
 }
-function addGroceryRow(){
+function escAttr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function addGroceryRow(name, qty, checked){
   const wrap = document.getElementById('groceryList');
   const row = document.createElement('div');
   row.className = 'grocery-row';
-  row.innerHTML = `<input type="checkbox"><input class="gr-name" type="text" placeholder="살 것"><input class="gr-qty" type="number" placeholder="1" min="1"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button>`;
+  row.innerHTML = `<input type="checkbox" ${checked?'checked':''}><input class="gr-name" type="text" placeholder="살 것" value="${escAttr(name)}"><input class="gr-qty" type="number" placeholder="1" min="1" value="${escAttr(qty)}"><button class="row-del" onclick="this.closest('.grocery-row').remove()">✕</button>`;
   wrap.appendChild(row);
+  return row;
 }
 
 /* ── 주간 식단: 작성(식단페이지) ↔ 체크(홈) 연동 ── */
@@ -3904,7 +4374,7 @@ function renderMealPlanGrid(){
   weekMealPlan.forEach((m, i) => {
     const row = document.createElement('div');
     row.className = 'meal-day-row';
-    row.innerHTML = `<span class="meal-day-label">${m.day}</span><input type="text" placeholder="예: 김치찌개, 계란말이" value="${m.text}" oninput="updateMealText(${i}, this.value)">`;
+    row.innerHTML = `<span class="meal-day-label">${m.day}</span><input type="text" placeholder="예: 김치찌개, 계란말이" value="${escAttr(m.text)}" oninput="updateMealText(${i}, this.value)">`;
     grid.appendChild(row);
   });
 }
@@ -3945,11 +4415,12 @@ async function toggleMealDone(i, checked){
 }
 
 /* ── 실제 장보기 구매내역 ── */
-function addGroceryActualRow(name, qty){
+function addGroceryActualRow(name, qty, amt, synced){
   const wrap = document.getElementById('groceryActualList');
   const row = document.createElement('div');
   row.className = 'grocery-actual-row';
-  row.innerHTML = `<input class="ga-name" type="text" placeholder="산 것" value="${name||''}"><input class="ga-qty" type="number" placeholder="1" min="1" value="${qty||''}"><input class="ga-amt" type="text" inputmode="numeric" placeholder="금액" oninput="formatMoneyInput(this);recalcGroceryActual()"><button class="row-del" onclick="this.closest('.grocery-actual-row').remove();recalcGroceryActual()">✕</button>`;
+  if(synced) row.dataset.synced = '1';
+  row.innerHTML = `<input class="ga-name" type="text" placeholder="산 것" value="${escAttr(name)}"><input class="ga-qty" type="number" placeholder="1" min="1" value="${escAttr(qty)}"><input class="ga-amt" type="text" inputmode="numeric" placeholder="금액" value="${amt?Number(amt).toLocaleString():''}" oninput="formatMoneyInput(this);recalcGroceryActual()"><button class="row-del" onclick="this.closest('.grocery-actual-row').remove();recalcGroceryActual()">✕</button>`;
   wrap.appendChild(row);
   return row;
 }
@@ -4082,8 +4553,10 @@ async function resetAllCategories(){
   if(!confirmed) return;
   const btn = document.querySelector('#sub-categories .sub-top .mode-switch-btn');
   if(btn){ btn.disabled = true; btn.textContent = '초기화 중...'; }
-  const { error } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
+  // 삭제 대신 이번 달부터 종료 처리 → 지난 정산과 투자 누적액은 그대로 유지
+  const { error } = await sb.from('ledger_categories').update({ ended_on: dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) }).eq('user_id', currentUser.id).is('ended_on', null);
   if(btn){ btn.disabled = false; btn.textContent = '전체 초기화'; }
+  await loadMyCategories();
   if(error){
     alert('초기화 실패: ' + error.message);
     return;
@@ -4124,7 +4597,7 @@ function addCatRow(listId, type){
     <span class="cat-name-field" style="position:relative;flex:1;">
       <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
         <option value="">카테고리 선택</option>
-        ${existing.map(n=>`<option value="${n}">${n}</option>`).join('')}
+        ${existing.map(n=>`<option value="${escAttr(n)}">${n}</option>`).join('')}
         <option value="__new__">＋ 새 이름 직접입력</option>
       </select>
       <input class="cat-name-new cat-select" type="text" placeholder="새 카테고리 이름" style="display:none;">
@@ -4204,8 +4677,8 @@ function makeCatCardEl(cat){
   const hasSplit = cat.splits && cat.splits.length > 0;
   card.innerHTML = `
     <div class="cat-row-top">
-      <input class="cat-select" type="text" placeholder="카테고리 이름" value="${cat.category||''}">
-      <input class="cat-name-input" type="text" placeholder="세부항목(예: 찌, 쫑)" value="${cat.name && cat.name!==cat.category ? cat.name : ''}">
+      <input class="cat-select" type="text" placeholder="카테고리 이름" value="${escAttr(cat.category||'')}">
+      <input class="cat-name-input" type="text" placeholder="세부항목(예: 찌, 쫑)" value="${escAttr(cat.name && cat.name!==cat.category ? cat.name : '')}">
       <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
     </div>
     <div class="cat-row-bottom">
@@ -4214,7 +4687,7 @@ function makeCatCardEl(cat){
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
-      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
+      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${escAttr(s.day_label)}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
       <button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button>
     </div>
   `;
@@ -4246,7 +4719,7 @@ function makeAssetLinkRowEl(assetType, cat, myAssets){
     </div>
     <p class="cat-split-link ${hasSplit?'open':''}" onclick="toggleCatSplit(this)">여러 날짜로 나누기 ${hasSplit?'(사용 중) ':''}›</p>
     <div class="cat-split-detail ${hasSplit?'open':''}">
-      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${s.day_label}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
+      ${hasSplit ? cat.splits.map(s=>`<div class="cat-split-row"><input type="text" value="${escAttr(s.day_label)}" placeholder="일"><input type="text" inputmode="numeric" value="${Number(s.amount).toLocaleString()}" oninput="formatMoneyInput(this);recalcCatSplit(this)"><button class="row-del-sm" onclick="this.parentElement.remove();recalcCatSplit(this)">✕</button></div>`).join('') : ''}
       <button class="add-row-sm" onclick="addCatSplitRow(this)">＋ 날짜 추가</button>
     </div>
   `;
@@ -4266,7 +4739,7 @@ const ASSET_TYPES_3 = ['비유동자산','고정투자자산','변동자산'];
 async function loadCategories(){
   if(!currentUser) return;
   const [{ data: cats, error }, { data: myAssets }] = await Promise.all([
-    sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id),
+    sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id).is('ended_on', null),
     sb.from('assets').select('id,name,asset_type').eq('user_id', currentUser.id),
   ]);
   myAssetsCache = myAssets || [];
@@ -4296,7 +4769,7 @@ async function loadCategories(){
             <option ${c.income_tag==='금융수입'?'selected':''}>금융수입</option>
             <option ${c.income_tag==='이벤트수입'?'selected':''}>이벤트수입</option>
           </select>
-          <input class="cat-name-input" type="text" placeholder="세부항목(예: 월급, 배당금)" value="${c.name && c.name!==c.income_tag ? c.name : ''}">
+          <input class="cat-name-input" type="text" placeholder="세부항목(예: 월급, 배당금)" value="${escAttr(c.name && c.name!==c.income_tag ? c.name : '')}">
           <button class="cat-del" onclick="this.closest('.cat-card').remove()">✕</button>
         </div>
         <div class="cat-row-bottom">
@@ -4316,6 +4789,26 @@ function getCatNameFromRow(row){
   const plain = row.querySelector('.cat-select, .cat-income-name');
   return plain ? plain.value.trim() : '';
 }
+function currentQuarterStartKey(){
+  const n = new Date();
+  return dateKey(new Date(n.getFullYear(), Math.floor(n.getMonth()/3)*3, 1));
+}
+function currentQuarterLabel(){
+  const n = new Date();
+  return `${n.getFullYear()}-Q${Math.floor(n.getMonth()/3)+1}`;
+}
+function categoryApplyFromKey(){
+  const mode = document.getElementById('catEffectiveMonth').value;
+  const now = new Date();
+  let y = now.getFullYear(), m = now.getMonth(); // 0-based
+  if(mode === 'last') m -= 1;
+  else if(mode === 'next') m += 1;
+  else if(mode === 'custom'){
+    const v = document.getElementById('catCustomMonth').value; // YYYY-MM
+    if(v){ const [yy,mm] = v.split('-').map(Number); y = yy; m = mm-1; }
+  }
+  return dateKey(new Date(y, m, 1));
+}
 async function saveCategories(){
   if(!currentUser) return;
   const btn = document.querySelector('#sub-categories .save-btn');
@@ -4331,6 +4824,7 @@ async function saveCategories(){
       }).filter(s => s.day_label);
       const budget = rawMoney(card.querySelector('.cat-budget'));
       return {
+        id: card.dataset.id || null,
         category, name: nameInput || category, kind:'expense', linked_asset_id: null,
         payment_day: splitRows.length ? null : (card.querySelector('.cat-day').value.trim() || null),
         monthly_budget: budget,
@@ -4352,6 +4846,7 @@ async function saveCategories(){
         const budget = rawMoney(row.querySelector('.cat-budget'));
         const assetName = select.options[select.selectedIndex]?.textContent || assetType;
         assetLinkPayload.push({
+          id: row.dataset.id || null,
           category: assetType, name: assetName, kind:'expense', linked_asset_id,
           payment_day: splitRows.length ? null : (row.querySelector('.cat-day').value.trim() || null),
           monthly_budget: budget,
@@ -4367,34 +4862,87 @@ async function saveCategories(){
       const detail = detailInput ? detailInput.value.trim() : '';
       const dayInput = row.querySelector('.cat-day').value.trim();
       const budget = rawMoney(row.querySelector('.cat-budget'));
-      return { category: tag, name: detail || tag, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
+      return { id: row.dataset.id || null, category: tag, name: detail || tag, kind:'income', income_tag: tag, payment_day: dayInput || null, monthly_budget: budget, splits: [] };
     }).filter(r => r.category);
 
-    // 기존 항목 전부 삭제 후 새로 저장 (splits는 cascade로 함께 삭제됨)
-    const { error: delErr } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id);
-    if(delErr) throw delErr;
-
+    // ── 변경분만 반영 (전체 삭제 후 재생성 X) ──
+    // 예전엔 전부 지우고 새로 만들어서, 거래내역(고정지출 확정·투자기록)의 category_id 연결이 끊겼어요.
+    // 이제: 안 바뀐 항목은 그대로, 바뀐 항목은 '적용 시작월'부터 새 버전, 지운 항목은 그 달부터 종료.
+    const applyFrom = categoryApplyFromKey();
+    const { data: existing, error: exErr } = await sb.from('ledger_categories').select('*, category_splits(*)').eq('user_id', currentUser.id).is('ended_on', null);
+    if(exErr) throw exErr;
+    const exMap = {}; (existing||[]).forEach(c => exMap[c.id] = c);
+    const norm = c => JSON.stringify([c.category, c.name, c.kind, c.income_tag||null, c.payment_day||null, Number(c.monthly_budget)||0, c.linked_asset_id||null,
+      (c.splits || (c.category_splits||[]).map(x=>({day_label:x.day_label, amount:Number(x.amount)}))).map(x=>x.day_label+':'+(Number(x.amount)||0)).sort()]);
     const allRows = [...expensePayload, ...assetLinkPayload, ...incomePayload].filter(r => r.category);
-    if(allRows.length > 0){
-      const insertPayload = allRows.map(r => ({
+    const keptIds = new Set();
+    const toInsert = []; // { row, effective_from }
+    for(const r of allRows){
+      const old = r.id && exMap[r.id];
+      if(old){
+        keptIds.add(old.id);
+        if(norm(old) === norm(r)) continue; // 변경 없음
+        const oldStart = old.effective_from || '0000-00-00';
+        if(applyFrom <= oldStart){
+          // 아직 시작 전인 버전이거나 같은 시점 → 제자리 수정
+          const { error } = await sb.from('ledger_categories').update({
+            category:r.category, name:r.name, kind:r.kind, income_tag:r.income_tag||null,
+            payment_day:r.payment_day, monthly_budget:r.monthly_budget, linked_asset_id:r.linked_asset_id||null,
+          }).eq('id', old.id);
+          if(error) throw error;
+          await sb.from('category_splits').delete().eq('category_id', old.id);
+          if(r.splits && r.splits.length){
+            const { error: se } = await sb.from('category_splits').insert(r.splits.map(x=>({ category_id: old.id, day_label:x.day_label, amount:x.amount })));
+            if(se) throw se;
+          }
+        } else {
+          // 이전 버전은 applyFrom 전날까지, 새 버전은 applyFrom부터
+          const { error } = await sb.from('ledger_categories').update({ ended_on: applyFrom }).eq('id', old.id);
+          if(error) throw error;
+          toInsert.push({ row: r, effective_from: applyFrom, oldId: old.id });
+        }
+      } else {
+        toInsert.push({ row: r, effective_from: applyFrom });
+      }
+    }
+    // 화면에서 지운 항목: 삭제하지 않고 applyFrom부터 종료 (과거 정산·투자누적 보존)
+    for(const old of (existing||[])){
+      if(keptIds.has(old.id)) continue;
+      if(old.effective_from && applyFrom <= old.effective_from){
+        const { error } = await sb.from('ledger_categories').delete().eq('id', old.id); // 시작도 안 한 버전은 그냥 삭제
+        if(error) throw error;
+      } else {
+        const { error } = await sb.from('ledger_categories').update({ ended_on: applyFrom }).eq('id', old.id);
+        if(error) throw error;
+      }
+    }
+    if(toInsert.length > 0){
+      const insertPayload = toInsert.map(({row:r, effective_from}) => ({
         user_id: currentUser.id, category:r.category, name:r.name, kind:r.kind,
         income_tag: r.income_tag || null, payment_day: r.payment_day, monthly_budget: r.monthly_budget,
-        linked_asset_id: r.linked_asset_id || null,
+        linked_asset_id: r.linked_asset_id || null, effective_from,
       }));
       const { data: inserted, error: insErr } = await sb.from('ledger_categories').insert(insertPayload).select();
       if(insErr) throw insErr;
-
       const splitInserts = [];
       inserted.forEach((row, i) => {
-        (allRows[i].splits || []).forEach(s => {
-          splitInserts.push({ category_id: row.id, day_label: s.day_label, amount: s.amount });
-        });
+        (toInsert[i].row.splits || []).forEach(x => splitInserts.push({ category_id: row.id, day_label: x.day_label, amount: x.amount }));
       });
       if(splitInserts.length > 0){
         const { error: splitErr } = await sb.from('category_splits').insert(splitInserts);
         if(splitErr) throw splitErr;
       }
+      // 적용 시작일 이후에 이미 확정/이동/건너뛴 고정항목 기록은 새 버전으로 옮겨 연결 유지
+      for(let i=0;i<inserted.length;i++){
+        const oldId = toInsert[i].oldId;
+        if(!oldId) continue;
+        const { error: mvErr } = await sb.from('transactions').update({ category_id: inserted[i].id })
+          .eq('user_id', currentUser.id).eq('category_id', oldId).eq('is_auto_fixed', true).gte('tx_date', applyFrom);
+        if(mvErr) throw mvErr;
+      }
     }
+    await loadMyCategories();
+    try{ refreshWeekGridDisplay(); refreshLedgerSummary(); }catch(e){}
 
     const mode = document.getElementById('catEffectiveMonth').value;
     let when = '이번 달부터';
@@ -4490,21 +5038,29 @@ async function doLogin(){
 let currentProfile = null;
 async function loadMyStats(){
   if(!currentUser) return;
-  const { data: setting } = await sb.from('season_settings').select('season_start').eq('program','routinebu').maybeSingle();
-  const seasonStart = setting ? setting.season_start : '2026-07-01';
+  const { data: setting } = await sb.from('season_settings').select('season_start, season_end').eq('program','routinebu').maybeSingle();
+  const seasonStart = setting ? setting.season_start : currentQuarterStartKey();
+  const seasonEnd = setting ? setting.season_end : null;
+  const endEl = document.getElementById('miSeasonEnd'); if(endEl) endEl.textContent = seasonEnd ? seasonEnd.replace(/-/g, '.') : '-';
   const { data, error } = await sb.from('mission_logs')
-    .select('log_date')
+    .select('log_date, mission_type')
     .eq('user_id', currentUser.id)
     .gte('log_date', seasonStart)
     .order('log_date', { ascending: false });
   if(error){ console.error('stats load failed', error); return; }
-  const count = data ? data.length : 0;
+  const count = (data||[]).filter(r => !seasonEnd || r.log_date <= seasonEnd).length; // 완료 기록 횟수는 시즌 종료일까지만
   const seasonEl = document.getElementById('homeSeasonVal');
   const miSeasonEl = document.getElementById('miSeasonCount');
   if(seasonEl) seasonEl.textContent = count + '회';
   if(miSeasonEl) miSeasonEl.textContent = count + '회';
 
   const dates = new Set((data||[]).map(r => r.log_date));
+  // 주말엔 지수 미션이 없고 주말정산만 있으니, 토·일 중 하루만 제출해도 주말 이틀 모두 참여로 인정(안 그러면 월요일 아침 연속참여가 0이 돼요)
+  (data||[]).filter(r => r.mission_type === 'weeksettle').forEach(r => {
+    const d = new Date(r.log_date + 'T00:00:00'); const dow = d.getDay();
+    if(dow === 6){ d.setDate(d.getDate() + 1); dates.add(dateKey(d)); }
+    else if(dow === 0){ d.setDate(d.getDate() - 1); dates.add(dateKey(d)); }
+  });
   let streak = 0;
   let cur = new Date();
   if(!dates.has(dateKey(cur))) cur.setDate(cur.getDate() - 1);
@@ -4562,6 +5118,7 @@ async function loadAndDisplayProfile(){
   if(!currentUser) return;
   const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   displayUserProfile(profile);
+  try{ refreshInquiryBadge(); }catch(e){}
 }
 
 async function routeAfterAuth(){
@@ -4577,6 +5134,7 @@ async function routeAfterAuth(){
   const adminBtn = document.getElementById('adminModeBtn');
   if(adminBtn) adminBtn.style.display = profile.is_admin ? 'block' : 'none';
   displayUserProfile(profile);
+  try{ refreshInquiryBadge(); }catch(e){}
 
   if(!hasRoutine){
     // 본부성만 신청한 경우: 과제(온보딩) 없이 바로 본부성 홈으로
@@ -4611,6 +5169,7 @@ async function checkApprovalStatus(){
     const adminBtn = document.getElementById('adminModeBtn');
     if(adminBtn) adminBtn.style.display = profile.is_admin ? 'block' : 'none';
     displayUserProfile(profile);
+  try{ refreshInquiryBadge(); }catch(e){}
     const hasRoutine = (profile.programs || []).includes('routinebu');
     const hasBonbu = (profile.programs || []).includes('bonbuseong');
     if(!hasRoutine){
@@ -4667,8 +5226,14 @@ async function saveTask1(){
       };
     }).filter(r => r.category);
 
-    const { error: catErr } = await sb.from('ledger_categories').insert([...expensePayload, ...incomePayload]);
-    if(catErr) throw catErr;
+    // 재시도 대비: 이미 저장된 항목은 건너뜀(첫 시도가 중간에 실패했다가 다시 눌러도 중복 안 생김)
+    const { data: existCats } = await sb.from('ledger_categories').select('kind, category, name').eq('user_id', currentUser.id);
+    const seenCats = new Set((existCats || []).map(c => [c.kind, c.category, c.name].join('|')));
+    const catRows = [...expensePayload, ...incomePayload].filter(r => !seenCats.has([r.kind, r.category, r.name].join('|')));
+    if(catRows.length > 0){
+      const { error: catErr } = await sb.from('ledger_categories').insert(catRows);
+      if(catErr) throw catErr;
+    }
 
     const { error: profErr } = await sb.from('profiles').update({
       level: selectedLevel,
@@ -4698,8 +5263,11 @@ async function saveTask2(){
       name: row.dataset.name || row.querySelector('span').textContent,
       amount: 0,
     }));
-    if(payload.length > 0){
-      const { error } = await sb.from('assets').insert(payload);
+    const { data: existAssets } = await sb.from('assets').select('asset_type, name').eq('user_id', currentUser.id);
+    const seenAssets = new Set((existAssets || []).map(a => a.asset_type + '|' + a.name));
+    const newAssets = payload.filter(a => !seenAssets.has(a.asset_type + '|' + a.name));
+    if(newAssets.length > 0){
+      const { error } = await sb.from('assets').insert(newAssets);
       if(error) throw error;
     }
     const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3, level: selectedLevel }).eq('id', currentUser.id);
@@ -4720,14 +5288,18 @@ async function saveTask3(){
   const msg = document.getElementById('task3Msg');
   btn.disabled = true; btn.textContent = '저장 중...';
   try{
-    const rows = [...document.querySelectorAll('#obGoalPreviewList .ob-preview-row span')];
-    const payload = rows.map(s => {
-      const m = s.textContent.match(/^(.+) · 목표 ([\d.]+)(.+)$/);
+    const rows = [...document.querySelectorAll('#obGoalPreviewList .ob-preview-row')];
+    const payload = rows.map(row => {
+      if(row.dataset.name){ return { user_id: currentUser.id, name: row.dataset.name, target: Number(row.dataset.target), unit: row.dataset.unit, current: 0 }; }
+      const m = row.querySelector('span').textContent.match(/^(.+) · 목표 ([\d.]+)(.+)$/);
       if(!m) return null;
       return { user_id: currentUser.id, name: m[1], target: Number(m[2]), unit: m[3], current: 0 };
     }).filter(Boolean);
-    if(payload.length > 0){
-      const { error } = await sb.from('investment_goals').insert(payload);
+    const { data: existGoals } = await sb.from('investment_goals').select('name, unit, target').eq('user_id', currentUser.id);
+    const seenGoals = new Set((existGoals || []).map(g => g.name + '|' + g.unit + '|' + Number(g.target)));
+    const newGoals = payload.filter(g => !seenGoals.has(g.name + '|' + g.unit + '|' + Number(g.target)));
+    if(newGoals.length > 0){
+      const { error } = await sb.from('investment_goals').insert(newGoals);
       if(error) throw error;
     }
     const { error: profErr } = await sb.from('profiles').update({ onboarding_step: 3 }).eq('id', currentUser.id);
@@ -4746,6 +5318,7 @@ async function checkExistingSession(){
   const { data } = await sb.auth.getSession();
   if(data.session){
     currentUser = data.session.user;
+    if(recoveryMode){ showRecoveryForm(); return; } // 재설정 메일로 들어온 경우: 새 비밀번호부터
     await routeAfterAuth();
   }
 }
@@ -4761,7 +5334,7 @@ function addObRow(targetId){
       <span class="cat-name-field" style="position:relative;flex:1;">
         <select class="cat-name-select" onchange="handleCatNameDropdown(this)">
           <option value="">카테고리 선택</option>
-          ${options.map(n=>`<option value="${n}">${n}</option>`).join('')}
+          ${options.map(n=>`<option value="${escAttr(n)}">${n}</option>`).join('')}
           <option value="__new__">＋ 새 이름 직접입력</option>
         </select>
         <input class="cat-name-new" type="text" placeholder="새 카테고리 이름" style="display:none;">
@@ -4793,18 +5366,200 @@ function addObIncomeRow(targetId){
   `;
   wrap.appendChild(row);
 }
-function sendChat(){
+/* ── 공용 토스트 ── */
+let _lastWriteErrAt = 0;
+window.__onWriteError = function(msg){
+  const now = Date.now(); if(now - _lastWriteErrAt < 4000) return; // 연속 실패 시 알림 폭주 방지
+  _lastWriteErrAt = now; toastMsg(msg, 4500);
+};
+function toastMsg(msg, ms){
+  const t = document.getElementById('toast'); if(!t) return;
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastMsg._t);
+  toastMsg._t = setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, ms || 1800);
+}
+/* ── 문의하기 (DB: inquiries) ── */
+let inquiryContext = '홈';
+function captureInquiryContext(){
+  const open = [...document.querySelectorAll('.subscreen.open')].filter(e => e.id !== 'sub-inquiry');
+  if(open.length === 0){ inquiryContext = '홈'; return; }
+  open.sort((a,b) => (Number(b.style.zIndex)||0) - (Number(a.style.zIndex)||0));
+  const t = open[0].querySelector('.sub-title');
+  inquiryContext = t ? t.textContent.trim() : '홈';
+}
+function chatNote(text){
+  const p = document.createElement('p'); p.className = 'chat-note'; p.textContent = text; return p;
+}
+function appendInquiryBubbles(thread, q){
+  const mine = document.createElement('div'); mine.className = 'chat-bubble mine';
+  const ctx = document.createElement('p'); ctx.className = 'chat-context'; ctx.textContent = '📍 ' + (q.context || '홈') + ' 화면에서';
+  const body = document.createElement('p'); body.textContent = q.content; body.style.whiteSpace = 'pre-wrap';
+  mine.appendChild(ctx); mine.appendChild(body); thread.appendChild(mine);
+  if(q.admin_reply){
+    const theirs = document.createElement('div'); theirs.className = 'chat-bubble theirs';
+    const r = document.createElement('p'); r.textContent = q.admin_reply; r.style.whiteSpace = 'pre-wrap';
+    theirs.appendChild(r); thread.appendChild(theirs);
+  }
+}
+async function loadMyInquiries(){
+  const thread = document.getElementById('chatThread'); if(!thread) return;
+  if(!currentUser){ thread.innerHTML = ''; return; }
+  const { data, error } = await sb.from('inquiries').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
+  thread.innerHTML = '';
+  if(error){ thread.appendChild(chatNote('문의 내역을 불러오지 못했어요: ' + error.message)); return; }
+  if(!data || data.length === 0) thread.appendChild(chatNote('궁금한 점이나 불편한 점을 남겨주세요. 운영자가 확인하고 답변드려요.'));
+  (data||[]).forEach(q => appendInquiryBubbles(thread, q));
+  thread.scrollTop = thread.scrollHeight;
+  try{ localStorage.setItem('inqSeen:' + currentUser.id, String(Date.now())); }catch(e){}
+  document.getElementById('globalFab').classList.remove('has-reply');
+}
+let sendingChat = false;
+async function sendChat(){
+  if(sendingChat) return;
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if(!text) return;
-  const thread = document.getElementById('chatThread');
-  const bubble = document.createElement('div');
-  bubble.className = 'chat-bubble mine';
-  bubble.innerHTML = `<p class="chat-context">📍 홈 화면에서</p><p>${text}</p>`;
-  thread.appendChild(bubble);
+  if(!currentUser){ toastMsg('로그인 후에 문의할 수 있어요', 2200); return; }
+  sendingChat = true;
+  const { data, error } = await sb.from('inquiries').insert({ user_id: currentUser.id, content: text, context: inquiryContext }).select().single();
+  sendingChat = false;
+  if(error){ console.error('inquiry send failed', error); toastMsg('전송에 실패했어요. 입력한 내용은 그대로 남아있어요: ' + error.message, 3500); return; }
   input.value = '';
+  const thread = document.getElementById('chatThread');
+  thread.querySelectorAll('.chat-note').forEach(n => n.remove());
+  appendInquiryBubbles(thread, data);
   thread.scrollTop = thread.scrollHeight;
+  toastMsg('문의가 전달됐어요', 1500);
 }
+async function refreshInquiryBadge(){
+  if(!currentUser) return;
+  try{ announceDrafts(); }catch(e){}
+  const { data } = await sb.from('inquiries').select('id, replied_at').eq('user_id', currentUser.id).not('admin_reply', 'is', null);
+  let seen = 0; try{ seen = Number(localStorage.getItem('inqSeen:' + currentUser.id) || 0); }catch(e){}
+  const unread = (data||[]).some(q => q.replied_at && new Date(q.replied_at).getTime() > seen);
+  const fab = document.getElementById('globalFab'); if(fab) fab.classList.toggle('has-reply', unread);
+}
+/* 운영자: 문의함 */
+async function loadAdminInquiries(){
+  const box = document.getElementById('adminInquiryList'); const cnt = document.getElementById('inquiryCount');
+  if(!box) return;
+  const { data, error } = await sb.from('inquiries').select('*').order('created_at', { ascending: false }).limit(50);
+  box.innerHTML = '';
+  if(error){ const p = document.createElement('p'); p.className = 'ac-sub'; p.textContent = '불러오기 실패: ' + error.message; box.appendChild(p); if(cnt) cnt.textContent = '-'; return; }
+  const ids = [...new Set((data||[]).map(q => q.user_id))];
+  const names = {};
+  if(ids.length){ const { data: ps } = await sb.from('profiles').select('id, name, email').in('id', ids); (ps||[]).forEach(p => names[p.id] = p.name || p.email); }
+  const open = (data||[]).filter(q => !q.admin_reply).length;
+  if(cnt) cnt.textContent = open > 0 ? `답변 대기 ${open}건` : '모두 답변함';
+  if(!data || data.length === 0){ const p = document.createElement('p'); p.className = 'ac-sub'; p.style.textAlign = 'center'; p.textContent = '아직 들어온 문의가 없어요.'; box.appendChild(p); return; }
+  data.forEach(q => {
+    const card = document.createElement('div'); card.className = 'inq-card' + (q.admin_reply ? '' : ' unanswered'); card.dataset.id = q.id;
+    const meta = document.createElement('p'); meta.className = 'inq-meta';
+    meta.textContent = `${names[q.user_id] || '(알 수 없음)'} · ${new Date(q.created_at).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })} · ${q.context || '홈'}`;
+    const body = document.createElement('p'); body.className = 'inq-body'; body.textContent = q.content;
+    card.appendChild(meta); card.appendChild(body);
+    if(q.admin_reply){
+      const r = document.createElement('p'); r.className = 'inq-reply'; r.textContent = '↳ ' + q.admin_reply; card.appendChild(r);
+    } else {
+      const ta = document.createElement('textarea'); ta.placeholder = '답변 쓰기'; card.appendChild(ta);
+      const btn = document.createElement('button'); btn.className = 'add-row'; btn.textContent = '답변 보내기'; btn.onclick = () => replyInquiry(q.id, btn); card.appendChild(btn);
+    }
+    box.appendChild(card);
+  });
+}
+async function replyInquiry(id, btn){
+  const card = btn.closest('.inq-card'); const text = card.querySelector('textarea').value.trim();
+  if(!text){ toastMsg('답변 내용을 적어주세요', 1800); return; }
+  btn.disabled = true;
+  const { error } = await sb.from('inquiries').update({ admin_reply: text, replied_at: new Date().toISOString() }).eq('id', id);
+  btn.disabled = false;
+  if(error){ toastMsg('답변 저장 실패: ' + error.message, 3000); return; }
+  toastMsg('답변이 전달됐어요', 1500);
+  loadAdminInquiries();
+}
+/* ── 월말정산: 한 달 성찰 (DB: month_reflections) ── */
+let reflectionMonthKey = null, reflectionLoaded = false, reflectionTimer = null, reflectionHasRow = false;
+async function loadReflection(monthKey){
+  reflectionLoaded = false; reflectionMonthKey = monthKey;
+  const ids = ['msGood','msBad','msInsight'].map(i => document.getElementById(i));
+  if(ids.some(e => !e)) return;
+  ids.forEach(e => { e.value = ''; e.disabled = true; });
+  const { data, error } = await sb.from('month_reflections').select('*').eq('user_id', currentUser.id).eq('month', monthKey).maybeSingle();
+  if(reflectionMonthKey !== monthKey) return; // 그 사이 다른 달로 넘어감
+  ids.forEach(e => { e.disabled = false; });
+  if(error){ console.error('reflection load failed', error); toastMsg('한 달 성찰을 불러오지 못했어요: ' + error.message, 3000); return; }
+  reflectionHasRow = !!data;
+  if(data){ ids[0].value = data.good_spending || ''; ids[1].value = data.bad_spending || ''; ids[2].value = data.insight || ''; }
+  reflectionLoaded = true;
+}
+function scheduleReflectionSave(){
+  if(!reflectionLoaded) return;
+  clearTimeout(reflectionTimer);
+  reflectionTimer = setTimeout(saveReflectionNow, 600);
+}
+async function saveReflectionNow(){
+  clearTimeout(reflectionTimer);
+  if(!reflectionLoaded || !currentUser || !reflectionMonthKey) return;
+  const good = document.getElementById('msGood').value, bad = document.getElementById('msBad').value, ins = document.getElementById('msInsight').value;
+  if(!reflectionHasRow && !good && !bad && !ins) return;
+  const { error } = await sb.from('month_reflections').upsert({
+    user_id: currentUser.id, month: reflectionMonthKey, good_spending: good, bad_spending: bad, insight: ins, updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,month' });
+  if(error){ console.error('reflection save failed', error); toastMsg('성찰 저장 실패: ' + error.message, 3500); return; }
+  reflectionHasRow = true; flashSaved();
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveReflectionNow(); });
+async function finishMonthSettle(){
+  await saveReflectionNow();
+  await logMissionCompletion('monthsettle');
+  if(monthSettleOffset === 0){ const c = document.querySelector('.mission[data-target="monthsettle"]'); if(c) c.classList.add('done'); }
+  updateCount();
+  try{ loadMyStats(); }catch(e){}
+  closeSub('monthsettle');
+}
+async function finishWeekSettle(){
+  await logMissionCompletion('weeksettle');
+  if(weekOffset === 0){ const c = document.querySelector('.mission[data-target="weeksettle"]'); if(c) c.classList.add('done'); }
+  updateCount();
+  try{ loadMyStats(); }catch(e){}
+  closeSub('weeksettle');
+}
+/* ── 비밀번호 재설정 ── */
+let recoveryMode = (location.hash || '').includes('type=recovery');
+function authErrorKo(msg){
+  const m = (msg || '').toLowerCase();
+  if(m.includes('rate limit') || m.includes('too many') || m.includes('seconds')) return '잠시 후 다시 시도해주세요.';
+  if(m.includes('invalid') && m.includes('email')) return '이메일 주소를 확인해주세요.';
+  if(m.includes('same') && m.includes('password')) return '이전과 다른 비밀번호를 써주세요.';
+  if(m.includes('at least 6')) return '비밀번호는 6자 이상이어야 해요.';
+  return msg || '알 수 없는 오류';
+}
+async function requestPasswordReset(){
+  let email = ((currentUser && currentUser.email) || (document.getElementById('loginEmail') || {}).value || '').trim();
+  if(!email){ toastMsg('위 이메일 칸에 가입한 이메일을 먼저 적어주세요', 2500); const el = document.getElementById('loginEmail'); if(el) el.focus(); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if(error){ console.error('reset mail failed', error); toastMsg('메일을 보내지 못했어요: ' + authErrorKo(error.message), 3500); return; }
+  toastMsg('재설정 링크를 보냈어요. 메일함(스팸함 포함)을 확인해주세요', 4000);
+}
+function showRecoveryForm(){ const o = document.getElementById('recoveryOverlay'); if(o) o.style.display = 'flex'; }
+async function submitNewPassword(){
+  const pw = document.getElementById('recoveryPw').value, pw2 = document.getElementById('recoveryPw2').value;
+  const msg = document.getElementById('recoveryMsg'); msg.textContent = '';
+  if(pw.length < 6){ msg.textContent = '비밀번호는 6자 이상으로 만들어주세요.'; return; }
+  if(pw !== pw2){ msg.textContent = '두 비밀번호가 서로 달라요.'; return; }
+  const btn = document.getElementById('recoveryBtn'); btn.disabled = true; btn.textContent = '변경 중...';
+  const { error } = await sb.auth.updateUser({ password: pw });
+  btn.disabled = false; btn.textContent = '비밀번호 변경';
+  if(error){ msg.textContent = '변경하지 못했어요: ' + authErrorKo(error.message); return; }
+  recoveryMode = false;
+  document.getElementById('recoveryOverlay').style.display = 'none';
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  toastMsg('비밀번호가 변경됐어요', 2500);
+  if(currentUser) await routeAfterAuth();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if((location.hash || '').includes('error_code=otp_expired')){ toastMsg('링크가 만료됐거나 이미 사용됐어요. 다시 요청해주세요', 4500); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} }
+});
 let announceProgKey = 'routinebu';
 function switchAnnounceProg(btn, prog){
   document.querySelectorAll('#sub-announce .prog-tab').forEach(t=>t.classList.remove('active'));
@@ -4917,22 +5672,31 @@ async function loadSeasonSettings(){
       const labelDisplay = document.getElementById('seasonLabelDisplay');
       const startInput = document.getElementById('seasonStartInput');
       const labelInput = document.getElementById('seasonLabelInput');
-      if(startDisplay) startDisplay.textContent = s.season_start;
+      if(startDisplay) startDisplay.textContent = s.season_start + ' ~ ' + (s.season_end || '종료일 미정');
       if(labelDisplay) labelDisplay.textContent = s.season_label;
       if(startInput) startInput.value = s.season_start;
       if(labelInput) labelInput.value = s.season_label;
     }
   });
 }
+function autofillSeasonEnd(){
+  const v = document.getElementById('seasonStartInput').value; if(!v) return;
+  const [y,m,d] = v.split('-').map(Number);
+  const end = d === 1 ? new Date(y, m + 2, 0) : new Date(y, m - 1 + 3, d - 1); // 1일 시작 → 3개월째 말일 (10/1 → 12/31)
+  document.getElementById('seasonEndInput').value = dateKey(end);
+}
 async function resetSeasonStart(program){
   const startInput = document.getElementById('seasonStartInput');
+  const endInput = document.getElementById('seasonEndInput');
   const labelInput = document.getElementById('seasonLabelInput');
   const newStart = startInput.value;
+  const newEnd = endInput ? endInput.value : '';
   const newLabel = labelInput.value.trim();
-  if(!newStart || !newLabel){ alert('시작일과 시즌 라벨을 모두 입력해주세요.'); return; }
-  const confirmed = confirm(`"${newLabel}" 시즌을 ${newStart}부터 새로 시작할까요?\n모든 멤버의 연속참여·완료기록이 이 날짜 기준으로 다시 카운트돼요.`);
+  if(!newStart || !newEnd || !newLabel){ alert('시작일, 종료일, 시즌 라벨을 모두 입력해주세요.'); return; }
+  if(newEnd < newStart){ alert('종료일이 시작일보다 빠를 수 없어요.'); return; }
+  const confirmed = confirm(`"${newLabel}" 시즌을 ${newStart}부터 ${newEnd}까지로 새로 시작할까요?\n모든 멤버의 연속참여·완료기록이 시작일 기준으로 다시 카운트돼요.`);
   if(!confirmed) return;
-  const { error } = await sb.from('season_settings').update({ season_start: newStart, season_label: newLabel }).eq('program', program);
+  const { error } = await sb.from('season_settings').update({ season_start: newStart, season_end: newEnd, season_label: newLabel }).eq('program', program);
   if(error){ alert('저장 실패: ' + error.message); return; }
   const t = document.getElementById('toast');
   t.textContent = `${newLabel} 시즌이 ${newStart}부터 시작돼요.`;
@@ -5032,8 +5796,8 @@ function addCustomIndexRow(name, value){
   row.className = 'custom-field';
   row.style.marginBottom = '8px';
   row.innerHTML = `
-    <input class="custom-label" type="text" value="${name||''}" placeholder="지표 이름 (예: 비트코인)">
-    <input type="text" inputmode="numeric" value="${value!=null?Number(value).toLocaleString():''}" placeholder="값 입력" oninput="formatMoneyInput(this)">
+    <input class="custom-label" type="text" value="${escAttr(name||'')}" placeholder="지표 이름 (예: 비트코인)">
+    <input type="text" inputmode="decimal" value="${value!=null?fmtNum(value):''}" placeholder="값 입력" oninput="formatDecimalInput(this)">
     <button class="row-del" onclick="this.closest('.custom-field').remove()">✕</button>
   `;
   list.appendChild(row);
@@ -5053,18 +5817,25 @@ async function saveIndexCheck(){
   const { error } = await sb.from('index_checks').upsert(payload, { onConflict: 'user_id,log_date' });
   if(error){ console.error('index save failed', error); return; }
 
-  // 커스텀 지표: 그 날짜 것 지우고 지금 화면에 있는 걸로 다시 저장
-  await sb.from('custom_index_entries').delete().eq('user_id', currentUser.id).eq('log_date', targetKey);
+  // 커스텀 지표: 지금 화면의 값을 먼저 새로 저장하고, 성공했을 때만 이전 기록을 지움(실패해도 기존 기록은 남음)
+  const { data: oldCustoms, error: oldErr } = await sb.from('custom_index_entries').select('id').eq('user_id', currentUser.id).eq('log_date', targetKey);
+  if(oldErr){ console.error('custom load failed', oldErr); toastMsg('커스텀 지표를 저장하지 못했어요: ' + oldErr.message, 3500); return; }
   const customRows = [...document.querySelectorAll('#idxCustomList .custom-field')];
   const customPayload = customRows.map((row, i) => {
     const name = row.querySelector('.custom-label').value.trim();
     const valInput = row.querySelectorAll('input')[1];
-    const value = valInput.value ? rawMoney(valInput) : null;
+    const value = valInput.value ? rawDecimal(valInput) : null;
     if(!name) return null;
     return { user_id: currentUser.id, log_date: targetKey, name, value, sort_order: i };
   }).filter(Boolean);
   if(customPayload.length > 0){
-    await sb.from('custom_index_entries').insert(customPayload);
+    const { error: insErr } = await sb.from('custom_index_entries').insert(customPayload);
+    if(insErr){ console.error('custom index insert failed', insErr); toastMsg('커스텀 지표 저장 실패(기존 기록은 그대로예요): ' + insErr.message, 4000); return; }
+  }
+  const oldIds = (oldCustoms || []).map(r => r.id);
+  if(oldIds.length > 0){
+    const { error: delErr } = await sb.from('custom_index_entries').delete().in('id', oldIds);
+    if(delErr){ console.error('custom old delete failed', delErr); }
   }
 
   if(targetKey === todayKey){
@@ -5085,9 +5856,9 @@ async function saveIndexMemo(){
   if(!currentUser) return;
   const memo = document.getElementById('idxMemo').value.trim();
   const { error } = await sb.from('index_checks').upsert({
-    user_id: currentUser.id, log_date: dateKey(new Date()), memo,
+    user_id: currentUser.id, log_date: editingIdxDate || dateKey(new Date()), memo,
   }, { onConflict: 'user_id,log_date' });
-  if(error) console.error('index memo save failed', error);
+  if(error){ console.error('index memo save failed', error); toastMsg('메모 저장 실패: ' + error.message, 3500); }
 }
 let editingIdxDate = null;
 async function loadTodayIndexCheck(){
@@ -5202,7 +5973,7 @@ async function submitSeasonEnd(){
   const { data: setting } = await sb.from('season_settings').select('season_label').eq('program', program).maybeSingle();
   const review = document.getElementById('seasonReview').value.trim();
   const { error } = await sb.from('season_surveys').upsert({
-    user_id: currentUser.id, program, season_label: setting ? setting.season_label : '2026-S3',
+    user_id: currentUser.id, program, season_label: setting ? setting.season_label : currentQuarterLabel(),
     continue_choice: seasonOptChoice, rating: seasonStarCount || null, review: review || null,
   }, { onConflict: 'user_id,program,season_label' });
   const t = document.getElementById('toast');
@@ -5455,17 +6226,17 @@ async function reviewFocusSubmission(id, status){
 function applyFabVisibility(){
   const fab = document.getElementById('globalFab');
   if(!fab) return;
-  const hidden = localStorage.getItem('hideFab') === '1';
+  let hidden = false; try{ hidden = localStorage.getItem('hideFab') === '1'; }catch(e){}
   fab.dataset.userHidden = hidden ? '1' : '0';
   if(hidden) fab.style.display = 'none';
 }
 function toggleFabVisible(checkbox){
-  localStorage.setItem('hideFab', checkbox.checked ? '0' : '1');
+  try{ localStorage.setItem('hideFab', checkbox.checked ? '0' : '1'); }
+  catch(e){ toastMsg('이 브라우저에서는 설정을 저장할 수 없어요 (지금 화면에만 적용돼요)', 3000); }
   const fab = document.getElementById('globalFab');
-  if(fab && currentDemoMode){
-    const baseVisible = (currentDemoMode==='routine' || currentDemoMode==='bonbu');
-    fab.style.display = (baseVisible && checkbox.checked) ? 'flex' : 'none';
-  }
+  if(!fab) return;
+  const baseVisible = (currentDemoMode === 'routine' || currentDemoMode === 'bonbu');
+  fab.style.display = (baseVisible && checkbox.checked) ? 'flex' : 'none';
 }
 async function renderDataDownloadMenu(){
   const menu = document.getElementById('dataDownloadMenu');
@@ -5526,7 +6297,7 @@ async function loadCatSettingsList(){
   if(!currentUser) return;
   const list = document.getElementById('csExpenseList');
   list.innerHTML = '<p class="ac-sub">불러오는 중...</p>';
-  const { data, error } = await sb.from('ledger_categories').select('category').eq('user_id', currentUser.id).eq('kind','expense').is('linked_asset_id', null);
+  const { data, error } = await sb.from('ledger_categories').select('category').eq('user_id', currentUser.id).eq('kind','expense').is('linked_asset_id', null).is('ended_on', null);
   if(error){ list.innerHTML = `<p class="ac-sub">불러오기 실패: ${error.message}</p>`; return; }
   const counts = {};
   (data||[]).forEach(r => { counts[r.category] = (counts[r.category]||0) + 1; });
@@ -5537,7 +6308,7 @@ async function loadCatSettingsList(){
   }
   list.innerHTML = names.map(n => `
     <div class="cs-row" style="display:flex;gap:8px;align-items:center;margin:0 20px 8px;">
-      <input type="text" value="${n}" data-old="${n}" style="flex:1;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);background:var(--surface);font-family:inherit;font-size:13px;">
+      <input type="text" value="${escAttr(n)}" data-old="${n}" style="flex:1;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);background:var(--surface);font-family:inherit;font-size:13px;">
       <span class="field-hint" style="white-space:nowrap;">${counts[n]}개 항목</span>
       <button class="cat-del" onclick="renameCategoryGlobal(this)">저장</button>
       <button class="cat-del" style="color:var(--red);" onclick="deleteCategoryGlobal('${n}', ${counts[n]})">✕</button>
@@ -5556,7 +6327,8 @@ async function renameCategoryGlobal(btn){
 async function deleteCategoryGlobal(name, count){
   const confirmed = confirm(`"${name}" 카테고리를 삭제하면 그 안의 ${count}개 항목이 전부 지워져요.\n(이미 기록된 가계부 거래내역은 남아있어요)\n정말 삭제하시겠어요?`);
   if(!confirmed) return;
-  const { error } = await sb.from('ledger_categories').delete().eq('user_id', currentUser.id).eq('kind','expense').eq('category', name);
+  const { error } = await sb.from('ledger_categories').update({ ended_on: dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) }).eq('user_id', currentUser.id).eq('kind','expense').eq('category', name).is('ended_on', null);
+  await loadMyCategories();
   if(error){ alert('삭제 실패: ' + error.message); return; }
   loadCatSettingsList();
 }
@@ -5619,13 +6391,25 @@ async function loadAdminBookList(){
     return;
   }
   wrap.innerHTML = data.map(b => `
-    <p class="ac-line">${b.month_number}월 · <b>${b.title}</b>${b.subtitle?' · '+b.subtitle:''} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteBonbuBook('${b.id}')">삭제</span></p>
+    <p class="ac-line">${b.year||''}년 ${b.month_number}월 · <b>${b.title}</b>${b.subtitle?' · '+b.subtitle:''} <span style="float:right;color:var(--red);cursor:pointer;" onclick="deleteBonbuBook('${b.id}')">삭제</span></p>
   `).join('');
 }
+function initBookFormDefaults(){
+  const ys = document.getElementById('abYear'), ms = document.getElementById('abMonth');
+  if(!ys || !ms) return;
+  const now = new Date(), y = now.getFullYear();
+  if(!ys.options.length){
+    for(let i=y-1;i<=y+3;i++){ const o = document.createElement('option'); o.value = i; o.textContent = i+'년'; ys.appendChild(o); }
+  }
+  ys.value = String(y);
+  ms.value = String(now.getMonth()+1);
+}
+document.addEventListener('DOMContentLoaded', initBookFormDefaults);
 async function addBonbuBook(){
   const title = document.getElementById('abTitle').value.trim();
   const subtitle = document.getElementById('abSubtitle').value.trim();
   const monthNumber = Number(document.getElementById('abMonth').value);
+  const yearNumber = Number(document.getElementById('abYear').value) || new Date().getFullYear();
   const t = document.getElementById('toast');
   if(!title){
     t.textContent = '책 제목을 입력해주세요';
@@ -5639,7 +6423,7 @@ async function addBonbuBook(){
     setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1800);
     return;
   }
-  const { error } = await sb.from('bonbu_books').insert({ title, subtitle: subtitle || null, month_number: monthNumber, sort_order: monthNumber, created_by: currentUser.id });
+  const { error } = await sb.from('bonbu_books').insert({ title, subtitle: subtitle || null, month_number: monthNumber, year: yearNumber, sort_order: yearNumber*100 + monthNumber, created_by: currentUser.id });
   if(error){
     console.error('book add failed', error);
     t.textContent = '책 추가 실패: ' + error.message;
@@ -6046,6 +6830,36 @@ function viewMemberScreen(sub, name){
 
 /* ── 과거 주/월 이동 ── */
 let weekOffset = 0;
+function refreshDateLabels(){
+  try{ applyDayMissions(); }catch(e){}
+  const now = new Date();
+  const fmt = d => (d.getMonth()+1) + '.' + d.getDate();
+  const ws = getThisWeekMonday(); ws.setDate(ws.getDate() + weekOffset*7);
+  const we = new Date(ws); we.setDate(we.getDate()+6);
+  const weekText = `${ws.getFullYear()}.${fmt(ws)} ~ ${fmt(we)} ${weekOffset===0 ? '<i>이번 주</i>' : ''}`;
+  ['weekNavLabel','weeksettleNavLabel'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = weekText; });
+  const md = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const ml = document.getElementById('monthNavLabel');
+  if(ml) ml.innerHTML = `${md.getFullYear()}년 ${md.getMonth()+1}월 ${monthOffset===0 ? '<i>이번 달</i>' : ''}`;
+  const cd = new Date(now.getFullYear(), now.getMonth() + calMonthOffset, 1);
+  const cl = document.getElementById('calMonthLabel');
+  if(cl) cl.textContent = `${cd.getFullYear()}년 ${cd.getMonth()+1}월`;
+  const hd = document.getElementById('homeDateText');
+  if(hd) hd.textContent = `${now.getMonth()+1}월 ${now.getDate()}일 ${['일','월','화','수','목','금','토'][now.getDay()]}요일`;
+}
+let lastSeenDateKey = null;
+document.addEventListener('DOMContentLoaded', () => {
+  lastSeenDateKey = dateKey(new Date());
+  refreshDateLabels();
+});
+// 앱을 켜둔 채 날짜가 바뀐 경우: 다시 앞으로 돌아왔을 때 새 날짜로 갱신 (열려있는 화면이 없을 때만)
+function checkDayRollover(){
+  if(lastSeenDateKey === null) return;
+  if(dateKey(new Date()) === lastSeenDateKey) return;
+  if(document.querySelector('.subscreen.open')) return; // 입력 중일 수 있으니 방해하지 않음
+  location.reload();
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkDayRollover(); });
 function getThisWeekMonday(){
   const today = new Date();
   const dow = (today.getDay() + 6) % 7;
@@ -6075,6 +6889,11 @@ async function navWeek(dir){
 function actualAmountForItem(item, key, txList){
   const match = (txList||[]).find(t => t.category_id === item.category_id && t.tx_date === key && t.is_auto_fixed);
   return match ? Number(match.amount) : item.amount; // 기록 없으면 예산금액을 그대로 실제로 간주
+}
+function shortWon(n){
+  n = Math.abs(Number(n)||0);
+  if(n >= 100000) return (Math.round(n/1000)/10)+'만'; // 칸 폭 때문에 10만 이상만 축약
+  return n.toLocaleString();
 }
 function renderWeekGrid(weekStart){
   const grid = document.getElementById('grid7');
@@ -6111,14 +6930,14 @@ function renderWeekGrid(weekStart){
     } else if(expenseSum === 0 && tx.length > 0){
       cell.classList.add('nospend');
       inner += '<span class="stamp">무지출</span>';
+      if(incomeSum > 0) inner += `<small class="inc-only">+${shortWon(incomeSum)}</small>`;
     } else if(expenseSum === 0 && due.length === 0){
       cell.classList.add('empty');
       inner += '<small>-</small>';
     } else {
       const diff = incomeSum - expenseSum;
       cell.classList.add(diff >= 0 ? 'ok' : 'over');
-      const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
-      inner += `<small>${diff>=0?'+':'-'}${diffText}</small>`;
+      inner += `<small>${diff>=0?'+':'-'}${shortWon(Math.abs(diff))}</small>`;
     }
     cell.innerHTML = inner;
     cell.dataset.dateKey = key;
@@ -6177,7 +6996,7 @@ function colorizeSettleRows(){
     const bTxt = budgetEl.textContent.trim();
     let budget = null;
     if(bTxt.includes('만')) budget = parseFloat(bTxt) * 10000;
-    else if(/^[0-9.]+$/.test(bTxt)) budget = parseFloat(bTxt);
+    else if(/\d/.test(bTxt)) budget = Number(bTxt.replace(/[^\d]/g,''));
     if(budget === null) return;
     const total = parseFloat(totalEl.textContent.replace(/[^0-9.]/g,'')) || 0;
     const isExpense = !!row.querySelector('.tx-dot.expense');
@@ -6269,11 +7088,10 @@ async function renderMonthGrid(){
     } else {
       const diff = incomeSum - expenseSum;
       state = diff >= 0 ? 'ok' : 'over';
-      const diffText = Math.abs(diff) >= 10000 ? (Math.round(Math.abs(diff)/1000)/10)+'만' : Math.round(Math.abs(diff)/1000)+'천';
-      label = (diff>=0?'+':'-') + diffText;
+      label = (diff>=0?'+':'-') + shortWon(diff);
     }
     cell.className = 'm-cell ' + state;
-    cell.innerHTML = state==='nospend' ? `${day}<small>무지출</small>` : `${day}<small>${label}</small>`;
+    cell.innerHTML = state==='nospend' ? `${day}<small>${incomeSum>0 ? '무지출 +'+shortWon(incomeSum) : '무지출'}</small>` : `${day}<small>${label}</small>`;
     cell.onclick = () => {
       document.querySelectorAll('.m-cell').forEach(c=>c.classList.remove('selected'));
       cell.classList.add('selected');
@@ -6330,11 +7148,16 @@ function navMonth(dir){
   <div class="admin-card" style="margin-top:10px;">
     <p class="ac-line" style="margin-bottom:6px;"><b>시즌 시작일 (연속참여·완료기록 카운트 기준)</b></p>
     <p class="field-hint" style="margin-bottom:8px;">현재: <span id="seasonStartDisplay">-</span> · 라벨: <span id="seasonLabelDisplay">-</span></p>
-    <input type="date" id="seasonStartInput" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
-    <input type="text" id="seasonLabelInput" placeholder="시즌 라벨 (예: 2026-S4)" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+    <input type="date" id="seasonStartInput" onchange="autofillSeasonEnd()" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+    <input type="date" id="seasonEndInput" style="width:100%;margin-bottom:4px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
+    <p class="field-hint" style="margin:0 0 8px;">시작일을 고르면 종료일이 3개월 뒤로 자동 입력돼요 (고쳐도 돼요)</p>
+    <input type="text" id="seasonLabelInput" placeholder="시즌 라벨 (예: 2027년 1기)" style="width:100%;margin-bottom:8px;padding:9px 10px;border-radius:9px;border:0.5px solid var(--line);">
     <button class="add-row" style="color:var(--red);" onclick="resetSeasonStart('routinebu')">🔄 새 시즌 시작 (초기화)</button>
     <p class="field-hint" style="margin-top:6px;">누르면 그 날짜부터 모든 멤버의 연속참여·완료기록이 새로 카운트돼요.</p>
   </div>
+
+  <div class="section-head" style="margin-top:22px;"><h2>문의함</h2><span id="inquiryCount">불러오는 중</span></div>
+  <div id="adminInquiryList"><p class="ac-sub">불러오는 중...</p></div>
 
   <div class="section-head" style="margin-top:22px;"><h2>가입 승인 대기 · 루틴부</h2><span id="approvalCount">불러오는 중</span></div>
   <div class="admin-card" id="approvalCard">
@@ -6416,11 +7239,12 @@ function navMonth(dir){
     <input type="text" id="abSubtitle" placeholder="예: 10주년 스페셜 에디션">
   </div>
   <div class="field">
-    <label>몇 월 책인가요?</label>
+    <label>몇 년 몇 월 책인가요?</label>
+    <select id="abYear" style="margin-bottom:6px;"></select>
     <select id="abMonth">
       <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
       <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
-      <option value="7">7월</option><option value="8">8월</option><option value="9" selected>9월</option>
+      <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
       <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
     </select>
     <p class="field-hint">그 달이 되면 모든 멤버의 서재에 자동으로 "읽는 중"으로 떠요.</p>
