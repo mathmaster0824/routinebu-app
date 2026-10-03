@@ -361,6 +361,9 @@
   .row-done{flex:none;height:30px;padding:0 12px;border-radius:15px;border:none;background:var(--brand);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
   .row-done:disabled{opacity:.6;}
   .mission.day-hidden{display:none;}
+  .tx-fixed-extra{margin-top:4px;text-align:right;}
+  .row-move{border:none;background:none;color:var(--ink-faint);font-size:12px;text-decoration:underline;cursor:pointer;padding:3px 0;font-family:inherit;}
+  .tx-row.fixed.skipped .tx-fixed-extra{display:none;}
   .section-head h2 .mission-date{font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink-faint);margin-left:6px;white-space:nowrap;}
   .tx-row.done-ok .row-done{background:var(--green-bg);color:var(--green);}
   .tx-row.manual.editing{box-shadow:inset 3px 0 0 var(--gold);padding-left:8px;border-radius:6px;}
@@ -2418,6 +2421,10 @@ async function navMonthSettle(dir){
   monthSettleOffset += dir;
   renderMonthSettle();
 }
+function monthLabelFor(cat, fallback){
+  if(cat && cat.linked_asset_id) return cat.category === '비유동자산' ? '비유동투자' : cat.category === '고정투자자산' ? '고정투자' : '변동투자';
+  return cat ? cat.category : fallback;
+}
 async function renderMonthSettle(){
   if(!currentUser) return;
   if(myCategoriesCache.length === 0) await loadMyCategories();
@@ -2453,18 +2460,14 @@ async function renderMonthSettle(){
     getDueItemsForDate(d).forEach(item => {
       const amt = actualAmountForItem(item, key, dayTx);
       const cat = catMap[item.category_id];
-      let label;
-      if(cat && cat.linked_asset_id){
-        label = cat.category === '비유동자산' ? '비유동투자' : cat.category === '고정투자자산' ? '고정투자' : '변동투자';
-      } else {
-        label = cat ? cat.category : item.category;
-      }
+      const label = monthLabelFor(cat, item.category);
       if(item.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + amt; incomeTotal += amt; }
       else { expenseByCat[label] = (expenseByCat[label]||0) + amt; expenseTotal += amt; }
     });
     dayTx.filter(t => !t.is_auto_fixed).forEach(t => {
       const cat = catMap[t.category_id];
-      const label = cat ? (cat.name || cat.category) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
+      // 고정항목과 같은 기준으로 묶어요(옮긴 기록이 따로 줄이 갈라지거나, 직접 기록한 투자가 투자금액에서 빠지지 않게)
+      const label = cat ? monthLabelFor(cat, t.category_snapshot) : (t.category_snapshot || (t.kind==='income'?'기타 수입':'기타 지출'));
       if(t.kind === 'income'){ incomeByCat[label] = (incomeByCat[label]||0) + Number(t.amount); incomeTotal += Number(t.amount); }
       else { expenseByCat[label] = (expenseByCat[label]||0) + Number(t.amount); expenseTotal += Number(t.amount); }
     });
@@ -2573,7 +2576,11 @@ function getDueItemsForDate(d){
       items.push({ category_id:c.id, category:c.category, name:c.name, kind:c.kind, income_tag:c.income_tag, amount:Number(c.monthly_budget)||0 });
     }
   });
-  return items;
+  // 같은 항목이 같은 날 두 번 해당될 수 있어요(예: '여러 날짜로 나누기'에서 29일·말일을 둘 다 정했는데 2월 29일에 겹침).
+  // 하루에 한 항목은 한 건으로 합쳐서 계산해야 주간정산·월말정산·확정 기록(항목당 하루 1건)이 서로 어긋나지 않아요.
+  const merged = new Map();
+  items.forEach(it => { const m = merged.get(it.category_id); if(m) m.amount += it.amount; else merged.set(it.category_id, { ...it }); });
+  return [...merged.values()];
 }
 function dateKey(d){
   const y = d.getFullYear();
@@ -2631,6 +2638,7 @@ async function showRealDay(el, d){
     row.dataset.autoFixed = '1';
     row.dataset.kind = item.kind;
     row.dataset.dayKey = key;
+    row.dataset.categoryName = item.kind === 'income' ? (item.income_tag || item.category || '') : (item.category || '');
     const catSelectHtml = item.kind === 'income'
       ? `<select class="tx-cat" disabled>${incomeOptions(item.income_tag)}</select>`
       : `<select class="tx-cat" disabled>${catOptions(item.category)}</select>`;
@@ -2645,7 +2653,8 @@ async function showRealDay(el, d){
         <span class="tx-fixed-budget">예산 ${item.amount.toLocaleString()}원</span>
         <input class="tx-input" type="text" inputmode="numeric" value="${amt.toLocaleString()}" oninput="formatMoneyInput(this)">
         <button class="row-del" title="이번엔 없었어요" onclick="skipFixedTx(this)">✕</button>
-      </div>`;
+      </div>
+      <div class="tx-fixed-extra"><button class="row-move" onclick="moveFixedFromLedger(this)">📅 다른 날짜로 옮기기</button></div>`;
     setRowState(row, existing ? 'done' : 'idle');
     list.appendChild(row);
   });
@@ -3682,8 +3691,11 @@ async function skipTodayFixedItem(btnEl, categoryId){
   }
   field.remove();
 }
+/* 오늘 결제일인 고정항목을 이번 달의 다른 날짜로 옮기기.
+   ① 새 날짜에 기록을 먼저 만들고 ② 원래 항목을 0원 처리해요. ②가 실패하면 ①을 지워서 원래대로 돌려놓아요(지출이 사라지거나 두 번 잡히지 않게). */
 async function moveFixedItemDate(btnEl, categoryId, category, kind){
   const field = btnEl.closest('.field');
+  if(!field || field.dataset.moving === '1') return; // 처리 중에 또 누르면 무시(연타 방지)
   const amtInput = field.querySelector('input[inputmode="numeric"]');
   const amount = rawMoney(amtInput);
   const input = prompt(`"${category}" 항목(${amount.toLocaleString()}원)을 몇 일로 옮길까요? (1~31 숫자만 입력)`);
@@ -3692,43 +3704,95 @@ async function moveFixedItemDate(btnEl, categoryId, category, kind){
   if(!day || day < 1 || day > 31){ alert('1~31 사이 숫자를 입력해주세요'); return; }
   const now = new Date();
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const moveDay = Math.min(day, lastDayOfMonth); // 4월에 31 → 4월 30일(말일). (JS는 4/31을 5/1로 바꿔버려서 다음 달로 넘어갔었음)
-  const targetDate = new Date(now.getFullYear(), now.getMonth(), moveDay);
-  const targetKey = dateKey(targetDate);
+  const moveDay = Math.min(day, lastDayOfMonth); // 4월에 31 → 4월 30일(말일)
+  const targetKey = dateKey(new Date(now.getFullYear(), now.getMonth(), moveDay));
   const todayKey = dateKey(now);
+  if(targetKey === todayKey){ alert('오늘 날짜예요. 다른 날짜를 입력해주세요.'); return; }
 
-  // 오늘자 고정항목은 0원으로 스킵 처리 (오늘은 실제로 안 나간 걸로)
-  const { data: existing } = await sb.from('transactions').select('id')
-    .eq('category_id', categoryId).eq('tx_date', todayKey).eq('is_auto_fixed', true).maybeSingle();
-  if(existing){
-    await sb.from('transactions').update({ amount: 0 }).eq('id', existing.id);
-  } else {
-    await upsertFixedTx({
-      user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: todayKey, is_auto_fixed: true,
-    });
+  field.dataset.moving = '1'; btnEl.style.pointerEvents = 'none';
+  try{
+    const res = await moveFixedCore({ categoryId, snapshot: category, kind, amount, srcKey: todayKey, targetKey });
+    if(!res.ok){ alert(res.msg); return; }
+    field.remove();
+    toastMsg(`"${category}"(${amount.toLocaleString()}원)를 ${moveDay}일로 옮겼어요.` + (moveDay !== day ? ` (이번 달은 ${lastDayOfMonth}일까지라 말일로 옮겼어요)` : ''), 2400);
+    try{ await navWeek(0); }catch(e){}
+  } finally {
+    field.dataset.moving = ''; btnEl.style.pointerEvents = '';
   }
-  // 옮긴 날짜에 실제 거래 기록 (지금 화면에 보이던 금액 그대로)
-  const { error } = await sb.from('transactions').insert({
-    user_id: currentUser.id, category_id: categoryId, category_snapshot: category, kind, amount, tx_date: targetKey, is_auto_fixed: false,
-  });
-  if(error){ alert('옮기기 실패: ' + error.message); return; }
-
-  const t = document.getElementById('toast');
-  t.textContent = `"${category}"(${amount.toLocaleString()}원)를 ${moveDay}일로 옮겼어요.` + (moveDay !== day ? ` (이번 달은 ${lastDayOfMonth}일까지라 말일로 옮겼어요)` : '');
-  t.classList.add('show');
-  setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 2200);
-
-  field.remove(); // 오늘 목록에서 바로 제거
+}
+/* 고정항목 옮기기 공통 처리.
+   ① 새 날짜에 기록을 먼저 만들고 ② 원래 날짜 항목을 0원 처리해요. ②가 실패하면 ①을 지워서 원래대로 돌려놓아요.
+   (아침예산·저녁정산과 가계부 날짜 상세가 모두 이걸 써요) */
+async function moveFixedCore({ categoryId, snapshot, kind, amount, srcKey, targetKey }){
+  const { data: newTx, error } = await sb.from('transactions').insert({
+    user_id: currentUser.id, category_id: categoryId, category_snapshot: snapshot, kind, amount, tx_date: targetKey, is_auto_fixed: false,
+  }).select().single();
+  if(error) return { ok:false, msg: '옮기기 실패 (아무것도 바뀌지 않았어요): ' + error.message };
+  const { data: existing } = await sb.from('transactions').select('id')
+    .eq('user_id', currentUser.id).eq('category_id', categoryId).eq('tx_date', srcKey).eq('is_auto_fixed', true).maybeSingle();
+  let r;
+  if(existing) r = await sb.from('transactions').update({ amount: 0 }).eq('id', existing.id);
+  else r = await upsertFixedTx({ user_id: currentUser.id, category_id: categoryId, kind, amount: 0, tx_date: srcKey, is_auto_fixed: true });
+  if(r.error){
+    const { error: rbErr } = await sb.from('transactions').delete().eq('id', newTx.id); // 원상복구
+    return { ok:false, msg: rbErr ? '옮기기가 중간에 멈췄어요. 가계부에서 이 항목을 한 번 확인해주세요.' : '옮기기 실패 (아무것도 바뀌지 않았어요): ' + r.error.message };
+  }
+  delete weekTxCache[srcKey]; delete weekTxCache[targetKey];
+  return { ok:true };
+}
+/* 가계부 날짜 상세의 고정항목을 '그 달의 다른 날짜'로 옮기기 (결제일 당일이 아니어도 가능) */
+async function moveFixedFromLedger(btn){
+  const row = btn.closest('.tx-row'); if(!row || row.dataset.moving === '1') return;
+  const categoryId = row.dataset.categoryId, kind = row.dataset.kind, srcKey = row.dataset.dayKey;
+  const snapshot = row.dataset.categoryName || '';
+  const name = (row.querySelector('.tx-fixed-name') || {}).textContent || snapshot;
+  const amount = rawMoney(row.querySelector('.tx-input'));
+  if(!categoryId || !srcKey) return;
+  if(!amount){ alert('금액이 0원이라 옮길 게 없어요.\\n옮길 금액을 먼저 입력해주세요.'); return; }
+  const [sy, sm] = srcKey.split('-').map(Number);
+  const lastDay = new Date(sy, sm, 0).getDate();
+  const input = prompt(`"${name}"(${amount.toLocaleString()}원)을 ${sm}월 몇 일로 옮길까요? (1~${lastDay} 숫자만)`);
+  if(!input) return;
+  const day = parseInt(input);
+  if(!day || day < 1 || day > 31){ alert('1~31 사이 숫자를 입력해주세요'); return; }
+  const moveDay = Math.min(day, lastDay); // 2월에 31 → 말일
+  const targetKey = dateKey(new Date(sy, sm - 1, moveDay));
+  if(targetKey === srcKey){ alert('같은 날짜예요. 다른 날짜를 입력해주세요.'); return; }
+  row.dataset.moving = '1'; btn.disabled = true;
+  try{
+    const res = await moveFixedCore({ categoryId, snapshot, kind, amount, srcKey, targetKey });
+    if(!res.ok){ alert(res.msg); return; }
+    try{ clearDraft(row); }catch(e){}
+    toastMsg(`"${name}"(${amount.toLocaleString()}원)를 ${sm}월 ${moveDay}일로 옮겼어요.` + (moveDay !== day ? ` (${sm}월은 ${lastDay}일까지라 말일로 옮겼어요)` : ''), 2600);
+    // 화면 새로고침: 주간/월간 달력과 요약, 그리고 지금 보던 날짜 상세
+    const monthMode = document.getElementById('monthView') && document.getElementById('monthView').style.display !== 'none';
+    try{ if(monthMode) await renderMonthGrid(); else await navWeek(0); }catch(e){}
+    const [y2, m2, d2] = srcKey.split('-').map(Number);
+    const cell = document.querySelector(`#grid7 .g-cell[data-date-key="${srcKey}"]`) || [...document.querySelectorAll('#monthView .m-cell')].find(c => c.dataset && c.dataset.dateKey === srcKey) || null;
+    await showRealDay(cell, new Date(y2, m2 - 1, d2));
+    try{ refreshLedgerSummary(); }catch(e){}
+  } finally {
+    row.dataset.moving = ''; btn.disabled = false;
+  }
+}
+/* 오늘 이미 0원 처리(건너뜀·옮김)된 고정항목의 카테고리 id들 — 아침예산·저녁정산 목록에서 빼기 위해 */
+async function todaysSkippedCategoryIds(){
+  if(!currentUser) return new Set();
+  const { data } = await sb.from('transactions').select('category_id, amount')
+    .eq('user_id', currentUser.id).eq('tx_date', dateKey(new Date())).eq('is_auto_fixed', true);
+  return new Set((data || []).filter(t => Number(t.amount) === 0).map(t => t.category_id));
 }
 async function renderMorningBudget(){
   if(currentUser && myCategoriesCache.length === 0) await loadMyCategories();
-  const items = currentUser ? getDueItemsForDate(new Date()) : [];
+  let items = currentUser ? getDueItemsForDate(new Date()) : [];
+  let hiddenCount = 0;
+  if(items.length){ const sk = await todaysSkippedCategoryIds(); const n0 = items.length; items = items.filter(i => !sk.has(i.category_id)); hiddenCount = n0 - items.length; }
   const list = document.getElementById('budgetTodayList');
   const emptyNote = document.getElementById('budgetEmptyNote');
   const dateNote = document.getElementById('budgetDateNote');
   if(dateNote){
     const today = new Date();
-    dateNote.innerHTML = `오늘(${today.getMonth()+1}월 ${today.getDate()}일)에 결제 예정인 항목이에요. 실제로 다를 것 같으면 미리 고쳐두세요.`;
+    dateNote.innerHTML = `오늘(${today.getMonth()+1}월 ${today.getDate()}일)에 결제 예정인 항목이에요. 실제로 다를 것 같으면 미리 고쳐두세요.` + (hiddenCount ? ` (옮기거나 건너뛴 ${hiddenCount}개는 목록에서 빠졌어요)` : '');
   }
   if(!list) return;
   list.innerHTML = '';
@@ -3768,6 +3832,7 @@ async function renderEveningSettle(){
     const due = getDueItemsForDate(new Date());
     items = due.map(d => ({ name: d.name, amt: d.amount, type: d.kind, categoryId: d.category_id, category: d.category }));
   }
+  if(currentUser && items.length){ const sk = await todaysSkippedCategoryIds(); items = items.filter(i => !i.categoryId || !sk.has(i.categoryId)); }
   const list = document.getElementById('settleTodayList');
   const emptyNote = document.getElementById('settleEmptyNote');
   if(!list) return;
@@ -7091,6 +7156,7 @@ async function renderMonthGrid(){
       label = (diff>=0?'+':'-') + shortWon(diff);
     }
     cell.className = 'm-cell ' + state;
+    cell.dataset.dateKey = key;
     cell.innerHTML = state==='nospend' ? `${day}<small>${incomeSum>0 ? '무지출 +'+shortWon(incomeSum) : '무지출'}</small>` : `${day}<small>${label}</small>`;
     cell.onclick = () => {
       document.querySelectorAll('.m-cell').forEach(c=>c.classList.remove('selected'));
