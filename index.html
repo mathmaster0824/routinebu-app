@@ -361,6 +361,18 @@
   .row-done{flex:none;height:30px;padding:0 12px;border-radius:15px;border:none;background:var(--brand);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
   .row-done:disabled{opacity:.6;}
   .mission.day-hidden{display:none;}
+  .meal-week-chips{display:flex;gap:8px;margin:6px 20px 8px;align-items:center;}
+  .meal-chip{flex:1;padding:9px 6px;border-radius:10px;border:0.5px solid var(--line);background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit;}
+  .meal-chip.arrow{flex:none;width:40px;}
+  .meal-chip.active{background:var(--brand-deep,#2b3d2f);color:#fff;border-color:transparent;}
+  .meal-day-row.past{opacity:.5;}
+  .meal-day-row.today .meal-day-label{background:var(--brand-deep,#2b3d2f);color:#fff;}
+  .meal-day-date{flex:none;min-width:58px;font-size:11px;color:var(--ink-faint);line-height:1.2;}
+  .meal-day-date b{color:var(--brand-deep,#2b3d2f);font-weight:700;}
+  .meal-move-row{display:flex;justify-content:space-between;gap:8px;margin:8px 20px 0;}
+  .auto-login-row{display:flex;align-items:flex-start;gap:9px;margin:12px 20px 0;font-size:14px;color:var(--ink);cursor:pointer;line-height:1.35;}
+  .auto-login-row input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--brand-deep,#2b3d2f);}
+  .auto-login-row small{display:block;color:var(--ink-faint);font-size:11.5px;margin-top:2px;}
   .tx-fixed-extra{margin-top:4px;text-align:right;}
   .row-move{border:none;background:none;color:var(--ink-faint);font-size:12px;text-decoration:underline;cursor:pointer;padding:3px 0;font-family:inherit;}
   .tx-row.fixed.skipped .tx-fixed-extra{display:none;}
@@ -1088,6 +1100,7 @@
     <div id="loginStep">
       <div class="field"><label>이메일</label><input id="loginEmail" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('loginPassword').focus();}"></div>
       <div class="field"><label>비밀번호</label><input id="loginPassword" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin();}"></div>
+      <label class="auto-login-row"><input type="checkbox" id="autoLoginCheck"><span>자동 로그인<small>이 기기에서 로그아웃하기 전까지 로그인이 유지돼요. 내 기기에서만 켜주세요.</small></span></label>
       <button class="save-btn" id="loginBtn" style="margin:14px 20px 0;width:calc(100% - 40px);" onclick="doLogin()">로그인</button>
       <p class="login-link" onclick="showOnboard('signup')">처음이신가요? 회원가입</p>
       <p class="login-link" onclick="requestPasswordReset()">비밀번호를 잊으셨나요?</p>
@@ -1385,6 +1398,17 @@
 
     <div class="toggle-row" style="margin-top:14px;">
       <div>
+        <p class="toggle-row-label">자동 로그인</p>
+        <p class="toggle-row-sub">켜면 이 기기에서 로그아웃하기 전까지 로그인이 유지돼요 (내 기기에서만 켜주세요)</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="autoLoginToggle" onchange="toggleAutoLogin(this)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row" style="margin-top:14px;">
+      <div>
         <p class="toggle-row-label">문의하기 버튼 표시</p>
         <p class="toggle-row-sub">끄면 화면 우측하단 💬 버튼이 안 보여요</p>
       </div>
@@ -1401,7 +1425,7 @@
     <button class="mode-switch-btn" id="adminModeBtn" style="display:none;width:calc(100% - 40px);margin:16px 20px 0;" onclick="try{setDemoMode('admin')}catch(e){alert('에러: '+e.message)}">관리자 모드로 전환</button>
 
     <button class="mi-logout" onclick="doLogout()">로그아웃</button>
-    <p class="mi-logout-note">브라우저(탭)를 완전히 닫으면 자동으로 로그아웃돼요.</p>
+    <p class="mi-logout-note" id="miLogoutNote">브라우저(탭)를 완전히 닫으면 자동으로 로그아웃돼요.</p>
   </div>
 </div>
 
@@ -1886,7 +1910,7 @@
 <div class="subscreen" id="sub-mealplan">
   <div class="sub-top"><button class="back-btn" onclick="closeSub('mealplan')">←</button><h1 class="sub-title">이번 주 식단·장보기</h1></div>
   <div class="sub-body">
-    <p class="se-intro">여기서 계획을 쓰면, 실천 체크는 홈 화면에서 바로바로 할 수 있어요.</p>
+    <p class="se-intro">여기서 계획을 쓰면, 실천 체크는 홈 화면에서 바로바로 할 수 있어요. 다음 주 식단은 아래에서 <b>'다음 주'</b>를 눌러 미리 짤 수 있어요.</p>
 
     <p class="group-label" style="margin-top:16px;">🧊 냉장고 (지금 있는 재료)</p>
     <p class="field-hint" style="margin:0 20px 8px;">실제 구매 내역에 적으면 여기 자동으로 쌓여요. 쓸 때마다 －를 눌러 줄이고, 0이 되면 🛒로 장보기 리스트에 바로 담으세요.</p>
@@ -1897,7 +1921,14 @@
     </div>
 
     <p class="group-label" style="margin-top:20px;" id="mealWeekLabel">이번 주 식단</p>
+    <div class="meal-week-chips" id="mealWeekChips"></div>
+    <p class="field-hint" id="mealWeekHint" style="margin:0 20px 8px;display:none;"></p>
     <div class="meal-grid" id="mealPlanGrid"></div>
+    <p class="field-hint" style="margin:10px 20px 0;">잘못된 주에 적었다면, 이 주 식단을 통째로 옮길 수 있어요. (이미 적힌 날은 덮어쓰지 않아요)</p>
+    <div class="meal-move-row" id="mealMoveRow">
+      <button class="row-move" onclick="moveMealWeek(-1)">‹ 지난주로 옮기기</button>
+      <button class="row-move" onclick="moveMealWeek(1)">다음 주로 옮기기 ›</button>
+    </div>
 
     <p class="group-label" style="margin-top:20px;">장보기 리스트 + 예산</p>
     <p class="field-hint" style="margin:0 20px 8px;">식단에 맞춰 살 것과 수량을 미리 적어두세요.</p>
@@ -1983,7 +2014,50 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-  const SB_URL = 'https://mnrrcfpnmebuixpomuso.supabase.co';
+  /* ── 자동 로그인 (원하는 사람만) ──
+   기본은 지금처럼 '탭을 닫으면 로그아웃'(sessionStorage). 자동 로그인을 켠 기기에서만 로그인 정보를 이 기기에 계속 보관해요(localStorage). */
+const AUTOLOGIN_KEY = 'routinebu_autologin';
+function lsGet(k){ try{ return window.localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ window.localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+function lsDel(k){ try{ window.localStorage.removeItem(k); }catch(e){} }
+function ssGet(k){ try{ return window.sessionStorage.getItem(k); }catch(e){ return null; } }
+function ssSet(k,v){ try{ window.sessionStorage.setItem(k,v); return true; }catch(e){ return false; } }
+function ssDel(k){ try{ window.sessionStorage.removeItem(k); }catch(e){} }
+function autoLoginOn(){ return lsGet(AUTOLOGIN_KEY) === '1'; }
+const authStorage = {
+  getItem(k){ const a = ssGet(k); if(a != null) return a; return autoLoginOn() ? lsGet(k) : null; },
+  setItem(k,v){ if(autoLoginOn() && lsSet(k,v)){ ssDel(k); } else { ssSet(k,v); lsDel(k); } },
+  removeItem(k){ ssDel(k); lsDel(k); },
+};
+function authKeysIn(getStore){ const out = []; try{ const st = getStore(); for(let i=0;i<st.length;i++){ const k = st.key(i); if(k && /^sb-.*-auth-token/.test(k)) out.push(k); } }catch(e){} return out; }
+function clearPersistedAuth(){ authKeysIn(() => window.localStorage).forEach(k => lsDel(k)); }
+function moveAuthSession(toLocal){ // true: 이 탭 → 이 기기에 계속 보관 / false: 반대
+  try{
+    const getFrom = () => toLocal ? window.sessionStorage : window.localStorage; let ok = true;
+    authKeysIn(getFrom).forEach(k => { const v = getFrom().getItem(k); if(toLocal ? lsSet(k,v) : ssSet(k,v)){ getFrom().removeItem(k); } else ok = false; });
+    return ok;
+  }catch(e){ return false; }
+}
+function refreshAutoLoginUi(){
+  const on = autoLoginOn();
+  const t = document.getElementById('autoLoginToggle'); if(t) t.checked = on;
+  const n = document.getElementById('miLogoutNote');
+  if(n) n.textContent = on ? '자동 로그인 사용 중이에요. 로그아웃하기 전까지 이 기기에서 로그인이 유지돼요.' : '브라우저(탭)를 완전히 닫으면 자동으로 로그아웃돼요.';
+  const c = document.getElementById('autoLoginCheck'); if(c) c.checked = on;
+}
+function toggleAutoLogin(cb){
+  if(cb.checked){
+    if(!lsSet(AUTOLOGIN_KEY, '1')){ cb.checked = false; toastMsg('이 브라우저에서는 자동 로그인을 쓸 수 없어요 (저장 공간이 막혀 있어요)', 3600); return; }
+    moveAuthSession(true);
+    toastMsg('자동 로그인을 켰어요. 이 기기에서는 로그아웃하기 전까지 로그인이 유지돼요', 3600);
+  } else {
+    lsDel(AUTOLOGIN_KEY); moveAuthSession(false); clearPersistedAuth();
+    toastMsg('자동 로그인을 껐어요. 이제 탭을 닫으면 로그아웃돼요', 3200);
+  }
+  refreshAutoLoginUi();
+}
+document.addEventListener('DOMContentLoaded', () => { try{ refreshAutoLoginUi(); }catch(e){} });
+const SB_URL = 'https://mnrrcfpnmebuixpomuso.supabase.co';
   const SB_KEY = 'sb_publishable_4igpt7hQVEt8018z04rcag_Ons4nogB';
   let sb;
   if(!window.supabase){
@@ -1993,7 +2067,7 @@
     document.body.appendChild(box);
   } else {
     sb = window.supabase.createClient(SB_URL, SB_KEY, {
-      auth: { storage: window.sessionStorage }
+      auth: { storage: authStorage }
     });
     // 안전망: insert/update/upsert/delete가 실패하면(오프라인·권한·제약조건 등) 조용히 넘어가지 않고 알림
     try{
@@ -2057,6 +2131,7 @@ function openSub(id){
   }
   if(id === 'mealplan'){
     refreshMealPlanIfNewWeek().then(() => {
+      mealViewOffset = 0; viewMealPlan = weekMealPlan; mealPastWarned = {};
       try{ renderMealPlanGrid(); }catch(e){ console.error('mealplan render failed', e); }
       loadMealState().catch(e => console.error('mealplan state load failed', e));
     }).catch(e => console.error('mealplan refresh failed', e));
@@ -2069,6 +2144,7 @@ function openSub(id){
     try{ loadCatSettingsList(); }catch(e){ console.error('catsettings load failed', e); }
   }
   if(id === 'myinfo'){
+    try{ refreshAutoLoginUi(); }catch(e){}
     try{ renderDataDownloadMenu(); }catch(e){ console.error('data download menu failed', e); }
     try{
       const fabToggle = document.getElementById('fabVisibleToggle');
@@ -4255,7 +4331,7 @@ function renderFridge(){
     const row = document.createElement('div');
     row.className = 'fridge-row' + (item.qty <= 0 ? ' empty' : '');
     row.innerHTML = `
-      <span class="fridge-name">${item.name}</span>
+      <span class="fridge-name">${escHtml(item.name)}</span>
       <div class="fridge-qty-ctrl">
         <button class="fridge-qty-btn" onclick="adjustFridgeQty(${i},-1)">－</button>
         <input class="fridge-qty-num" type="number" min="0" value="${item.qty}" onchange="setFridgeQty(${i}, this.value)">
@@ -4290,29 +4366,66 @@ function collectMealState(){
 function scheduleMealSave(){
   if(!mealStateLoaded || !currentUser) return; // 불러오기 전에 빈 값으로 덮어쓰지 않도록
   clearTimeout(mealSaveTimer);
-  mealSaveTimer = setTimeout(saveMealStateNow, 600);
+  mealSaveTimer = setTimeout(() => { mealSaveTimer = null; saveMealStateNow(); }, 600);
 }
-async function saveMealStateNow(){
-  clearTimeout(mealSaveTimer);
+let mealRemoteStamp = 0, mealBaseFridge = {}, mealSaveChain = Promise.resolve();
+function fridgeToMap(arr){ const m = {}; (arr||[]).forEach(f => { const n = normName(f.name); if(n) m[n] = (m[n]||0) + (Number(f.qty)||0); }); return m; }
+function mapToFridge(m){ return Object.keys(m).map(n => ({ name:n, qty:m[n] })); }
+/* 저장은 한 번에 하나씩(겹쳐서 서로 덮어쓰지 않게). 저장 직전에 다른 기기가 먼저 바꾼 게 있으면 냉장고는 합쳐서 저장해요. */
+function saveMealStateNow(){
+  clearTimeout(mealSaveTimer); mealSaveTimer = null;
+  mealSaveChain = mealSaveChain.then(_saveMealStateOnce).catch(e => console.error('mealplan save failed', e));
+  return mealSaveChain;
+}
+async function _saveMealStateOnce(){
   if(!mealStateLoaded || !currentUser) return;
-  const { error } = await sb.from('user_records').upsert({
-    user_id: currentUser.id, key: 'mealplan', value: collectMealState(), updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,key' });
-  if(error){ console.error('mealplan save failed', error); alert('냉장고/장보기 저장 실패: ' + error.message); }
+  const local = collectMealState();
+  const { data: remote, error: rErr } = await sb.from('user_records').select('value, updated_at').eq('user_id', currentUser.id).eq('key','mealplan').maybeSingle();
+  if(rErr){ console.error('mealplan pre-save check failed', rErr); toastMsg('냉장고 저장을 확인하지 못했어요. 인터넷 연결을 확인해주세요.', 3500); return; }
+  if(remote && remote.value && Array.isArray(remote.value.fridge) && (new Date(remote.updated_at).getTime() || 0) > mealRemoteStamp){
+    // 다른 기기·탭이 나보다 먼저 저장했어요 → 내가 바꾼 것은 내 값, 안 바꾼 것은 상대 값으로 합치기
+    const B = mealBaseFridge, L = fridgeToMap(local.fridge), R = fridgeToMap(remote.value.fridge), merged = {};
+    new Set([...Object.keys(B), ...Object.keys(L), ...Object.keys(R)]).forEach(n => {
+      const inB = n in B, inL = n in L, inR = n in R; let q;
+      if(inL){ const mine = !inB || L[n] !== B[n]; q = mine ? L[n] : (inR ? R[n] : undefined); }
+      else if(inB){ q = undefined; }            // 내가 지운 항목
+      else q = R[n];                            // 상대가 새로 추가한 항목
+      if(q !== undefined) merged[n] = q;
+    });
+    fridgeItems = mapToFridge(merged); local.fridge = fridgeItems.map(f => ({ name:f.name, qty:f.qty }));
+    try{ renderFridge(); }catch(e){}
+  }
+  const { data: saved, error } = await sb.from('user_records').upsert({
+    user_id: currentUser.id, key: 'mealplan', value: local, updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' }).select('updated_at').single();
+  if(error){ console.error('mealplan save failed', error); toastMsg('냉장고/장보기 저장 실패: ' + error.message, 4000); return; }
+  mealRemoteStamp = new Date(saved.updated_at).getTime() || Date.now();
+  mealBaseFridge = fridgeToMap(local.fridge);
+}
+function showMealLoadError(on){
+  const body = document.querySelector('#sub-mealplan .sub-body') || document.getElementById('sub-mealplan'); if(!body) return;
+  let b = document.getElementById('mealLoadErr');
+  if(!on){ if(b) b.remove(); return; }
+  if(b) return;
+  b = document.createElement('p'); b.id = 'mealLoadErr'; b.className = 'draft-hint';
+  b.innerHTML = '냉장고·장보기 기록을 불러오지 못했어요. <b>기존 기록은 지워지지 않았어요.</b> 인터넷 연결을 확인한 뒤 <button class="add-row" style="margin:0 0 0 6px;display:inline-block;width:auto;" onclick="loadMealState()">다시 불러오기</button><br>불러오기 전에는 이 화면에서 입력한 내용이 저장되지 않아요.';
+  body.insertBefore(b, body.firstChild);
 }
 async function loadMealState(){
   mealStateLoaded = false;
-  let st = null;
+  let st = null, stamp = 0;
   if(currentUser){
-    const { data, error } = await sb.from('user_records').select('value').eq('user_id', currentUser.id).eq('key','mealplan').maybeSingle();
-    if(error){ console.error('mealplan load failed', error); }
-    st = data ? data.value : null;
+    const { data, error } = await sb.from('user_records').select('value, updated_at').eq('user_id', currentUser.id).eq('key','mealplan').maybeSingle();
+    if(error){ console.error('mealplan load failed', error); showMealLoadError(true); return; } // 실패하면 여기서 멈춰요(빈 값을 저장해서 기존 기록을 덮어쓰지 않도록)
+    if(data){ st = data.value; stamp = new Date(data.updated_at).getTime() || 0; }
   }
+  showMealLoadError(false);
   const week = mealWeekKey();
   const sameWeek = st && st.week === week;
   fridgeItems = (st && st.fridge) ? st.fridge.map(f=>({ name:f.name, qty:Number(f.qty)||0 })) : [];
   const gl = document.getElementById('groceryList'); gl.innerHTML = '';
   const al = document.getElementById('groceryActualList'); al.innerHTML = '';
+  let carried = 0, movedToFridge = 0;
   // 냉장고는 계속 유지, 장보기·구매내역·예산은 주가 바뀌면 새로 시작
   if(sameWeek){
     (st.grocery||[]).forEach(g => addGroceryRow(g.name, g.qty, g.checked));
@@ -4320,14 +4433,22 @@ async function loadMealState(){
     (st.actual||[]).forEach(a => addGroceryActualRow(a.name, a.qty, a.amt, a.synced));
   } else {
     document.getElementById('groceryBudget').value = '';
+    if(st){
+      // 지난주에 못 산(체크 안 한) 항목은 이번 주 장보기로 넘기고, 냉장고에 아직 안 넣은 구매내역은 냉장고에 넣어서 기록이 사라지지 않게 해요
+      (st.grocery||[]).filter(g => !g.checked && normName(g.name)).forEach(g => { addGroceryRow(g.name, g.qty, false); carried++; });
+      (st.actual||[]).forEach(a => {
+        if(a.synced) return; const n = normName(a.name); if(!n) return;
+        const q = Number(a.qty) || 1; const ex = fridgeItems.find(f => sameName(f.name, n));
+        if(ex) ex.qty += q; else fridgeItems.push({ name:n, qty:q }); movedToFridge++;
+      });
+    }
   }
   if(al.children.length === 0) syncGroceryListToActual(); else recalcGroceryActual();
-  const lbl = document.getElementById('mealWeekLabel');
-  if(lbl){ const m = new Date(week+'T00:00:00'); const e = new Date(m); e.setDate(m.getDate()+6);
-    lbl.textContent = `이번 주 식단 (${m.getMonth()+1}/${m.getDate()} ~ ${e.getMonth()+1}/${e.getDate()})`; }
+  mealRemoteStamp = stamp; mealBaseFridge = fridgeToMap(fridgeItems);
   mealStateLoaded = true;
   renderFridge();
   if(!st && currentUser) saveMealStateNow();
+  if(carried || movedToFridge) toastMsg(`지난주 기록을 옮겨왔어요${carried ? ` · 못 산 ${carried}개를 장보기에` : ''}${movedToFridge ? ` · 구매내역 ${movedToFridge}개를 냉장고에` : ''}`, 4200);
 }
 document.addEventListener('DOMContentLoaded', () => {
   const sub = document.getElementById('sub-mealplan');
@@ -4363,11 +4484,13 @@ function addFridgeToGroceryList(i){
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); t.textContent='저장됐어요'; }, 1500);
 }
+function normName(n){ return String(n==null?'':n).trim().replace(/\s+/g,' '); }
+function sameName(a,b){ return normName(a).toLowerCase() === normName(b).toLowerCase(); }
 function addFridgeTag(){
   const input = document.getElementById('fridgeInput');
-  const name = input.value.trim();
+  const name = normName(input.value);
   if(!name) return;
-  const existing = fridgeItems.find(f => f.name === name);
+  const existing = fridgeItems.find(f => sameName(f.name, name));
   if(existing) existing.qty += 1;
   else fridgeItems.push({ name, qty:1 });
   input.value = '';
@@ -4376,17 +4499,18 @@ function addFridgeTag(){
 function syncPurchasesToFridge(){
   document.querySelectorAll('#groceryActualList .grocery-actual-row').forEach(row => {
     if(row.dataset.synced === '1') return; // 이미 냉장고에 넣은 행
-    const name = row.querySelector('.ga-name').value.trim();
+    const name = normName(row.querySelector('.ga-name').value);
     if(!name) return;
     row.dataset.synced = '1';
     const qty = Number(row.querySelector('.ga-qty').value) || 1;
-    const existing = fridgeItems.find(f => f.name === name);
+    const existing = fridgeItems.find(f => sameName(f.name, name));
     if(existing) existing.qty += qty;
     else fridgeItems.push({ name, qty });
   });
   renderFridge();
   return saveMealStateNow();
 }
+function escHtml(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function escAttr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function addGroceryRow(name, qty, checked){
   const wrap = document.getElementById('groceryList');
@@ -4398,11 +4522,10 @@ function addGroceryRow(name, qty, checked){
 }
 
 /* ── 주간 식단: 작성(식단페이지) ↔ 체크(홈) 연동 ── */
-async function buildWeekMealPlan(){
+async function buildWeekMealPlan(offset){
   const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 월=0 ... 일=6
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dow);
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow + 7 * (offset || 0));
   const dayLabels = ['월','화','수','목','금','토','일'];
   const mondayKey = dateKey(monday);
   const dateKeys = dayLabels.map((_, i) => {
@@ -4432,25 +4555,100 @@ async function refreshMealPlanIfNewWeek(){
     weekMealPlan = await buildWeekMealPlan();
   }
 }
+/* ── 식단 화면: 보고 있는 주(0=이번 주, 1=다음 주 …) ── */
+let mealViewOffset = 0, viewMealPlan = [], mealPastWarned = {}, mealMoving = false;
+function mealWeekName(off){
+  if(off === 0) return '이번 주'; if(off === 1) return '다음 주'; if(off === -1) return '지난주';
+  return off > 1 ? `${off}주 뒤` : `${-off}주 전`;
+}
+function mealWeekRangeText(plan){
+  if(!plan || !plan.length) return '';
+  const a = plan[0].date, b = plan[plan.length - 1].date; return `${a} ~ ${b}`;
+}
 function renderMealPlanGrid(){
   const grid = document.getElementById('mealPlanGrid');
   if(!grid) return;
+  if(!viewMealPlan.length) viewMealPlan = weekMealPlan;
+  const todayKey = dateKey(new Date());
   grid.innerHTML = '';
-  weekMealPlan.forEach((m, i) => {
+  viewMealPlan.forEach((m, i) => {
+    const isPast = m.dateKey < todayKey, isToday = m.dateKey === todayKey;
     const row = document.createElement('div');
-    row.className = 'meal-day-row';
-    row.innerHTML = `<span class="meal-day-label">${m.day}</span><input type="text" placeholder="예: 김치찌개, 계란말이" value="${escAttr(m.text)}" oninput="updateMealText(${i}, this.value)">`;
+    row.className = 'meal-day-row' + (isPast ? ' past' : '') + (isToday ? ' today' : '');
+    row.innerHTML = `<span class="meal-day-label">${m.day}</span><span class="meal-day-date">${m.date}${isToday ? '<br><b>오늘</b>' : (isPast ? '<br>지난 날' : '')}</span><input type="text" placeholder="예: 김치찌개, 계란말이" value="${escAttr(m.text)}" oninput="updateMealText(${i}, this.value)">`;
     grid.appendChild(row);
   });
+  const lbl = document.getElementById('mealWeekLabel');
+  if(lbl) lbl.textContent = `${mealWeekName(mealViewOffset)} 식단 (${mealWeekRangeText(viewMealPlan)})`;
+  const chips = document.getElementById('mealWeekChips');
+  if(chips){
+    chips.innerHTML = `<button class="meal-chip arrow" onclick="setMealView(${mealViewOffset - 1})">‹</button>`
+      + `<button class="meal-chip${mealViewOffset === 0 ? ' active' : ''}" onclick="setMealView(0)">이번 주</button>`
+      + `<button class="meal-chip${mealViewOffset === 1 ? ' active' : ''}" onclick="setMealView(1)">다음 주</button>`
+      + `<button class="meal-chip arrow" onclick="setMealView(${mealViewOffset + 1})">›</button>`;
+  }
+  const hint = document.getElementById('mealWeekHint'); const dow = new Date().getDay();
+  if(hint){
+    let t = '';
+    if(mealViewOffset === 0 && (dow === 0 || dow === 6)) t = '💡 다음 주 식단을 미리 짜려면 위의 \'다음 주\'를 눌러주세요.';
+    else if(mealViewOffset < 0) t = '지난 주 식단이에요. 기록을 확인하거나 고칠 수 있어요.';
+    hint.textContent = t; hint.style.display = t ? 'block' : 'none';
+  }
+  const mv = document.getElementById('mealMoveRow');
+  if(mv){ const bs = mv.querySelectorAll('button'); if(bs[0]) bs[0].textContent = `‹ ${mealWeekName(mealViewOffset - 1)}로 옮기기`; if(bs[1]) bs[1].textContent = `${mealWeekName(mealViewOffset + 1)}로 옮기기 ›`; }
+}
+async function setMealView(offset){
+  try{ flushPendingSaves(); }catch(e){}   // 쓰던 글은 먼저 저장하고 주를 바꿔요
+  mealViewOffset = offset; mealPastWarned = {};
+  viewMealPlan = offset === 0 ? weekMealPlan : await buildWeekMealPlan(offset);
+  renderMealPlanGrid();
 }
 function updateMealText(i, val){
-  weekMealPlan[i].text = val;
+  const row = viewMealPlan[i]; if(!row) return;
+  row.text = val;
+  try{ if(mealViewOffset === 0) renderHomeMealChecklist(); }catch(e){}   // 홈의 '이번 주 식단' 카드에도 바로 반영
+  // 이번 주의 '이미 지난 날'에 쓰고 있다면 한 번 알려줘요(다음 주를 짜려던 건 아닌지)
+  if(mealViewOffset === 0 && row.dateKey < dateKey(new Date()) && !mealPastWarned[row.dateKey]){
+    mealPastWarned[row.dateKey] = true;
+    toastMsg(`${row.date}은 이미 지난 날이에요. 다음 주를 짜는 거라면 위의 '다음 주'를 눌러주세요.`, 5200);
+  }
   if(!currentUser) return;
-  debouncedCall('mealplan-'+weekMealPlan[i].dateKey, async () => {
+  debouncedCall('mealplan-'+row.dateKey, async () => {   // 쓰는 그 줄을 붙잡아 둬서, 그 사이 주를 바꿔도 엉뚱한 날짜에 저장되지 않아요
     await sb.from('meal_plans').upsert({
-      user_id: currentUser.id, plan_date: weekMealPlan[i].dateKey, text: weekMealPlan[i].text, done: weekMealPlan[i].done,
+      user_id: currentUser.id, plan_date: row.dateKey, text: row.text, done: row.done,
     }, { onConflict: 'user_id,plan_date' });
   }, 600);
+}
+/* 이 주에 적은 식단을 이전/다음 주로 옮기기 (잘못된 주에 적었을 때).
+   목적지에 이미 적힌 날은 덮어쓰지 않고, 목적지에 먼저 저장한 뒤에만 원래 칸을 비워요(중간에 실패해도 식단이 사라지지 않게). */
+async function moveMealWeek(delta){
+  if(mealMoving || !currentUser) return;
+  mealMoving = true;
+  try{
+    const srcOffset = mealViewOffset, dstOffset = srcOffset + delta;
+    const src = viewMealPlan.filter(m => (m.text || '').trim());
+    if(!src.length){ toastMsg('옮길 식단이 없어요', 2000); return; }
+    src.forEach(m => { const k = 'mealplan-' + m.dateKey; clearTimeout(_saveTimers[k]); delete _pendingFns[k]; }); // 대기 중이던 자동저장이 나중에 되살리지 않게
+    const dst = await buildWeekMealPlan(dstOffset);
+    const toDst = [], toClear = []; let skipped = 0;
+    viewMealPlan.forEach((m, i) => {
+      if(!(m.text || '').trim()) return;
+      if((dst[i].text || '').trim()){ skipped++; return; }
+      toDst.push({ user_id: currentUser.id, plan_date: dst[i].dateKey, text: m.text, done: false });
+      toClear.push({ user_id: currentUser.id, plan_date: m.dateKey, text: '', done: false });
+    });
+    if(!toDst.length){ alert(`${mealWeekName(dstOffset)}에 이미 같은 요일 식단이 적혀 있어서 옮길 수 없어요. (덮어쓰지 않아요)`); return; }
+    const name = `${mealWeekName(dstOffset)} (${mealWeekRangeText(dst)})`;
+    if(!confirm(`${toDst.length}일치 식단을 ${name}로 옮길까요?` + (skipped ? `\n(겹치는 ${skipped}일은 그대로 둬요)` : ''))) return;
+    const { error: e1 } = await sb.from('meal_plans').upsert(toDst, { onConflict: 'user_id,plan_date' });
+    if(e1){ alert('옮기기 실패 (아무것도 바뀌지 않았어요): ' + e1.message); return; }
+    const { error: e2 } = await sb.from('meal_plans').upsert(toClear, { onConflict: 'user_id,plan_date' });
+    if(e2) alert(`${mealWeekName(dstOffset)}에는 저장됐지만 이 주 칸을 비우지 못했어요. 두 주에 모두 남아 있으니, 이 주 칸은 직접 지워주세요.`);
+    weekMealPlan = await buildWeekMealPlan(0);
+    try{ renderHomeMealChecklist(); }catch(e){}
+    await setMealView(dstOffset);
+    toastMsg(`${toDst.length}일치 식단을 ${mealWeekName(dstOffset)}로 옮겼어요` + (skipped ? ` (겹치는 ${skipped}일은 그대로)` : ''), 3600);
+  } finally { mealMoving = false; }
 }
 function renderHomeMealChecklist(){
   const list = document.getElementById('homeMealChecklist');
@@ -4464,7 +4662,7 @@ function renderHomeMealChecklist(){
     card.className = 'week-card meal-card' + (isToday ? ' today' : '') + (m.done ? ' checked' : '');
     card.innerHTML = `
       <div class="wc-day">${m.day} ${m.date}${isToday?' · 오늘':''}</div>
-      <div class="wc-title">${hasPlan ? m.text : '계획 없음'}</div>
+      <div class="wc-title">${hasPlan ? escHtml(m.text) : '계획 없음'}</div>
       ${hasPlan ? `<label class="meal-card-check"><input type="checkbox" ${m.done?'checked':''} onchange="toggleMealDone(${i}, this.checked)"> 실천</label>` : ''}
     `;
     list.appendChild(card);
@@ -5092,6 +5290,11 @@ async function doLogin(){
   msg.textContent = '';
   if(!email || !pw){ msg.textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
   const btn = document.getElementById('loginBtn');
+  // 자동 로그인: 체크한 경우에만 이 기기에 로그인 정보를 계속 보관 (로그인 '전에' 정해야 처음 저장되는 곳이 맞아요)
+  const cbk = document.getElementById('autoLoginCheck');
+  if(cbk && cbk.checked){
+    if(!lsSet(AUTOLOGIN_KEY, '1')){ cbk.checked = false; msg.textContent = '이 브라우저에서는 자동 로그인을 쓸 수 없어서, 자동 로그인 없이 로그인해요.'; }
+  } else { lsDel(AUTOLOGIN_KEY); clearPersistedAuth(); }
   btn.disabled = true; btn.textContent = '로그인 중...';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   btn.disabled = false; btn.textContent = '로그인';
@@ -5218,9 +5421,11 @@ async function routeAfterAuth(){
 }
 async function doLogout(){
   await sb.auth.signOut();
+  clearPersistedAuth(); // 로그아웃하면 이 기기에 보관된 로그인 정보도 지워요(자동 로그인 선택은 유지)
   currentUser = null;
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
+  try{ refreshAutoLoginUi(); }catch(e){}
   setDemoMode('login');
 }
 
