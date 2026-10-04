@@ -1665,7 +1665,7 @@
   </div>
 
   <button class="save-btn" onclick="openSub('weeksettle')" style="background:var(--gold);color:#2b220a;">일요일 주말정산 보기</button>
-  <button class="save-btn" onclick="openSub('monthsettle')" style="background:var(--brand-deep);color:#fff;margin-top:8px;">이번 달 월말정산 보기</button>
+  <button class="save-btn" id="ledgerMonthSettleBtn" onclick="openMonthSettleFromLedger()" style="background:var(--brand-deep);color:#fff;margin-top:8px;">이번 달 월말정산 보기</button>
 </div>
 
 <!-- 주말정산 서브화면 -->
@@ -2682,6 +2682,7 @@ async function showRealDay(el, d){
   document.querySelectorAll('.g-cell, .m-cell').forEach(c=>c.classList.remove('selected'));
   if(el) el.classList.add('selected');
   selectedDayDate = d;
+  try{ refreshLedgerMonthSettleBtn(); }catch(e){}
   const dow = ['일','월','화','수','목','금','토'][d.getDay()];
   document.querySelector('.dd-title').textContent = `${dow} ${d.getMonth()+1}/${d.getDate()} 상세내역`;
   if(myAssetsCache.length === 0 && currentUser){
@@ -7102,6 +7103,7 @@ function viewMemberScreen(sub, name){
 let weekOffset = 0;
 function refreshDateLabels(){
   try{ applyDayMissions(); }catch(e){}
+  try{ refreshLedgerMonthSettleBtn(); }catch(e){}
   const now = new Date();
   const fmt = d => (d.getMonth()+1) + '.' + d.getDate();
   const ws = getThisWeekMonday(); ws.setDate(ws.getDate() + weekOffset*7);
@@ -7151,6 +7153,7 @@ async function navWeek(dir){
 
   await loadWeekTransactions(start);
   renderWeekGrid(start);
+  try{ refreshLedgerMonthSettleBtn(); }catch(e){}
   refreshLedgerSummary();
   if(document.getElementById('sub-weeksettle').classList.contains('open')){
     try{ await renderWeekSettle(); }catch(e){ console.error('weeksettle refresh failed', e); }
@@ -7283,12 +7286,40 @@ function switchLedgerView(view){
   document.getElementById('weekView').style.display = view==='week' ? 'block' : 'none';
   document.getElementById('monthView').style.display = view==='month' ? 'block' : 'none';
   if(view === 'month') renderMonthGrid();
+  try{ refreshLedgerMonthSettleBtn(); }catch(e){}
 }
 let calMonthOffset = 0;
 function navCalMonth(dir){
   calMonthOffset += dir;
   renderMonthGrid();
+  try{ refreshLedgerMonthSettleBtn(); }catch(e){}
 }
+/* 가계부에서 지금 보고 있는 달: 월간 보기=그 달 / 주간 보기=선택한 날짜가 이 주에 있으면 그 날짜의 달, 아니면 그 주 목요일의 달
+   (예전엔 어느 주를 보든 '이번 달' 월말정산만 열려서, 지난달 기록이 사라진 것처럼 보였어요) */
+function ledgerViewedMonth(){
+  const now = new Date();
+  const mv = document.getElementById('monthView');
+  if(mv && mv.style.display !== 'none') return new Date(now.getFullYear(), now.getMonth() + calMonthOffset, 1);
+  const mon = getThisWeekMonday(); mon.setDate(mon.getDate() + weekOffset * 7);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  if(selectedDayDate instanceof Date && !isNaN(selectedDayDate)){
+    const k = dateKey(selectedDayDate);
+    if(k >= dateKey(mon) && k <= dateKey(sun)) return new Date(selectedDayDate.getFullYear(), selectedDayDate.getMonth(), 1);
+  }
+  const thu = new Date(mon); thu.setDate(mon.getDate() + 3);
+  return new Date(thu.getFullYear(), thu.getMonth(), 1);
+}
+function ledgerMonthOffset(){
+  const v = ledgerViewedMonth(), n = new Date();
+  return (v.getFullYear() * 12 + v.getMonth()) - (n.getFullYear() * 12 + n.getMonth());
+}
+function refreshLedgerMonthSettleBtn(){
+  const btn = document.getElementById('ledgerMonthSettleBtn'); if(!btn) return;
+  const v = ledgerViewedMonth(), off = ledgerMonthOffset(), n = new Date();
+  btn.textContent = off === 0 ? '이번 달 월말정산 보기'
+    : (v.getFullYear() !== n.getFullYear() ? `${v.getFullYear()}년 ${v.getMonth()+1}월 월말정산 보기` : `${v.getMonth()+1}월 월말정산 보기`);
+}
+function openMonthSettleFromLedger(){ monthSettleOffset = ledgerMonthOffset(); openSub('monthsettle'); }
 async function renderMonthGrid(){
   const base = getThisWeekMonday(); // 오늘이 포함된 주의 월요일 기준으로 오늘 달 계산은 아래서 별도 처리
   const today = new Date();
