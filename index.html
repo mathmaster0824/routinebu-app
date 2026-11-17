@@ -1118,6 +1118,8 @@
 .nwh-c{font-size:10px;font-style:normal;color:var(--ink-soft,#78715E);border:0.5px solid var(--line,#ccc);border-radius:6px;padding:0 5px}
 .nwh-add{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.nwh-add select,.nwh-add input{flex:1 1 30%;min-width:0;padding:6px;font-size:13px}.nwh-add button{padding:6px 12px}
 .nwh-det{margin-top:10px;font-size:13px}.nwh-det summary{cursor:pointer;padding:4px 0}.nwh-all{cursor:pointer}
+.upd-bar{position:fixed;left:12px;right:12px;bottom:76px;z-index:99999;background:#2b2a26;color:#fff;border-radius:12px;padding:11px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.upd-bar.show{display:flex}.upd-bar button{border:none;background:#fff;color:#2b2a26;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -8148,6 +8150,32 @@ function navMonth(dir){
   const label = document.getElementById('monthNavLabel');
   label.innerHTML = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${monthOffset===0 ? '<i>이번 달</i>' : ''}`;
 }
+
+/* ── 새 버전 알림: 앱이 업데이트되면 "새로고침" 안내를 띄워요 ── */
+const APP_BUILD = '2026-11-18-1';
+(function(){
+  let shown = false, last = 0;
+  function bar(){
+    let b = document.getElementById('updBar');
+    if(!b){ b = document.createElement('div'); b.id = 'updBar'; b.className = 'upd-bar'; b.innerHTML = '<span>앱이 업데이트됐어요. 새로고침해 주세요</span><button type="button" onclick="location.reload()">새로고침</button>'; document.body.appendChild(b); }
+    return b;
+  }
+  async function check(){
+    if(shown || document.hidden) return;
+    const now = Date.now(); if(now - last < 120000) return; last = now;
+    try{
+      const base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+      const r = await fetch(base + 'version.json?t=' + now, { cache: 'no-store' });
+      if(!r.ok) return;
+      const j = await r.json();
+      if(j && j.build && j.build !== APP_BUILD){ shown = true; bar().classList.add('show'); }
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  setInterval(check, 300000);
+  setTimeout(check, 8000);
+})();
 </script>
 
 <!-- 운영자 대시보드 -->
