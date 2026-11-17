@@ -7363,13 +7363,14 @@ async function uploadProgressChart(input){
   const targetDays = targetDaysInput && targetDaysInput.value ? parseInt(targetDaysInput.value) : null;
   const ext = file.name.split('.').pop();
   const path = `${monthKey}.${ext}`;
-  const { error: upErr } = await sb.storage.from('bonbu-progress-charts').upload(path, file, { upsert: true });
+  const { error: upErr } = await sb.storage.from('bonbu-progress-charts').upload(path, file, { upsert: true, cacheControl: '60' });
   if(upErr){ alert('업로드 실패: ' + upErr.message); return; }
   const { data: urlData } = sb.storage.from('bonbu-progress-charts').getPublicUrl(path);
   const { error } = await sb.from('bonbu_progress_charts').upsert({
-    month_key: monthKey, image_url: urlData.publicUrl, target_days: targetDays, uploaded_by: currentUser.id, uploaded_at: new Date().toISOString(),
+    month_key: monthKey, image_url: urlData.publicUrl + '?v=' + Date.now(), target_days: targetDays, uploaded_by: currentUser.id, uploaded_at: new Date().toISOString(),
   }, { onConflict: 'month_key' });
   if(error){ alert('저장 실패: ' + error.message); return; }
+  toastMsg('진도표가 교체됐어요', 2200);
   loadAdminProgressChart();
 }
 async function loadAdminBookList(){
